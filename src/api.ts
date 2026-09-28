@@ -1,0 +1,27 @@
+export type User = { id: number; email: string; first_name: string; last_name: string; role: 'STUDENT' | 'ADMIN'; date_joined?: string }
+export type Track = { id: number; title: string; slug: string; description: string; cover: number | null; is_published: boolean }
+export type Module = { id: number; track: number; title: string; description: string; position: number; is_published: boolean }
+export type Lesson = { id: number; module: number; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED' }
+export type Block = { id?: number; type: 'TEXT' | 'IMAGE'; position: number; content: string; media: number | null; media_url?: string | null; config: Record<string, unknown> }
+export type Option = { id?: number; text: string; position: number; is_correct?: boolean }
+export type Question = { id?: number; text: string; position: number; points: number; options: Option[] }
+export type Test = { id?: number; lesson?: number; title: string; description: string; passing_percent: number; max_attempts: number | null; is_published?: boolean; version?: number; questions: Question[] }
+export type Attempt = { id: number; test: number; test_version: number; answers: { question: number; option: number }[]; snapshot: { question: string; selected: string; correct: string; points: number }[]; earned_points: number; total_points: number; percent: number; passed: boolean; completed_at: string }
+export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] }
+
+function cookie(name: string) { return document.cookie.split('; ').find(x => x.startsWith(name + '='))?.split('=')[1] || '' }
+export class ApiError extends Error { constructor(message: string, public status: number) { super(message) } }
+export async function api<T>(path: string, method = 'GET', data?: unknown): Promise<T> {
+  if (method !== 'GET' && !cookie('csrftoken')) await fetch('/api/v1/csrf/', { credentials: 'include' })
+  const body = data instanceof FormData ? data : data === undefined ? undefined : JSON.stringify(data)
+  const headers: Record<string, string> = {}
+  if (body && !(data instanceof FormData)) headers['Content-Type'] = 'application/json'
+  if (method !== 'GET') headers['X-CSRFToken'] = decodeURIComponent(cookie('csrftoken'))
+  const res = await fetch('/api/v1/' + path.replace(/^\//, ''), { method, body, headers, credentials: 'include' })
+  if (!res.ok) {
+    const payload = await res.json().catch(() => ({}))
+    const detail = payload.error?.detail ?? payload.detail ?? 'Ошибка запроса'
+    throw new ApiError(typeof detail === 'string' ? detail : JSON.stringify(detail), res.status)
+  }
+  return res.status === 204 ? undefined as T : res.json()
+}

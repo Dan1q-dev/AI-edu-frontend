@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build:
+      context: .
+      target: production
+    ports: !override ["80:80"]
+    volumes: [static_data:/static:ro]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+volumes:
+  static_data:
+    external: true
+    name: aiedu-static
