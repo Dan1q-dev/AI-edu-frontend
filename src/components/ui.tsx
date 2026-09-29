@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import { BookOpen, Loader2 } from 'lucide-react'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }
 
@@ -14,8 +15,80 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea {...props} className={`input ${props.className || ''}`} />
 }
 
-export function Loading({ label = 'Загрузка…' }: { label?: string }) {
-  return <div className="notice" role="status" aria-live="polite">{label}</div>
+export interface LoadingProps {
+  label?: string
+  description?: string
+  fullPage?: boolean
+  variant?: 'fullscreen' | 'page' | 'inline'
+  className?: string
+}
+
+export function Loading({
+  label = 'Загрузка…',
+  description,
+  fullPage = false,
+  variant,
+  className = ''
+}: LoadingProps) {
+  const isFull = fullPage || variant === 'fullscreen'
+
+  if (isFull) {
+    return (
+      <div
+        className={`loading-screen-full ${className}`}
+        role="status"
+        aria-live="polite"
+        aria-label={label}
+      >
+        <div className="loading-screen-card">
+          <div className="loading-screen-brand">
+            <div className="loading-brand-icon" aria-hidden="true">
+              <BookOpen size={28} />
+            </div>
+            <span className="brand">
+              AI<span>edu</span>
+            </span>
+          </div>
+
+          <div className="loading-screen-text">
+            <strong>{label}</strong>
+            {description && <p>{description}</p>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (variant === 'inline') {
+    return (
+      <div
+        className={`loading-inline ${className}`}
+        role="status"
+        aria-live="polite"
+        aria-label={label}
+      >
+        <Loader2 className="loading-spinner" size={16} aria-hidden="true" />
+        <span>{label}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={`loading-section ${className}`}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+    >
+      <div className="loading-section-content">
+        <Loader2 className="loading-spinner" size={28} aria-hidden="true" />
+        <div className="loading-section-text">
+          <span>{label}</span>
+          {description && <small>{description}</small>}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function ErrorState({ error }: { error: unknown }) {

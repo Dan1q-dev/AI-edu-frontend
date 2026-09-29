@@ -48,9 +48,9 @@ function ProtectedPage({ user, children, admin = false }: { user: User | null | 
 export default function App() {
   const { data: user, isLoading, error } = useQuery({ queryKey: ['me'], queryFn: () => api<User>('auth/me/').catch(() => null), staleTime: 60000 })
   useEffect(() => { fetch('/api/v1/csrf/', { credentials: 'include' }).catch(() => {}) }, [])
-  if (isLoading) return <Loading/>
+  if (isLoading) return <Loading fullPage label="Загрузка платформы…" description="Подготовка образовательного пространства…" />
   if (error) return <ErrorState error={error}/>
-  return <Suspense fallback={<Loading/>}><Routes>
+  return <Suspense fallback={<Loading fullPage label="Загрузка страницы…" />}><Routes>
     <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/'} replace/> : <AuthPage mode="login"/>}/>
     <Route path="/register" element={user ? <Navigate to="/" replace/> : <AuthPage mode="register"/>}/>
     <Route path="/" element={<ProtectedPage user={user}><Home user={user!}/></ProtectedPage>}/>
