@@ -3,11 +3,4 @@ services:
     image: ${FRONTEND_IMAGE:-ai-edu-frontend}:${IMAGE_TAG:-latest}
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:80"
-    networks:
-      - aiedu-platform
-
-networks:
-  aiedu-platform:
-    external: true
-    name: aiedu-platform
+      - "127.0.0.1:8080:3000"
