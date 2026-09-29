@@ -1,4 +1,10 @@
 .curriculum-workspace{display:grid;grid-template-columns:minmax(280px,36%) minmax(0,1fr);padding:0;overflow:hidden;min-height:560px}
+.content:has(.curriculum-heading){max-width:none;padding-left:clamp(18px,3vw,54px);padding-right:clamp(18px,3vw,54px)}
+.curriculum-heading{margin-bottom:22px}
+.curriculum-workspace{grid-template-columns:minmax(300px,32%) minmax(0,1fr);min-height:min(72vh,820px)}
+.curriculum-edit-panel{position:fixed;z-index:40;right:0;top:0;bottom:0;width:min(380px,94vw);overflow:auto;padding:24px;background:#fff;border-left:1px solid #e3e9f0;box-shadow:-20px 0 60px #14243b1c;display:grid;align-content:start;gap:16px}
+.curriculum-edit-heading{display:flex;justify-content:space-between;align-items:start;margin-bottom:8px}.curriculum-edit-heading h2{margin:6px 0 0;font-size:20px}.curriculum-edit-heading button{width:32px;height:32px;border:0;border-radius:8px;background:#f2f5f8;color:#66778f;font-size:22px;line-height:1}
+.curriculum-edit-panel>h2{display:none}.curriculum-edit-panel>label{display:grid;gap:7px}.curriculum-edit-panel .row{display:flex;gap:8px;flex-wrap:wrap}.curriculum-edit-panel .row .button{flex:1}
 .curriculum-tree{border-right:1px solid #e9edf3;min-width:0;display:flex;flex-direction:column}
 .curriculum-tree-head{display:flex;justify-content:space-between;align-items:center;padding:22px 20px 15px}
 .curriculum-tree-head strong{font-size:.95rem}
@@ -40,4 +46,4 @@
 .detail-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;border-top:1px solid #edf0f5;padding-top:20px}
 .detail-actions .button{font-size:.8rem;padding:9px 12px;min-height:38px}
 .detail-actions .detail-delete{margin-left:auto}
-@media(max-width:760px){.curriculum-workspace{grid-template-columns:1fr;min-height:0}.curriculum-tree{border-right:0;border-bottom:1px solid #e9edf3}.tree-scroll{max-height:330px}.curriculum-detail{padding:24px 20px;min-height:300px}.detail-actions .detail-delete{margin-left:0}}
+@media(max-width:760px){.curriculum-workspace{grid-template-columns:1fr;min-height:0}.curriculum-tree{border-right:0;border-bottom:1px solid #e9edf3}.tree-scroll{max-height:330px}.curriculum-detail{padding:24px 20px;min-height:300px}.detail-actions .detail-delete{margin-left:0}.curriculum-edit-panel{top:auto;max-height:90dvh;border-radius:16px 16px 0 0;border-left:0;box-shadow:0 -15px 45px #14243b24}}

@@ -6,6 +6,9 @@ import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Clock3, Layers } from 
 import { api, apiAll, ApiError, type Attempt, type Block, type Course, type Lesson, type Module, type Page, type Test, type Track, type User } from './api'
 import { Button, ErrorState, Input, Loading, Notice } from './components/ui'
 import { LearningLayout, type CourseSection } from './layouts/LearningLayout'
+import { RichLessonContent } from './components/LessonTextEditor'
+
+function isTiptapContent(value: string) { try { return JSON.parse(value)?.type === 'doc' } catch { return false } }
 
 export function CatalogPage() {
   const { data, isLoading, error } = useQuery({ queryKey: ['courses'], queryFn: () => apiAll<Course>('courses/') })
@@ -63,7 +66,7 @@ export function LessonPage() {
   const currentIndex = courseLessons.findIndex(item => item.short_id === id)
   return <LearningLayout courseTitle={course.data?.title} sections={sections} lessonId={id!} lessonTitle={lesson.data?.title || 'Урок'} currentIndex={currentIndex >= 0 ? currentIndex : 0} totalLessons={courseLessons.length || undefined} previous={currentIndex > 0 ? courseLessons[currentIndex - 1] : undefined} next={currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1] : undefined}>
     <div className="lesson-heading"><span className="eyebrow">УЧЕБНЫЙ МАТЕРИАЛ</span><h1>{lesson.data?.title}</h1><p>{lesson.data?.description}</p></div>
-    <article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown"><ReactMarkdown skipHtml>{block.content}</ReactMarkdown></div> : <figure key={block.id}><img src={block.media_url || ''} alt={block.content || 'Изображение урока'}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article>
+    <article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown">{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={block.content || 'Изображение урока'}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article>
     <TestRunner lessonId={id!}/>
   </LearningLayout>
 }

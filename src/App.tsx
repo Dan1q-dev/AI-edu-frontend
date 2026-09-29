@@ -11,7 +11,7 @@ const CatalogPage = lazy(() => import('./StudentPages').then(module => ({ defaul
 const CoursePage = lazy(() => import('./StudentPages').then(module => ({ default: module.CoursePage })))
 const LessonPage = lazy(() => import('./StudentPages').then(module => ({ default: module.LessonPage })))
 const ProfilePage = lazy(() => import('./StudentPages').then(module => ({ default: module.ProfilePage })))
-const EditorPage = lazy(() => import('./AdminPages').then(module => ({ default: module.EditorPage })))
+const EditorPage = lazy(() => import('./LessonEditorPage').then(module => ({ default: module.EditorPage })))
 const TestEditor = lazy(() => import('./AdminPages').then(module => ({ default: module.TestEditor })))
 const AdminCurriculum = lazy(() => import('./AdminCurriculum').then(module => ({ default: module.AdminCurriculum })))
 
