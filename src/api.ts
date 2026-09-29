@@ -1,6 +1,8 @@
-export type User = { id: number; email: string; first_name: string; last_name: string; role: 'STUDENT' | 'ADMIN'; date_joined?: string }
-export type Track = { id: number; short_id: string; title: string; description: string; cover: number | null; is_published: boolean }
-export type Module = { id: number; short_id: string; track: number; title: string; description: string; position: number; is_published: boolean }
+export type TrackRef = { id: number; short_id: string; title: string }
+export type User = { id: number; email: string; first_name: string; last_name: string; role: 'STUDENT' | 'ADMIN'; learning_track: TrackRef | null; date_joined?: string }
+export type Track = { id: number; short_id: string; title: string; description: string; cover: number | null; is_published: boolean; is_active: boolean }
+export type Course = { id: number; short_id: string; learning_track: number | null; title: string; slug: string; description: string; cover: number | null; position: number; is_published: boolean }
+export type Module = { id: number; short_id: string; course: number; title: string; description: string; position: number; is_published: boolean }
 export type Lesson = { id: number; short_id: string; module: number; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED' }
 export type Block = { id?: number; type: 'TEXT' | 'IMAGE'; position: number; content: string; media: number | null; media_url?: string | null; config: Record<string, unknown> }
 export type Option = { id?: number; text: string; position: number; is_correct?: boolean }

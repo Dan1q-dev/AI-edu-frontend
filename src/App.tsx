@@ -2,13 +2,13 @@ import { lazy, Suspense, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { BookOpen, Layers3 } from 'lucide-react'
-import { api, type User } from './api'
+import { api, apiAll, type Course, type User } from './api'
 import { MainLayout } from './layouts/MainLayout'
 import { ErrorState, Loading } from './components/ui'
 
 const AuthPage = lazy(() => import('./AuthPage').then(module => ({ default: module.AuthPage })))
 const CatalogPage = lazy(() => import('./StudentPages').then(module => ({ default: module.CatalogPage })))
-const TrackPage = lazy(() => import('./StudentPages').then(module => ({ default: module.TrackPage })))
+const CoursePage = lazy(() => import('./StudentPages').then(module => ({ default: module.CoursePage })))
 const LessonPage = lazy(() => import('./StudentPages').then(module => ({ default: module.LessonPage })))
 const ProfilePage = lazy(() => import('./StudentPages').then(module => ({ default: module.ProfilePage })))
 const EditorPage = lazy(() => import('./AdminPages').then(module => ({ default: module.EditorPage })))
@@ -17,16 +17,17 @@ const AdminCurriculum = lazy(() => import('./AdminCurriculum').then(module => ({
 
 function Home({ user }: { user: User }) {
   const isAdmin = user.role === 'ADMIN'
+  const courses = useQuery({ queryKey: ['courses'], queryFn: () => apiAll<Course>('courses/'), enabled: !isAdmin })
   return <>
     <section className="home-hero">
       <div className="home-hero-copy"><span className="eyebrow">{isAdmin ? 'ВАШЕ РАБОЧЕЕ ПРОСТРАНСТВО' : 'ПРОДОЛЖАЙТЕ УЧИТЬСЯ'}</span>
         <h1>{isAdmin ? 'Создавайте обучение, которое увлекает' : 'Знания, которые открывают возможности'}</h1>
-        <p>{isAdmin ? 'Собирайте программу, готовьте уроки и помогайте студентам двигаться вперёд.' : 'Выберите направление, изучайте уроки в своём темпе и проверяйте себя.'}</p>
+        <p>{isAdmin ? 'Собирайте программу, готовьте уроки и помогайте студентам двигаться вперёд.' : `Направление: ${user.learning_track?.title ?? 'не выбрано'}. Изучайте курсы в своём темпе и проверяйте себя.`}</p>
         <Link className="button primary" to={isAdmin ? '/admin/curriculum' : '/catalog'}>{isAdmin ? 'Открыть учебную программу' : 'Перейти в каталог'}<span aria-hidden="true">→</span></Link>
       </div><div className="home-hero-art" aria-hidden="true"><BookOpen size={48}/><span>AI Edu</span></div>
     </section>
-    <section className="home-next"><div><span className="eyebrow">{isAdmin ? 'УПРАВЛЕНИЕ' : 'ВАШ СЛЕДУЮЩИЙ ШАГ'}</span><h2>{isAdmin ? `Добро пожаловать, ${user.first_name || 'администратор'}` : `С возвращением${user.first_name ? `, ${user.first_name}` : ''}`}</h2><p>{isAdmin ? 'Все инструменты для работы с образовательным контентом собраны в одном месте.' : 'Начните с каталога и выберите траекторию, которая вам интересна.'}</p></div>
-      <div className="home-quick-links">{isAdmin ? <Link className="quick-link-card" to="/admin/curriculum"><span className="quick-link-icon"><Layers3 size={20}/></span><span><strong>Учебная программа</strong><small>Траектории, модули и уроки</small></span><span aria-hidden="true">→</span></Link> : <Link className="quick-link-card" to="/catalog"><span className="quick-link-icon"><BookOpen size={20}/></span><span><strong>Каталог траекторий</strong><small>Найдите курс для себя</small></span><span aria-hidden="true">→</span></Link>}</div>
+    <section className="home-next"><div><span className="eyebrow">{isAdmin ? 'УПРАВЛЕНИЕ' : 'ВАШЕ ОБУЧЕНИЕ'}</span><h2>{isAdmin ? `Добро пожаловать, ${user.first_name || 'администратор'}` : `С возвращением${user.first_name ? `, ${user.first_name}` : ''}`}</h2><p>{isAdmin ? 'Все инструменты для работы с образовательным контентом собраны в одном месте.' : `Ваше направление — ${user.learning_track?.title ?? 'не выбрано'}. ${courses.data?.length ?? 0} доступных курсов.`}</p></div>
+      <div className="home-quick-links">{isAdmin ? <Link className="quick-link-card" to="/admin/curriculum"><span className="quick-link-icon"><Layers3 size={20}/></span><span><strong>Учебная программа</strong><small>Направления, курсы, модули и уроки</small></span><span aria-hidden="true">→</span></Link> : courses.data?.length ? courses.data.slice(0, 3).map(course => <Link key={course.id} className="quick-link-card" to={`/courses/${course.slug}`}><span className="quick-link-icon"><BookOpen size={20}/></span><span><strong>{course.title}</strong><small>Открыть курс</small></span><span aria-hidden="true">→</span></Link>) : <Link className="quick-link-card" to="/catalog"><span className="quick-link-icon"><BookOpen size={20}/></span><span><strong>Мои курсы</strong><small>Открыть каталог курсов</small></span><span aria-hidden="true">→</span></Link>}</div>
     </section>
   </>
 }
@@ -54,7 +55,7 @@ export default function App() {
     <Route path="/register" element={user ? <Navigate to="/" replace/> : <AuthPage mode="register"/>}/>
     <Route path="/" element={<ProtectedPage user={user}><Home user={user!}/></ProtectedPage>}/>
     <Route path="/catalog" element={<ProtectedPage user={user}><CatalogPage/></ProtectedPage>}/>
-    <Route path="/tracks/:id" element={<ProtectedPage user={user}><TrackPage/></ProtectedPage>}/>
+    <Route path="/courses/:slug" element={<ProtectedPage user={user}><CoursePage/></ProtectedPage>}/>
     <Route path="/lessons/:id" element={user ? <LessonPage/> : <Navigate to="/login" replace/>}/>
     <Route path="/profile" element={<ProtectedPage user={user}><ProfilePage user={user!}/></ProtectedPage>}/>
     <Route path="/admin" element={<ProtectedPage user={user} admin><AdminHome/></ProtectedPage>}/>

@@ -50,7 +50,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .user-menu-panel a, .user-menu-panel button { display: flex; align-items: center; gap: 9px; padding: 10px; border: 0; border-radius: 8px; background: none; text-align: left; color: #47546a; font: inherit; font-size: .84rem; cursor: pointer; }
 .user-menu-panel a:hover, .user-menu-panel button:hover { background: #f5f6f8; }
 .user-menu-email { padding: 8px 10px 10px; border-bottom: 1px solid var(--color-border); color: var(--color-subtle); font-size: .74rem; overflow-wrap: anywhere; }
-.main-nav-toggle { display: none; }
 .main-content { width: min(100% - 64px, 1540px); margin: 0 auto; padding: 46px 0 88px; }
 .home-hero { display: flex; align-items: center; justify-content: space-between; gap: 42px; min-height: 325px; padding: clamp(32px, 5vw, 70px); overflow: hidden; border: 1px solid #e4e9f8; border-radius: 24px; background: linear-gradient(118deg, #f2f5ff 0%, #f9faff 62%, #ecf1ff 100%); }
 .home-hero-copy { max-width: 740px; }
@@ -245,12 +244,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 760px) {
   .main-header-inner { position: relative; width: calc(100% - 32px); min-height: 62px; gap: 12px; }
   .main-header .brand { font-size: 1.5rem; }
-  .main-nav-toggle { display: grid; margin-left: auto; }
-  .main-nav { position: absolute; top: calc(100% + 1px); right: -16px; left: -16px; display: none; align-items: stretch; padding: 9px 16px 13px; border-bottom: 1px solid var(--color-border); background: #fff; box-shadow: 0 12px 18px rgba(20,31,56,.06); }
-  .main-nav.open { display: grid; }
-  .main-nav-link { padding: 11px 12px; font-size: .88rem; }
-  .main-nav-link.admin-link { margin: 0; }
-  .user-menu { margin-left: 0; }
+  .main-nav { display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .main-nav::-webkit-scrollbar { display: none; }
+  .main-nav-link { padding: 8px 10px; font-size: .82rem; white-space: nowrap; }
+  .main-nav-link.admin-link { margin-left: auto; }
+  .user-menu { margin-left: auto; }
   .user-menu summary { gap: 0; }
   .user-menu summary > svg { display: none; }
   .user-menu-panel { right: -1px; }

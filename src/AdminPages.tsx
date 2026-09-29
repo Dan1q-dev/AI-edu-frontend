@@ -1,38 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { ArrowDown, ArrowLeft, ArrowUp, BookOpen, Eye, ImagePlus, Plus, Save, Trash2 } from 'lucide-react'
-import { api, apiAll, ApiError, type Block, type Lesson, type Module, type Question, type Test, type Track } from './api'
-import { Button, Confirm, ErrorState, Input, Loading, Notice, Textarea } from './components/ui'
+import { api, ApiError, type Block, type Lesson, type Question, type Test } from './api'
+import { Button, ErrorState, Input, Loading, Notice, Textarea } from './components/ui'
 import { EditorLayout, type SaveState } from './layouts/EditorLayout'
-
-type Kind = 'tracks' | 'modules' | 'lessons'
-type Item = Track | Module | Lesson
-export function AdminList({ kind }: { kind: Kind }) {
-  const qc = useQueryClient()
-  const { data, isLoading, error } = useQuery({ queryKey: ['admin', kind], queryFn: () => apiAll<Item>(`${kind}/`) })
-  const tracks = useQuery({ queryKey: ['admin', 'tracks'], queryFn: () => apiAll<Track>('tracks/'), enabled: kind !== 'tracks' })
-  const modules = useQuery({ queryKey: ['admin', 'modules'], queryFn: () => apiAll<Module>('modules/'), enabled: kind === 'lessons' })
-  const [editing, setEditing] = useState<Item | null | 'new'>(null)
-  const [form, setForm] = useState<Record<string, string | number | boolean>>({})
-  const [message, setMessage] = useState(''), [remove, setRemove] = useState<string | null>(null)
-  const label = kind === 'tracks' ? 'траектории' : kind === 'modules' ? 'модули' : 'уроки'
-  const start = (item?: Item) => { setEditing(item || 'new'); setForm(item ? { ...item } as unknown as Record<string, string | number | boolean> : { title: '', description: '', position: 0, track: tracks.data?.[0]?.id || 0, module: modules.data?.[0]?.id || 0, is_published: false, status: 'DRAFT' }) }
-  const field = (key: string, value: string | number | boolean) => setForm(f => ({ ...f, [key]: value }))
-  const save = async () => {
-    try {
-      const body = { ...form }; delete body.id; delete body.short_id; delete body.created_at; delete body.updated_at
-      const id = editing && editing !== 'new' ? editing.short_id : null
-      await api(`${kind}/${id ? id + '/' : ''}`, id ? 'PATCH' : 'POST', body)
-      await qc.invalidateQueries({ queryKey: ['admin', kind] })
-      setEditing(null); setMessage('Сохранено')
-    } catch (e) { setMessage((e as Error).message) }
-  }
-  const destroy = async () => { if (!remove) return; try { await api(`${kind}/${remove}/`, 'DELETE'); await qc.invalidateQueries({ queryKey: ['admin', kind] }); setRemove(null); setMessage('Удалено') } catch (e) { setMessage((e as Error).message); setRemove(null) } }
-  return <><div className="page-head"><div><span className="eyebrow">УПРАВЛЕНИЕ КОНТЕНТОМ</span><h1>{label[0].toUpperCase() + label.slice(1)}</h1><p>Создавайте и публикуйте материалы для студентов.</p></div><Button onClick={() => start()}><Plus size={17}/> Добавить</Button></div><Notice text={message} kind={message.includes('Ошибка') || message.includes('{') ? 'error' : 'success'}/>{isLoading ? <Loading/> : error ? <ErrorState error={error}/> : <div className="card table-wrap"><table><thead><tr><th>Название</th><th>Статус</th><th>Порядок</th><th>Действия</th></tr></thead><tbody>{data?.map(item => <tr key={item.id}><td><strong>{item.title}</strong><small>{item.description}</small></td><td><span className={`status ${'status' in item ? item.status === 'PUBLISHED' ? 'published' : '' : item.is_published ? 'published' : ''}`}>{'status' in item ? item.status === 'PUBLISHED' ? 'Опубликован' : 'Черновик' : item.is_published ? 'Опубликован' : 'Черновик'}</span></td><td>{'position' in item ? item.position + 1 : '—'}</td><td><div className="actions"><button onClick={() => start(item)}>Изменить</button>{kind === 'lessons' && <><Link to={`/admin/lessons/${item.short_id}/edit`}>Конструктор</Link><Link to={`/admin/lessons/${item.short_id}/test`}>Тест</Link></>}<button className="danger-text" onClick={() => setRemove(item.short_id)}>Удалить</button></div></td></tr>)}</tbody></table>{!data?.length && <div className="empty">Пока нет материалов. Создайте первый элемент.</div>}</div>}
-  {editing && <div className="modal-backdrop"><div className="modal form-modal"><h2>{editing === 'new' ? 'Создать' : 'Редактировать'} {kind === 'tracks' ? 'траекторию' : kind === 'modules' ? 'модуль' : 'урок'}</h2><label>Название<Input value={String(form.title || '')} onChange={e => field('title', e.target.value)}/></label><label>Описание<Textarea rows={3} value={String(form.description || '')} onChange={e => field('description', e.target.value)}/></label>{kind === 'modules' && <label>Траектория<select className="input" value={Number(form.track)} onChange={e => field('track', Number(e.target.value))}>{tracks.data?.map(t => <option value={t.id} key={t.id}>{t.title}</option>)}</select></label>}{kind === 'lessons' && <label>Модуль<select className="input" value={Number(form.module)} onChange={e => field('module', Number(e.target.value))}>{modules.data?.map(m => <option value={m.id} key={m.id}>{m.title}</option>)}</select></label>}{kind !== 'tracks' && <label>Порядок (с нуля)<Input type="number" min="0" value={Number(form.position) || 0} onChange={e => field('position', Number(e.target.value))}/></label>}{kind === 'lessons' ? <label className="checkbox"><input type="checkbox" checked={form.status === 'PUBLISHED'} onChange={e => field('status', e.target.checked ? 'PUBLISHED' : 'DRAFT')}/> Опубликован</label> : <label className="checkbox"><input type="checkbox" checked={Boolean(form.is_published)} onChange={e => field('is_published', e.target.checked)}/> Опубликовано</label>}<div className="row"><Button onClick={save}>Сохранить</Button><Button variant="secondary" onClick={() => setEditing(null)}>Отмена</Button></div></div></div>}{remove && <Confirm title="Удалить материал?" onConfirm={destroy} onCancel={() => setRemove(null)}/>}</>
-}
 
 function useLeaveWarning(dirty: boolean) {
   useEffect(() => { const handler = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault() }; window.addEventListener('beforeunload', handler); return () => window.removeEventListener('beforeunload', handler) }, [dirty])
