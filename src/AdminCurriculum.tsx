@@ -47,6 +47,7 @@ export function AdminCurriculum() {
   const selectedModule = selectedItem && isModule(selectedItem) ? selectedItem : selectedItem && isLesson(selectedItem) ? modules.find(module => module.id === selectedItem.module) : null
   const selectedTrack = selectedItem && 'short_id' in selectedItem && !isCourse(selectedItem) && !isModule(selectedItem) && !isLesson(selectedItem) ? selectedItem as Track : selectedCourse?.learning_track ? tracks.find(track => track.id === selectedCourse.learning_track) : null
   const start = (kind: Kind, item?: ContentItem, parentId?: number) => {
+    if (kind === 'tracks') return
     setEditing({ kind, item, parentId })
     setForm(item ? { ...item } as unknown as Record<string, string | number | boolean> : {
       title: '', description: '', position: 0, is_published: false, is_active: true, status: 'DRAFT',
@@ -58,17 +59,19 @@ export function AdminCurriculum() {
   const refresh = async () => Promise.all(['tracks', 'courses', 'modules', 'lessons'].map(key => qc.invalidateQueries({ queryKey: ['admin', key] })))
   const save = async () => {
     if (!editing) return
+    if (editing.kind === 'tracks') return
     try {
       const body = { ...form }
       for (const key of ['id', 'short_id', 'created_at', 'updated_at']) delete body[key]
       const key = editing.item ? keyOf(editing.item) : undefined
       const result = await api<ContentItem>(endpoint(editing.kind, key), key ? 'PATCH' : 'POST', body)
-      await refresh(); setSelected({ kind: editing.kind, id: keyOf(result) }); setEditing(null); setMessage(editing.kind === 'tracks' ? 'Траектория сохранена' : `${labelFor(editing.kind)} сохранён`)
+      await refresh(); setSelected({ kind: editing.kind, id: keyOf(result) }); setEditing(null); setMessage(`${labelFor(editing.kind)} сохранён`)
     } catch (e) { setMessage((e as Error).message) }
   }
   const destroy = async () => {
     if (!remove) return
-    try { await api(endpoint(remove.kind, remove.id), 'DELETE'); await refresh(); setSelected(null); setRemove(null); setMessage(remove.kind === 'tracks' ? 'Траектория удалена' : `${labelFor(remove.kind)} удалён`) }
+    if (remove.kind === 'tracks') return
+    try { await api(endpoint(remove.kind, remove.id), 'DELETE'); await refresh(); setSelected(null); setRemove(null); setMessage(`${labelFor(remove.kind)} удалён`) }
     catch (e) { setRemove(null); setMessage((e as Error).message) }
   }
   const toggle = (key: string) => setExpanded(value => ({ ...value, [key]: !(value[key] ?? true) }))
@@ -76,7 +79,7 @@ export function AdminCurriculum() {
   const treeRow = (kind: Kind, item: ContentItem, icon: React.ReactNode, indent = '') => <button key={`${kind}-${keyOf(item)}`} className={`tree-row ${indent} ${selected?.kind === kind && selected.id === keyOf(item) ? 'selected' : ''}`} onClick={() => select(kind, item)}>{icon}<span className="tree-label">{item.title}</span></button>
 
   return <>
-    <div className="page-head curriculum-heading"><div><span className="eyebrow">УПРАВЛЕНИЕ КОНТЕНТОМ</span><h1>Учебная программа</h1><p>Траектория → курс → модуль → урок.</p></div><Button onClick={() => start('tracks')}><CirclePlus size={17}/> Новая траектория</Button></div>
+    <div className="page-head curriculum-heading"><div><span className="eyebrow">УПРАВЛЕНИЕ КОНТЕНТОМ</span><h1>Учебная программа</h1><p>Траектория → курс → модуль → урок.</p></div></div>
     <Notice text={message} kind={message && !message.endsWith('сохранён') && !message.endsWith('удалён') && !message.endsWith('сохранена') && !message.endsWith('удалена') ? 'error' : 'success'}/>
     {loading ? <Loading/> : error ? <ErrorState error={error}/> : <section className="curriculum-workspace card">
       <aside className="curriculum-tree" aria-label="Структура учебной программы">
@@ -101,7 +104,7 @@ export function AdminCurriculum() {
         </div>
       </aside>
       <div className="curriculum-detail">
-        {!selectedItem ? <div className="curriculum-welcome"><div className="curriculum-welcome-icon"><Layers3 size={25}/></div><h2>Выберите материал</h2><p>Создайте траекторию, свяжите с ней курсы, а затем добавьте модули и уроки.</p><Button variant="secondary" onClick={() => start('tracks')}><CirclePlus size={16}/> Создать траекторию</Button></div> : <>
+        {!selectedItem ? <div className="curriculum-welcome"><div className="curriculum-welcome-icon"><Layers3 size={25}/></div><h2>Выберите материал</h2><p>Выберите существующую траекторию, чтобы добавить курсы, модули и уроки.</p></div> : <>
           <div className="detail-top"><div><span className="eyebrow">{labelFor(selected!.kind).toLocaleUpperCase()}</span><h2>{selectedItem.title}</h2></div><span className={`status ${isPublished(selectedItem) ? 'published' : ''}`}>{isPublished(selectedItem) ? 'Опубликовано' : 'Черновик'}</span></div>
           <div className="curriculum-breadcrumb">{selectedTrack && <><span>{selectedTrack.title}</span><span>›</span></>}{selectedCourse && selected?.kind !== 'courses' && <><span>{selectedCourse.title}</span><span>›</span></>}{selectedModule && selected?.kind === 'lessons' && <><span>{selectedModule.title}</span><span>›</span></>}<strong>{selectedItem.title}</strong></div>
           <p className="detail-description">{selectedItem.description || 'Описание пока не добавлено.'}</p>
@@ -111,12 +114,12 @@ export function AdminCurriculum() {
             {selected?.kind === 'modules' && <><div><span>Курс</span><strong>{selectedCourse?.title ?? '—'}</strong></div><div><span>Уроков</span><strong>{lessons.filter(lesson => lesson.module === (selectedItem as Module).id).length}</strong></div></>}
             {selected?.kind === 'lessons' && <><div><span>Модуль</span><strong>{selectedModule?.title ?? '—'}</strong></div><div><span>Порядок</span><strong>{(selectedItem as Lesson).position + 1}</strong></div></>}
           </div>
-          <div className="detail-actions"><Button variant="secondary" onClick={() => start(selected!.kind, selectedItem)}><Pencil size={16}/> Изменить сведения</Button>
+          <div className="detail-actions">{selected?.kind !== 'tracks' && <Button variant="secondary" onClick={() => start(selected!.kind, selectedItem)}><Pencil size={16}/> Изменить сведения</Button>}
             {selected?.kind === 'tracks' && <Button onClick={() => start('courses', undefined, (selectedItem as Track).id)}><CirclePlus size={16}/> Добавить курс</Button>}
             {selected?.kind === 'courses' && <Button onClick={() => start('modules', undefined, (selectedItem as Course).id)}><CirclePlus size={16}/> Добавить модуль</Button>}
             {selected?.kind === 'modules' && <Button onClick={() => start('lessons', undefined, (selectedItem as Module).id)}><CirclePlus size={16}/> Добавить урок</Button>}
             {selected?.kind === 'lessons' && <><Link className="button primary" to={`/admin/lessons/${selected.id}/edit`}>Редактировать содержание</Link><Link className="button secondary" to={`/admin/lessons/${selected.id}/test`}>Настроить тест</Link></>}
-            <Button variant="danger" className="detail-delete" onClick={() => setRemove(selected)}><Trash2 size={16}/> Удалить</Button>
+            {selected?.kind !== 'tracks' && <Button variant="danger" className="detail-delete" onClick={() => setRemove(selected)}><Trash2 size={16}/> Удалить</Button>}
           </div>
         </>}
       </div>
