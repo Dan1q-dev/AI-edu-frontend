@@ -1,54 +1,69 @@
-import { useEffect, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
-import { BookOpen, Layers, LayoutDashboard, LogOut, Menu, UserRound } from 'lucide-react'
+import { lazy, Suspense, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { BookOpen, Layers3 } from 'lucide-react'
 import { api, type User } from './api'
-import { AuthPage } from './AuthPage'
-import { CatalogPage, LessonPage, ProfilePage, TrackPage } from './StudentPages'
-import { EditorPage, TestEditor } from './AdminPages'
-import { AdminCurriculum } from './AdminCurriculum'
+import { MainLayout } from './layouts/MainLayout'
+import { ErrorState, Loading } from './components/ui'
 
-export function Button({ children, onClick, type = 'button', variant = 'primary', disabled = false, className = '' }: { children: React.ReactNode; onClick?: () => void; type?: 'button' | 'submit'; variant?: 'primary' | 'secondary' | 'danger'; disabled?: boolean; className?: string }) {
-  return <button type={type} disabled={disabled} onClick={onClick} className={`button ${variant} ${className}`}>{children}</button>
+const AuthPage = lazy(() => import('./AuthPage').then(module => ({ default: module.AuthPage })))
+const CatalogPage = lazy(() => import('./StudentPages').then(module => ({ default: module.CatalogPage })))
+const TrackPage = lazy(() => import('./StudentPages').then(module => ({ default: module.TrackPage })))
+const LessonPage = lazy(() => import('./StudentPages').then(module => ({ default: module.LessonPage })))
+const ProfilePage = lazy(() => import('./StudentPages').then(module => ({ default: module.ProfilePage })))
+const EditorPage = lazy(() => import('./AdminPages').then(module => ({ default: module.EditorPage })))
+const TestEditor = lazy(() => import('./AdminPages').then(module => ({ default: module.TestEditor })))
+const AdminCurriculum = lazy(() => import('./AdminCurriculum').then(module => ({ default: module.AdminCurriculum })))
+
+function Home({ user }: { user: User }) {
+  const isAdmin = user.role === 'ADMIN'
+  return <>
+    <section className="home-hero">
+      <div className="home-hero-copy"><span className="eyebrow">{isAdmin ? 'ВАШЕ РАБОЧЕЕ ПРОСТРАНСТВО' : 'ПРОДОЛЖАЙТЕ УЧИТЬСЯ'}</span>
+        <h1>{isAdmin ? 'Создавайте обучение, которое увлекает' : 'Знания, которые открывают возможности'}</h1>
+        <p>{isAdmin ? 'Собирайте программу, готовьте уроки и помогайте студентам двигаться вперёд.' : 'Выберите направление, изучайте уроки в своём темпе и проверяйте себя.'}</p>
+        <Link className="button primary" to={isAdmin ? '/admin/curriculum' : '/catalog'}>{isAdmin ? 'Открыть учебную программу' : 'Перейти в каталог'}<span aria-hidden="true">→</span></Link>
+      </div><div className="home-hero-art" aria-hidden="true"><BookOpen size={48}/><span>AI Edu</span></div>
+    </section>
+    <section className="home-next"><div><span className="eyebrow">{isAdmin ? 'УПРАВЛЕНИЕ' : 'ВАШ СЛЕДУЮЩИЙ ШАГ'}</span><h2>{isAdmin ? `Добро пожаловать, ${user.first_name || 'администратор'}` : `С возвращением${user.first_name ? `, ${user.first_name}` : ''}`}</h2><p>{isAdmin ? 'Все инструменты для работы с образовательным контентом собраны в одном месте.' : 'Начните с каталога и выберите траекторию, которая вам интересна.'}</p></div>
+      <div className="home-quick-links">{isAdmin ? <Link className="quick-link-card" to="/admin/curriculum"><span className="quick-link-icon"><Layers3 size={20}/></span><span><strong>Учебная программа</strong><small>Траектории, модули и уроки</small></span><span aria-hidden="true">→</span></Link> : <Link className="quick-link-card" to="/catalog"><span className="quick-link-icon"><BookOpen size={20}/></span><span><strong>Каталог траекторий</strong><small>Найдите курс для себя</small></span><span aria-hidden="true">→</span></Link>}</div>
+    </section>
+  </>
 }
-export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) { return <input {...props} className={`input ${props.className || ''}`} /> }
-export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) { return <textarea {...props} className={`input ${props.className || ''}`} /> }
-export function Loading() { return <div className="notice">Загрузка…</div> }
-export function ErrorState({ error }: { error: unknown }) { return <div className="notice error">{error instanceof Error ? error.message : 'Не удалось загрузить данные'}</div> }
-export function Confirm({ title, onConfirm, onCancel }: { title: string; onConfirm: () => void; onCancel: () => void }) { return <div className="modal-backdrop"><div className="modal"><h3>{title}</h3><div className="row"><Button variant="danger" onClick={onConfirm}>Подтвердить</Button><Button variant="secondary" onClick={onCancel}>Отмена</Button></div></div></div> }
-export function Notice({ text, kind = 'success' }: { text: string; kind?: 'success' | 'error' }) { return text ? <div role="status" className={`toast ${kind}`}>{text}</div> : null }
 
-function Shell({ user, children, admin = false }: { user: User; children: React.ReactNode; admin?: boolean }) {
-  const [open, setOpen] = useState(false)
-  const qc = useQueryClient()
-  const navigate = useNavigate()
-  const logout = async () => { await api('auth/logout/', 'POST'); qc.setQueryData(['me'], null); navigate('/login') }
-  const links = admin ? [['/admin', 'Обзор', LayoutDashboard], ['/admin/curriculum', 'Учебная программа', Layers]] as const : [['/', 'Главная', LayoutDashboard], ['/catalog', 'Каталог', BookOpen], ['/profile', 'Профиль', UserRound]] as const
-  return <div className="shell"><aside className={`sidebar ${open ? 'open' : ''}`}><Link className="brand" to={admin ? '/admin' : '/'}>AI<span>edu</span><small>Платформа знаний</small></Link><div className="side-label">{admin ? 'АДМИНИСТРИРОВАНИЕ' : 'ОБУЧЕНИЕ'}</div><nav>{links.map(([to, label, Icon]) => <Link key={to} onClick={() => setOpen(false)} className={location.pathname === to ? 'active' : ''} to={to}><Icon size={18}/>{label}</Link>)}</nav><div className="sidebar-foot"><div className="avatar">{(user.first_name || user.email)[0].toUpperCase()}</div><div className="user-meta"><strong>{user.first_name || user.email}</strong><small>{admin ? 'Администратор' : 'Студент'}</small></div><button title="Выйти" onClick={logout}><LogOut size={18}/></button></div></aside><div className="main-wrap"><header className="topbar"><button className="mobile-menu" onClick={() => setOpen(!open)}><Menu size={22}/></button><span>{admin ? 'Панель управления' : 'Личный кабинет'}</span><div className="topbar-right"><span className="role-badge">{admin ? 'ADMIN' : 'STUDENT'}</span><span className="avatar small">{(user.first_name || user.email)[0].toUpperCase()}</span></div></header><main className="content">{children}</main></div></div>
+function AdminHome() {
+  return <><div className="page-heading-row"><div><span className="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</span><h1>Администрирование</h1><p>Управляйте контентом и учебными материалами платформы.</p></div></div><div className="admin-home-grid">
+    <Link to="/admin/curriculum" className="admin-home-card"><span className="quick-link-icon"><Layers3 size={21}/></span><h2>Учебная программа</h2><p>Организуйте траектории, модули и уроки в единой структуре.</p><span className="card-link">Открыть программу <span aria-hidden="true">→</span></span></Link>
+    <Link to="/admin/curriculum" className="admin-home-card"><span className="quick-link-icon"><BookOpen size={21}/></span><h2>Конструктор уроков</h2><p>Создавайте лекции, добавляйте изображения и настраивайте тесты.</p><span className="card-link">Перейти к урокам <span aria-hidden="true">→</span></span></Link>
+  </div></>
 }
 
-function Home({ user }: { user: User }) { return <><div className="hero"><div><span className="eyebrow">НАЧНИТЕ УЧИТЬСЯ СЕГОДНЯ</span><h1>Знания, которые открывают возможности</h1><p>Выберите направление, изучайте уроки и проверяйте себя в тестах.</p><Link className="button primary" to="/catalog">Смотреть каталог →</Link></div><div className="hero-art"><BookOpen size={82}/></div></div><h2 className="section-title">Ваш учебный путь</h2><div className="card"><h3>Добро пожаловать, {user.first_name || 'студент'}!</h3><p>В каталоге доступны опубликованные образовательные траектории и уроки.</p><Link className="text-link" to="/catalog">Перейти к траекториям →</Link></div></> }
-function AdminHome() { return <><div className="page-head"><div><span className="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</span><h1>Управление обучением</h1><p>Создавайте траектории, собирайте уроки и публикуйте тесты.</p></div></div><div className="grid two"><Link to="/admin/curriculum" className="card action-card"><Layers/><h3>Учебная программа</h3><p>Траектории, модули и уроки в общей структуре.</p><span>Открыть →</span></Link><Link to="/admin/curriculum" className="card action-card"><BookOpen/><h3>Материалы и уроки</h3><p>Редактирование содержания и публикация уроков.</p><span>Открыть →</span></Link></div></> }
+function ProtectedPage({ user, children, admin = false }: { user: User | null | undefined; children: React.ReactNode; admin?: boolean }) {
+  if (!user) return <Navigate to="/login" replace/>
+  if (admin && user.role !== 'ADMIN') return <Navigate to="/" replace/>
+  return <MainLayout user={user}>{children}</MainLayout>
+}
 
 export default function App() {
-  const { data: user, isLoading } = useQuery({ queryKey: ['me'], queryFn: () => api<User>('auth/me/').catch(() => null), staleTime: 60000 })
+  const { data: user, isLoading, error } = useQuery({ queryKey: ['me'], queryFn: () => api<User>('auth/me/').catch(() => null), staleTime: 60000 })
   useEffect(() => { fetch('/api/v1/csrf/', { credentials: 'include' }).catch(() => {}) }, [])
-  if (isLoading) return <Loading />
-  return <Routes>
-    <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/'} /> : <AuthPage mode="login" />} />
-    <Route path="/register" element={user ? <Navigate to="/" /> : <AuthPage mode="register" />} />
-    <Route path="/" element={user ? <Shell user={user}><Home user={user}/></Shell> : <Navigate to="/login"/>}/>
-    <Route path="/catalog" element={user ? <Shell user={user}><CatalogPage/></Shell> : <Navigate to="/login"/>}/>
-    <Route path="/tracks/:id" element={user ? <Shell user={user}><TrackPage/></Shell> : <Navigate to="/login"/>}/>
-    <Route path="/lessons/:id" element={user ? <Shell user={user}><LessonPage/></Shell> : <Navigate to="/login"/>}/>
-    <Route path="/profile" element={user ? <Shell user={user}><ProfilePage user={user}/></Shell> : <Navigate to="/login"/>}/>
-    <Route path="/admin" element={user?.role === 'ADMIN' ? <Shell user={user} admin><AdminHome/></Shell> : <Navigate to="/"/>}/>
-    <Route path="/admin/curriculum" element={user?.role === 'ADMIN' ? <Shell user={user} admin><AdminCurriculum/></Shell> : <Navigate to="/"/>}/>
+  if (isLoading) return <Loading/>
+  if (error) return <ErrorState error={error}/>
+  return <Suspense fallback={<Loading/>}><Routes>
+    <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin' : '/'} replace/> : <AuthPage mode="login"/>}/>
+    <Route path="/register" element={user ? <Navigate to="/" replace/> : <AuthPage mode="register"/>}/>
+    <Route path="/" element={<ProtectedPage user={user}><Home user={user!}/></ProtectedPage>}/>
+    <Route path="/catalog" element={<ProtectedPage user={user}><CatalogPage/></ProtectedPage>}/>
+    <Route path="/tracks/:id" element={<ProtectedPage user={user}><TrackPage/></ProtectedPage>}/>
+    <Route path="/lessons/:id" element={user ? <LessonPage/> : <Navigate to="/login" replace/>}/>
+    <Route path="/profile" element={<ProtectedPage user={user}><ProfilePage user={user!}/></ProtectedPage>}/>
+    <Route path="/admin" element={<ProtectedPage user={user} admin><AdminHome/></ProtectedPage>}/>
+    <Route path="/admin/curriculum" element={<ProtectedPage user={user} admin><AdminCurriculum/></ProtectedPage>}/>
     <Route path="/admin/tracks" element={<Navigate to="/admin/curriculum" replace/>}/>
     <Route path="/admin/modules" element={<Navigate to="/admin/curriculum" replace/>}/>
     <Route path="/admin/lessons" element={<Navigate to="/admin/curriculum" replace/>}/>
-    <Route path="/admin/lessons/:id/edit" element={user?.role === 'ADMIN' ? <Shell user={user} admin><EditorPage/></Shell> : <Navigate to="/"/>}/>
-    <Route path="/admin/lessons/:id/test" element={user?.role === 'ADMIN' ? <Shell user={user} admin><TestEditor/></Shell> : <Navigate to="/"/>}/>
-    <Route path="*" element={<Navigate to="/"/>}/>
-  </Routes>
+    <Route path="/admin/lessons/:id/edit" element={user?.role === 'ADMIN' ? <EditorPage/> : <Navigate to="/" replace/>}/>
+    <Route path="/admin/lessons/:id/test" element={user?.role === 'ADMIN' ? <TestEditor/> : <Navigate to="/" replace/>}/>
+    <Route path="*" element={<Navigate to="/" replace/>}/>
+  </Routes></Suspense>
 }

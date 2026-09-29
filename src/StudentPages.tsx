@@ -3,22 +3,23 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Clock3, Layers } from 'lucide-react'
-import { api, ApiError, type Attempt, type Block, type Lesson, type Module, type Page, type Test, type Track, type User } from './api'
-import { Button, ErrorState, Input, Loading, Notice } from './App'
+import { api, apiAll, ApiError, type Attempt, type Block, type Lesson, type Module, type Page, type Test, type Track, type User } from './api'
+import { Button, ErrorState, Input, Loading, Notice } from './components/ui'
+import { LearningLayout, type CourseSection } from './layouts/LearningLayout'
 
 export function CatalogPage() {
-  const { data, isLoading, error } = useQuery({ queryKey: ['tracks'], queryFn: () => api<Page<Track>>('tracks/') })
-  return <><div className="page-head"><div><span className="eyebrow">ИССЛЕДУЙТЕ И УЧИТЕСЬ</span><h1>Каталог траекторий</h1><p>Выберите направление, которое вам интересно.</p></div></div>{isLoading ? <Loading/> : error ? <ErrorState error={error}/> : <div className="grid two">{data?.results.map((track, i) => <Link className="card track-card" key={track.id} to={`/tracks/${track.short_id}`}><div className={`track-icon tone-${i % 2}`}><Layers size={30}/></div><span className="eyebrow">ОБРАЗОВАТЕЛЬНАЯ ТРАЕКТОРИЯ</span><h3>{track.title}</h3><p>{track.description || 'Уроки и тесты для системного обучения.'}</p><span className="text-link">Смотреть модули <ChevronRight size={16}/></span></Link>)}</div>}</>
+  const { data, isLoading, error } = useQuery({ queryKey: ['tracks'], queryFn: () => apiAll<Track>('tracks/') })
+  return <><div className="page-heading-row"><div><span className="eyebrow">ИССЛЕДУЙТЕ И УЧИТЕСЬ</span><h1>Каталог траекторий</h1><p>Выберите направление и учитесь в своём темпе.</p></div><span className="catalog-count">{data?.length ?? 0} {data?.length === 1 ? 'траектория' : 'траекторий'}</span></div>{isLoading ? <Loading/> : error ? <ErrorState error={error}/> : data?.length ? <div className="catalog-grid">{data.map((track, i) => <Link className="catalog-card" key={track.id} to={`/tracks/${track.short_id}`}><div className={`catalog-card-art tone-${i % 3}`}><Layers size={29}/><span>AI Edu · {String(i + 1).padStart(2, '0')}</span></div><div className="catalog-card-body"><span className="eyebrow">ОБРАЗОВАТЕЛЬНАЯ ТРАЕКТОРИЯ</span><h2>{track.title}</h2><p>{track.description || 'Уроки и тесты для системного обучения.'}</p><span className="card-link">Смотреть программу <ChevronRight size={16}/></span></div></Link>)}</div> : <div className="empty-state"><Layers size={28}/><h2>Пока нет опубликованных траекторий</h2><p>Загляните позже — здесь появятся новые программы.</p></div>}</>
 }
 
 export function TrackPage() {
   const { id } = useParams()
   const track = useQuery({ queryKey: ['track', id], queryFn: () => api<Track>(`tracks/${id}/`) })
-  const modules = useQuery({ queryKey: ['modules', track.data?.id], queryFn: () => api<Page<Module>>(`modules/?track=${track.data!.id}`), enabled: Boolean(track.data) })
-  const lessons = useQuery({ queryKey: ['all-lessons', id], queryFn: () => api<Page<Lesson>>('lessons/?page_size=100') })
+  const modules = useQuery({ queryKey: ['modules', track.data?.id], queryFn: () => apiAll<Module>(`modules/?track=${track.data!.id}`), enabled: Boolean(track.data) })
+  const lessons = useQuery({ queryKey: ['track-lessons', track.data?.id, modules.data?.length], queryFn: async () => (await Promise.all((modules.data ?? []).map(module => apiAll<Lesson>(`lessons/?module=${module.id}`)))).flat(), enabled: modules.isSuccess })
   if (track.isLoading || modules.isLoading || lessons.isLoading) return <Loading/>
   if (track.error || modules.error || lessons.error) return <ErrorState error={track.error || modules.error || lessons.error}/>
-  return <><Link className="back" to="/catalog"><ArrowLeft size={16}/> Все траектории</Link><div className="page-head"><div><span className="eyebrow">ПРОГРАММА ОБУЧЕНИЯ</span><h1>{track.data?.title}</h1><p>{track.data?.description}</p></div></div><div className="stack">{modules.data?.results.map((module, index) => <div className="card module-card" key={module.id}><div className="module-num">{String(index + 1).padStart(2, '0')}</div><div className="module-body"><h3>{module.title}</h3><p>{module.description}</p><div className="lesson-list">{lessons.data?.results.filter(l => l.module === module.id).map((lesson, i) => <Link to={`/lessons/${lesson.short_id}`} key={lesson.id}><BookOpen size={17}/><span>Урок {i + 1}. {lesson.title}</span><ChevronRight size={16}/></Link>)}</div></div></div>)}</div></>
+  return <><Link className="back" to="/catalog"><ArrowLeft size={16}/> Все траектории</Link><div className="page-heading-row"><div><span className="eyebrow">ПРОГРАММА ОБУЧЕНИЯ</span><h1>{track.data?.title}</h1><p>{track.data?.description}</p></div><span className="catalog-count">{lessons.data?.length ?? 0} уроков</span></div><div className="module-list">{modules.data?.map((module, index) => <section className="module-card card" key={module.id}><div className="module-number">{String(index + 1).padStart(2, '0')}</div><div className="module-content"><div><span className="eyebrow">МОДУЛЬ {index + 1}</span><h2>{module.title}</h2><p>{module.description}</p></div><div className="module-lesson-list">{lessons.data?.filter(lesson => lesson.module === module.id).map((lesson, i) => <Link to={`/lessons/${lesson.short_id}`} key={lesson.id}><span className="lesson-list-icon"><BookOpen size={17}/></span><span className="module-lesson-copy"><strong>{lesson.title}</strong><small>Урок {i + 1}</small></span><ChevronRight size={17}/></Link>)}</div></div></section>)}</div></>
 }
 
 function TestRunner({ lessonId }: { lessonId: string }) {
@@ -44,9 +45,25 @@ export function LessonPage() {
   const { id } = useParams()
   const lesson = useQuery({ queryKey: ['lesson', id], queryFn: () => api<Lesson>(`lessons/${id}/`) })
   const blocks = useQuery({ queryKey: ['blocks', id], queryFn: () => api<Block[]>(`lessons/${id}/blocks/`) })
+  const modules = useQuery({ queryKey: ['learning-modules', lesson.data?.module], queryFn: () => apiAll<Module>('modules/'), enabled: Boolean(lesson.data) })
+  const currentModule = modules.data?.find(module => module.id === lesson.data?.module)
+  const tracks = useQuery({ queryKey: ['learning-tracks'], queryFn: () => apiAll<Track>('tracks/'), enabled: Boolean(currentModule) })
+  const courseSectionsQuery = useQuery({ queryKey: ['learning-lessons', currentModule?.track, modules.data?.length], queryFn: async () => {
+    const courseModules = (modules.data ?? []).filter(module => module.track === currentModule?.track)
+    const grouped = await Promise.all(courseModules.map(async module => ({ module, lessons: await apiAll<Lesson>(`lessons/?module=${module.id}`) })))
+    return grouped
+  }, enabled: Boolean(currentModule) })
   if (lesson.isLoading || blocks.isLoading) return <Loading/>
   if (lesson.error || blocks.error) return <ErrorState error={lesson.error || blocks.error}/>
-  return <><Link className="back" to="/catalog"><ArrowLeft size={16}/> К каталогу</Link><div className="lesson-header"><span className="eyebrow">УЧЕБНЫЙ МАТЕРИАЛ</span><h1>{lesson.data?.title}</h1><p>{lesson.data?.description}</p></div><article className="article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown"><ReactMarkdown skipHtml>{block.content}</ReactMarkdown></div> : <figure key={block.id}><img src={block.media_url || ''} alt={block.content || 'Изображение урока'}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article><TestRunner lessonId={id!}/></>
+  const sections: CourseSection[] = (courseSectionsQuery.data ?? []).map(section => ({ ...section, lessons: section.lessons }))
+  const courseLessons = sections.flatMap(section => section.lessons)
+  const currentIndex = courseLessons.findIndex(item => item.short_id === id)
+  const courseTrack = tracks.data?.find(track => track.id === currentModule?.track)
+  return <LearningLayout trackTitle={courseTrack?.title} sections={sections} lessonId={id!} lessonTitle={lesson.data?.title || 'Урок'} currentIndex={currentIndex >= 0 ? currentIndex : 0} totalLessons={courseLessons.length || undefined} previous={currentIndex > 0 ? courseLessons[currentIndex - 1] : undefined} next={currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1] : undefined}>
+    <div className="lesson-heading"><span className="eyebrow">УЧЕБНЫЙ МАТЕРИАЛ</span><h1>{lesson.data?.title}</h1><p>{lesson.data?.description}</p></div>
+    <article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown"><ReactMarkdown skipHtml>{block.content}</ReactMarkdown></div> : <figure key={block.id}><img src={block.media_url || ''} alt={block.content || 'Изображение урока'}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article>
+    <TestRunner lessonId={id!}/>
+  </LearningLayout>
 }
 
 function PasswordSection() {

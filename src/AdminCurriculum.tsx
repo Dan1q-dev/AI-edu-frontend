@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { BookOpen, ChevronDown, ChevronRight, CirclePlus, FileText, Layers3, Pencil, Search, Trash2 } from 'lucide-react'
-import { api, type Lesson, type Module, type Page, type Track } from './api'
-import { Button, Confirm, ErrorState, Input, Loading, Notice, Textarea } from './App'
+import { api, apiAll, type Lesson, type Module, type Track } from './api'
+import { Button, Confirm, ErrorState, Input, Loading, Notice, Textarea } from './components/ui'
 import './admin-curriculum.css'
 
 type Kind = 'tracks' | 'modules' | 'lessons'
@@ -18,9 +18,9 @@ const endpoint = (kind: Kind, id?: string) => `${kind}/${id ? `${id}/` : ''}`
 
 export function AdminCurriculum() {
   const qc = useQueryClient()
-  const tracksQuery = useQuery({ queryKey: ['admin', 'tracks'], queryFn: () => api<Page<Track>>('tracks/') })
-  const modulesQuery = useQuery({ queryKey: ['admin', 'modules'], queryFn: () => api<Page<Module>>('modules/') })
-  const lessonsQuery = useQuery({ queryKey: ['admin', 'lessons'], queryFn: () => api<Page<Lesson>>('lessons/') })
+  const tracksQuery = useQuery({ queryKey: ['admin', 'tracks'], queryFn: () => apiAll<Track>('tracks/') })
+  const modulesQuery = useQuery({ queryKey: ['admin', 'modules'], queryFn: () => apiAll<Module>('modules/') })
+  const lessonsQuery = useQuery({ queryKey: ['admin', 'lessons'], queryFn: () => apiAll<Lesson>('lessons/') })
   const [selected, setSelected] = useState<Selected | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [search, setSearch] = useState('')
@@ -28,9 +28,9 @@ export function AdminCurriculum() {
   const [form, setForm] = useState<Record<string, string | number | boolean>>({})
   const [remove, setRemove] = useState<Selected | null>(null)
   const [message, setMessage] = useState('')
-  const tracks = tracksQuery.data?.results ?? []
-  const modules = modulesQuery.data?.results ?? []
-  const lessons = lessonsQuery.data?.results ?? []
+  const tracks = tracksQuery.data ?? []
+  const modules = modulesQuery.data ?? []
+  const lessons = lessonsQuery.data ?? []
   const loading = tracksQuery.isLoading || modulesQuery.isLoading || lessonsQuery.isLoading
   const error = tracksQuery.error || modulesQuery.error || lessonsQuery.error
   const filtered = search.trim().toLocaleLowerCase()

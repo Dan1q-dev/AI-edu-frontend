@@ -25,3 +25,17 @@ export async function api<T>(path: string, method = 'GET', data?: unknown): Prom
   }
   return res.status === 204 ? undefined as T : res.json()
 }
+
+export async function apiAll<T>(path: string): Promise<T[]> {
+  const results: T[] = []
+  let next: string | null = path
+  while (next) {
+    const page: Page<T> = await api<Page<T>>(next)
+    results.push(...page.results)
+    if (!page.next) break
+    const url = new URL(page.next, window.location.origin)
+    const apiPrefix = '/api/v1/'
+    next = `${url.pathname.startsWith(apiPrefix) ? url.pathname.slice(apiPrefix.length) : url.pathname.replace(/^\//, '')}${url.search}`
+  }
+  return results
+}

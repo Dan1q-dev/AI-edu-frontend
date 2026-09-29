@@ -6,7 +6,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { BookOpen } from 'lucide-react'
 import { api, type User } from './api'
-import { Button, Input, Notice } from './App'
+import { Button, Input, Notice } from './components/ui'
 
 const schema = z.object({ email: z.email('Введите корректный email'), password: z.string().min(8, 'Минимум 8 символов'), first_name: z.string().optional(), last_name: z.string().optional() })
 type Form = z.infer<typeof schema>

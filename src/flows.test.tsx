@@ -36,7 +36,7 @@ describe('main flows', () => {
     renderAt('/admin/lessons/1/edit', <EditorPage/>)
     await screen.findByText('Intro')
     fireEvent.click(screen.getByRole('button', { name: /Текстовый блок/ }))
-    fireEvent.change(screen.getByPlaceholderText('Текст урока в Markdown…'), { target: { value: '# First block' } })
+    fireEvent.change(screen.getByPlaceholderText('Пишите в Markdown: заголовки, списки, выделения…'), { target: { value: '# First block' } })
     fireEvent.click(screen.getByRole('button', { name: /Сохранить/ }))
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('lessons/1/blocks/', 'PUT', [{ type: 'TEXT', position: 0, content: '# First block', media: null, config: {} }]))
   })
