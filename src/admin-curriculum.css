@@ -1,0 +1,43 @@
+.curriculum-workspace{display:grid;grid-template-columns:minmax(280px,36%) minmax(0,1fr);padding:0;overflow:hidden;min-height:560px}
+.curriculum-tree{border-right:1px solid #e9edf3;min-width:0;display:flex;flex-direction:column}
+.curriculum-tree-head{display:flex;justify-content:space-between;align-items:center;padding:22px 20px 15px}
+.curriculum-tree-head strong{font-size:.95rem}
+.curriculum-tree-head span{font-size:.74rem;color:#8793a5}
+.curriculum-search{margin:0 16px 14px;display:flex;align-items:center;gap:8px;border:1px solid #e1e7ef;border-radius:9px;padding:0 10px;color:#8291a6}
+.curriculum-search input{border:0;outline:0;min-width:0;width:100%;height:38px;font-size:.82rem;color:#25344b}
+.tree-scroll{padding:0 10px 20px;overflow:auto;max-height:calc(100vh - 360px)}
+.tree-group{margin:2px 0}
+.tree-row{display:flex;align-items:center;gap:4px;width:100%;min-height:38px;padding:3px 7px;border-radius:8px;color:#52627a}
+.tree-row.selected{background:#edf6ff;color:#196da9}
+.tree-toggle,.tree-item,.tree-add{border:0;background:transparent;color:inherit}
+.tree-toggle{width:20px;height:26px;display:grid;place-items:center;flex:none;padding:0}
+.tree-item{display:flex;align-items:center;gap:8px;min-width:0;flex:1;text-align:left;padding:5px 1px;font-size:.82rem;font-weight:650}
+.tree-item span,.tree-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-add{width:28px;height:28px;display:grid;place-items:center;border-radius:6px;color:#8291a6;opacity:0}
+.tree-row:hover .tree-add,.tree-add:focus-visible{opacity:1}
+.tree-add:hover{background:#e6f3ff;color:#1477b8}
+.tree-module{margin-left:18px}
+.tree-lesson{border:0;background:transparent;text-align:left;font-size:.8rem;cursor:pointer;padding-left:5px}
+.tree-lesson svg{flex:none}
+.tree-spacer{width:15px;flex:none}
+.tree-label{flex:1}
+.tree-empty{padding:10px 16px 12px 44px;color:#9aa5b5;font-size:.78rem}
+.curriculum-detail{padding:30px 34px;min-width:0}
+.curriculum-welcome{height:100%;min-height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:400px;margin:auto}
+.curriculum-welcome-icon{width:54px;height:54px;border-radius:16px;background:#e9f5ff;color:#2581c2;display:grid;place-items:center;margin-bottom:18px}
+.curriculum-welcome h2{margin-bottom:8px}
+.curriculum-welcome p{font-size:.88rem;margin-bottom:20px}
+.detail-top{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.detail-top h2{font-size:1.6rem;margin:7px 0 0;overflow-wrap:anywhere}
+.curriculum-breadcrumb{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:20px;font-size:.78rem;color:#8190a5}
+.curriculum-breadcrumb strong{color:#3e506a}
+.detail-description{margin:24px 0;color:#69778c;white-space:pre-line}
+.detail-facts{display:flex;gap:12px;flex-wrap:wrap;margin:25px 0 30px}
+.detail-facts>div{min-width:130px;background:#f7f9fc;border:1px solid #edf0f5;border-radius:10px;padding:13px 15px}
+.detail-facts span,.detail-facts strong{display:block}
+.detail-facts span{font-size:.72rem;color:#8a96a8;margin-bottom:6px}
+.detail-facts strong{font-size:.9rem;color:#354760}
+.detail-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;border-top:1px solid #edf0f5;padding-top:20px}
+.detail-actions .button{font-size:.8rem;padding:9px 12px;min-height:38px}
+.detail-actions .detail-delete{margin-left:auto}
+@media(max-width:760px){.curriculum-workspace{grid-template-columns:1fr;min-height:0}.curriculum-tree{border-right:0;border-bottom:1px solid #e9edf3}.tree-scroll{max-height:330px}.curriculum-detail{padding:24px 20px;min-height:300px}.detail-actions .detail-delete{margin-left:0}}
