@@ -1,16 +1,13 @@
 services:
   frontend:
-    build:
-      context: .
-      target: production
-    ports: !override ["80:80"]
-    volumes: [static_data:/static:ro]
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-volumes:
-  static_data:
+    image: ${FRONTEND_IMAGE:-ai-edu-frontend}:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    networks:
+      - aiedu-platform
+
+networks:
+  aiedu-platform:
     external: true
-    name: aiedu-static
+    name: aiedu-platform
