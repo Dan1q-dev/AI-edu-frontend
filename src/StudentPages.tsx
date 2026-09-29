@@ -8,17 +8,17 @@ import { Button, ErrorState, Input, Loading, Notice } from './App'
 
 export function CatalogPage() {
   const { data, isLoading, error } = useQuery({ queryKey: ['tracks'], queryFn: () => api<Page<Track>>('tracks/') })
-  return <><div className="page-head"><div><span className="eyebrow">ИССЛЕДУЙТЕ И УЧИТЕСЬ</span><h1>Каталог траекторий</h1><p>Выберите направление, которое вам интересно.</p></div></div>{isLoading ? <Loading/> : error ? <ErrorState error={error}/> : <div className="grid two">{data?.results.map((track, i) => <Link className="card track-card" key={track.id} to={`/tracks/${track.id}`}><div className={`track-icon tone-${i % 2}`}><Layers size={30}/></div><span className="eyebrow">ОБРАЗОВАТЕЛЬНАЯ ТРАЕКТОРИЯ</span><h3>{track.title}</h3><p>{track.description || 'Уроки и тесты для системного обучения.'}</p><span className="text-link">Смотреть модули <ChevronRight size={16}/></span></Link>)}</div>}</>
+  return <><div className="page-head"><div><span className="eyebrow">ИССЛЕДУЙТЕ И УЧИТЕСЬ</span><h1>Каталог траекторий</h1><p>Выберите направление, которое вам интересно.</p></div></div>{isLoading ? <Loading/> : error ? <ErrorState error={error}/> : <div className="grid two">{data?.results.map((track, i) => <Link className="card track-card" key={track.id} to={`/tracks/${track.short_id}`}><div className={`track-icon tone-${i % 2}`}><Layers size={30}/></div><span className="eyebrow">ОБРАЗОВАТЕЛЬНАЯ ТРАЕКТОРИЯ</span><h3>{track.title}</h3><p>{track.description || 'Уроки и тесты для системного обучения.'}</p><span className="text-link">Смотреть модули <ChevronRight size={16}/></span></Link>)}</div>}</>
 }
 
 export function TrackPage() {
   const { id } = useParams()
   const track = useQuery({ queryKey: ['track', id], queryFn: () => api<Track>(`tracks/${id}/`) })
-  const modules = useQuery({ queryKey: ['modules', id], queryFn: () => api<Page<Module>>(`modules/?track=${id}`) })
+  const modules = useQuery({ queryKey: ['modules', track.data?.id], queryFn: () => api<Page<Module>>(`modules/?track=${track.data!.id}`), enabled: Boolean(track.data) })
   const lessons = useQuery({ queryKey: ['all-lessons', id], queryFn: () => api<Page<Lesson>>('lessons/?page_size=100') })
   if (track.isLoading || modules.isLoading || lessons.isLoading) return <Loading/>
   if (track.error || modules.error || lessons.error) return <ErrorState error={track.error || modules.error || lessons.error}/>
-  return <><Link className="back" to="/catalog"><ArrowLeft size={16}/> Все траектории</Link><div className="page-head"><div><span className="eyebrow">ПРОГРАММА ОБУЧЕНИЯ</span><h1>{track.data?.title}</h1><p>{track.data?.description}</p></div></div><div className="stack">{modules.data?.results.map((module, index) => <div className="card module-card" key={module.id}><div className="module-num">{String(index + 1).padStart(2, '0')}</div><div className="module-body"><h3>{module.title}</h3><p>{module.description}</p><div className="lesson-list">{lessons.data?.results.filter(l => l.module === module.id).map((lesson, i) => <Link to={`/lessons/${lesson.id}`} key={lesson.id}><BookOpen size={17}/><span>Урок {i + 1}. {lesson.title}</span><ChevronRight size={16}/></Link>)}</div></div></div>)}</div></>
+  return <><Link className="back" to="/catalog"><ArrowLeft size={16}/> Все траектории</Link><div className="page-head"><div><span className="eyebrow">ПРОГРАММА ОБУЧЕНИЯ</span><h1>{track.data?.title}</h1><p>{track.data?.description}</p></div></div><div className="stack">{modules.data?.results.map((module, index) => <div className="card module-card" key={module.id}><div className="module-num">{String(index + 1).padStart(2, '0')}</div><div className="module-body"><h3>{module.title}</h3><p>{module.description}</p><div className="lesson-list">{lessons.data?.results.filter(l => l.module === module.id).map((lesson, i) => <Link to={`/lessons/${lesson.short_id}`} key={lesson.id}><BookOpen size={17}/><span>Урок {i + 1}. {lesson.title}</span><ChevronRight size={16}/></Link>)}</div></div></div>)}</div></>
 }
 
 function TestRunner({ lessonId }: { lessonId: string }) {

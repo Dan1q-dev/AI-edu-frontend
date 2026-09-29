@@ -1,7 +1,7 @@
 export type User = { id: number; email: string; first_name: string; last_name: string; role: 'STUDENT' | 'ADMIN'; date_joined?: string }
-export type Track = { id: number; title: string; slug: string; description: string; cover: number | null; is_published: boolean }
-export type Module = { id: number; track: number; title: string; description: string; position: number; is_published: boolean }
-export type Lesson = { id: number; module: number; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED' }
+export type Track = { id: number; short_id: string; title: string; description: string; cover: number | null; is_published: boolean }
+export type Module = { id: number; short_id: string; track: number; title: string; description: string; position: number; is_published: boolean }
+export type Lesson = { id: number; short_id: string; module: number; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED' }
 export type Block = { id?: number; type: 'TEXT' | 'IMAGE'; position: number; content: string; media: number | null; media_url?: string | null; config: Record<string, unknown> }
 export type Option = { id?: number; text: string; position: number; is_correct?: boolean }
 export type Question = { id?: number; text: string; position: number; points: number; options: Option[] }
