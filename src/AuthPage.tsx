@@ -92,38 +92,16 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           </p>
 
           {mode === 'register' && (
-            <>
-              <div className="row">
-                <label>
-                  Имя
-                  <Input {...register('first_name')} placeholder="Имя" />
-                </label>
-                <label>
-                  Фамилия
-                  <Input {...register('last_name')} placeholder="Фамилия" />
-                </label>
-              </div>
-
-              {/* Hidden input keeps form state synchronized */}
-              <input
-                type="hidden"
-                {...register('learning_track', { setValueAs: v => (v ? Number(v) : undefined) })}
-                value={selectedTrackId ? String(selectedTrackId) : ''}
-              />
-
-              <TrackSelect
-                tracks={tracks.data ?? []}
-                selectedTrackId={selectedTrackId}
-                onSelect={trackId => {
-                  setValue('learning_track', trackId, { shouldValidate: true })
-                  if (error === 'Выберите траекторию обучения') setError('')
-                }}
-                isLoading={tracks.isLoading}
-                error={tracks.error ? 'Не удалось загрузить траектории' : null}
-                hasError={Boolean(error && !selectedTrackId)}
-                errorMessage={error && !selectedTrackId ? error : null}
-              />
-            </>
+            <div className="row">
+              <label>
+                Имя
+                <Input {...register('first_name')} placeholder="Имя" />
+              </label>
+              <label>
+                Фамилия
+                <Input {...register('last_name')} placeholder="Фамилия" />
+              </label>
+            </div>
           )}
 
           <label>
@@ -147,6 +125,30 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             />
             <small className="field-error">{errors.password?.message}</small>
           </label>
+
+          {mode === 'register' && (
+            <>
+              {/* Hidden input keeps form state synchronized */}
+              <input
+                type="hidden"
+                {...register('learning_track', { setValueAs: v => (v ? Number(v) : undefined) })}
+                value={selectedTrackId ? String(selectedTrackId) : ''}
+              />
+
+              <TrackSelect
+                tracks={tracks.data ?? []}
+                selectedTrackId={selectedTrackId}
+                onSelect={trackId => {
+                  setValue('learning_track', trackId, { shouldValidate: true })
+                  if (error === 'Выберите траекторию обучения') setError('')
+                }}
+                isLoading={tracks.isLoading}
+                error={tracks.error ? 'Не удалось загрузить траектории' : null}
+                hasError={Boolean(error && !selectedTrackId)}
+                errorMessage={error && !selectedTrackId ? error : null}
+              />
+            </>
+          )}
 
           <Notice text={error} kind="error" />
 
