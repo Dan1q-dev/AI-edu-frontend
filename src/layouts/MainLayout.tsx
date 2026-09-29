@@ -72,7 +72,7 @@ export function MainLayout({ user, children }: { user: User; children: ReactNode
         </nav>
         <details ref={userMenuRef} className="user-menu">
           <summary aria-label="Меню пользователя"><span className="avatar">{(user.first_name || user.email)[0].toUpperCase()}</span><span className="user-menu-name">{user.first_name || user.email}</span><ChevronDown size={15}/></summary>
-          <div className="user-menu-panel"><span className="user-menu-email">{user.email}</span><Link to="/profile" onClick={closeUserMenu}>Профиль</Link><button onClick={() => { closeUserMenu(); logout() }}><LogOut size={16}/>Выйти</button></div>
+          <div className="user-menu-panel"><span className="user-menu-email" title={user.email}>{user.email}</span><Link to="/profile" onClick={closeUserMenu}>Профиль</Link><button onClick={() => { closeUserMenu(); logout() }}><LogOut size={16}/>Выйти</button></div>
         </details>
       </div>
     </header>

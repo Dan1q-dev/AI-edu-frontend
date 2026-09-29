@@ -50,6 +50,7 @@ export function TrackSelect({
                 role="radio"
                 aria-checked={isSelected}
                 disabled={disabled}
+                title={track.title}
                 className={`track-option-btn ${isSelected ? 'active' : ''}`}
                 onClick={() => onSelect(track.id)}
               >

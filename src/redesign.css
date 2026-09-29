@@ -46,10 +46,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .user-menu summary { display: flex; align-items: center; gap: 9px; cursor: pointer; list-style: none; }
 .user-menu summary::-webkit-details-marker { display: none; }
 .user-menu-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #49566b; font-size: .82rem; font-weight: 620; }
-.user-menu-panel { position: absolute; z-index: 30; top: calc(100% + 13px); right: 0; display: grid; width: 220px; padding: 8px; border: 1px solid var(--color-border); border-radius: 13px; background: #fff; box-shadow: var(--shadow-card); }
+.user-menu-panel { position: absolute; z-index: 30; top: calc(100% + 13px); right: 0; display: grid; min-width: 240px; width: max-content; max-width: min(360px, calc(100vw - 32px)); padding: 8px; border: 1px solid var(--color-border); border-radius: 13px; background: #fff; box-shadow: var(--shadow-card); }
 .user-menu-panel a, .user-menu-panel button { display: flex; align-items: center; gap: 9px; padding: 10px; border: 0; border-radius: 8px; background: none; text-align: left; color: #47546a; font: inherit; font-size: .84rem; cursor: pointer; }
 .user-menu-panel a:hover, .user-menu-panel button:hover { background: #f5f6f8; }
-.user-menu-email { padding: 8px 10px 10px; border-bottom: 1px solid var(--color-border); color: var(--color-subtle); font-size: .74rem; overflow-wrap: anywhere; }
+.user-menu-email { padding: 8px 10px 10px; border-bottom: 1px solid var(--color-border); color: var(--color-subtle); font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 100%; }
 .main-content { width: min(100% - 64px, 1540px); margin: 0 auto; padding: 46px 0 88px; }
 .home-hero { display: flex; align-items: center; justify-content: space-between; gap: 42px; min-height: 325px; padding: clamp(32px, 5vw, 70px); overflow: hidden; border: 1px solid #e4e9f8; border-radius: 24px; background: linear-gradient(118deg, #f2f5ff 0%, #f9faff 62%, #ecf1ff 100%); }
 .home-hero-copy { max-width: 740px; }
@@ -322,13 +322,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
    ========================================================================== */
 
 .auth-form-register {
-  width: min(100%, 460px);
+  width: min(100%, 480px);
+  padding: 38px 30px;
 }
 
 .track-selector {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
   width: 100%;
 }
 
@@ -341,7 +342,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .track-options-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -349,23 +350,25 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  min-height: 46px;
-  padding: 10px 14px;
+  gap: 8px;
+  min-height: 48px;
+  height: auto;
+  padding: 9px 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
   color: #4b5768;
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
   outline: none;
   transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.25;
+  word-break: normal;
 }
 
 .track-option-btn:hover:not(:disabled):not(.active) {
@@ -402,9 +405,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 .track-btn-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: inline-block;
+  white-space: normal;
+  text-align: left;
+  line-height: 1.25;
+  word-break: normal;
 }
 
 .track-options-grid.has-error .track-option-btn:not(.active) {
@@ -424,13 +429,18 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 @media (max-width: 440px) {
+  .auth-form-register {
+    padding: 24px 18px;
+  }
   .track-options-grid {
     gap: 8px;
   }
   .track-option-btn {
-    padding: 9px 10px;
-    font-size: 0.82rem;
+    padding: 8px 10px;
+    font-size: 0.8rem;
     gap: 6px;
+    min-height: 44px;
   }
 }
+
 
