@@ -100,7 +100,7 @@ export function CourseSection({ group, index, length, trackKey, expanded, forceO
   return <section className="curriculum-course-section" aria-label={`Курс ${course.title}`}>
     <div className="curriculum-course-row">
       <button className="curriculum-expand" aria-label={`${open ? 'Свернуть' : 'Развернуть'} курс ${course.title}`} aria-expanded={open} onClick={() => onToggle(key)}>{open ? <ChevronDown size={20}/> : <ChevronRight size={20}/>}</button>
-      <span className="curriculum-course-icon"><BookOpen size={20}/></span>
+      <span className="curriculum-course-icon">{course.cover ? <img src={`/api/v1/media/${course.cover}/`} alt="" className="curriculum-course-cover"/> : <BookOpen size={20}/>}</span>
       <Link className="curriculum-row-title" to={href}>{course.title}</Link>
       <span className="curriculum-count">{totalModules} мод.</span>
       <Status published={course.is_published}/>

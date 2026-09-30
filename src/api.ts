@@ -22,8 +22,12 @@ export async function api<T>(path: string, method = 'GET', data?: unknown): Prom
   if (method !== 'GET') headers['X-CSRFToken'] = decodeURIComponent(cookie('csrftoken'))
   const res = await fetch('/api/v1/' + path.replace(/^\//, ''), { method, body, headers, credentials: 'include' })
   if (!res.ok) {
+    if (res.status === 413) {
+      throw new ApiError('Размер файла превышает лимит сервера (до 10 МБ). Попробуйте уменьшить размер изображения.', 413)
+    }
     const payload = await res.json().catch(() => ({}))
-    const detail = payload.error?.detail ?? payload.detail ?? 'Ошибка запроса'
+    const rawDetail = payload.error?.detail ?? payload.detail
+    const detail = typeof rawDetail === 'object' && rawDetail !== null && 'file' in rawDetail ? (rawDetail as { file: unknown }).file : rawDetail ?? 'Ошибка запроса'
     throw new ApiError(typeof detail === 'string' ? detail : JSON.stringify(detail), res.status)
   }
   return res.status === 204 ? undefined as T : res.json()

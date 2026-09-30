@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ImagePlus, Save, X } from 'lucide-react'
 import { api, apiAll, type Course, type Module, type Track } from '../api'
 import { Button, ErrorState, Input, Loading, Notice, Select, Textarea } from '../components/ui'
+import { prepareImageForUpload } from '../utils/image'
 import { useLeaveWarning } from '../useLeaveWarning'
 import '../admin-curriculum.css'
 
@@ -55,10 +56,17 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
   const update = (patch: Partial<Form>) => { setForm(current => current ? { ...current, ...patch } : current); setDirty(true); setMessage('') }
   const uploadCover = async (file: File) => {
     setUploading(true); setMessage('')
-    const body = new FormData(); body.append('file', file)
-    try { const media = await api<{ id: number; url: string }>('media/', 'POST', body); update({ cover: media.id }) }
-    catch (error) { setIsError(true); setMessage(error instanceof Error ? error.message : 'Не удалось загрузить обложку') }
-    finally { setUploading(false) }
+    try {
+      const prepared = await prepareImageForUpload(file)
+      const body = new FormData(); body.append('file', prepared)
+      const media = await api<{ id: number; url: string }>('media/', 'POST', body)
+      update({ cover: media.id })
+    } catch (error) {
+      setIsError(true)
+      setMessage(error instanceof Error ? error.message : 'Не удалось загрузить обложку')
+    } finally {
+      setUploading(false)
+    }
   }
   const save = async () => {
     if (!form || !id || busy || uploading) return

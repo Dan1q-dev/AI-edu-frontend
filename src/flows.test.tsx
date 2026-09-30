@@ -4,17 +4,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AuthPage } from './AuthPage'
 import { EditorPage } from './AdminPages'
-import { LessonPage } from './StudentPages'
-import { api } from './api'
+import { LessonPage, CatalogPage } from './StudentPages'
+import { api, apiAll } from './api'
 
-vi.mock('./api', () => ({ api: vi.fn() }))
+vi.mock('./api', () => ({ api: vi.fn(), apiAll: vi.fn() }))
 const mockedApi = vi.mocked(api)
+const mockedApiAll = vi.mocked(apiAll)
 function renderAt(path: string, element: React.ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const pattern = path.replace(/\/\d+\//, '/:id/').replace(/\/\d+$/, '/:id')
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><Routes><Route path={pattern} element={element}/><Route path="/" element={<div>Home</div>}/></Routes></MemoryRouter></QueryClientProvider>)
 }
-beforeEach(() => mockedApi.mockReset())
+beforeEach(() => {
+  mockedApi.mockReset()
+  mockedApiAll.mockReset()
+})
 afterEach(cleanup)
 
 describe('main flows', () => {
@@ -55,5 +59,16 @@ describe('main flows', () => {
     fireEvent.click(screen.getByLabelText('Answer'))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить ответы' }))
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('lessons/1/attempts/', 'POST', { answers: [{ question: 10, option: 20 }] }))
+  })
+
+  it('renders course cover in catalog when present', async () => {
+    mockedApiAll.mockResolvedValue([
+      { id: 1, short_id: 'c1', title: 'Python Course', slug: 'python', description: 'Learn Python', cover: 42, position: 0, is_published: true, learning_track: 1 },
+      { id: 2, short_id: 'c2', title: 'JS Course', slug: 'js', description: 'Learn JS', cover: null, position: 1, is_published: true, learning_track: 1 }
+    ] as never)
+    renderAt('/catalog', <CatalogPage/>)
+    const img = await screen.findByRole('img', { name: 'Python Course' })
+    expect(img.getAttribute('src')).toBe('/api/v1/media/42/')
+    expect(screen.queryByRole('img', { name: 'JS Course' })).toBeNull()
   })
 })

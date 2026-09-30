@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import { ArrowDown, ArrowUp, Copy, Eye, ImagePlus, MoreHorizontal, Plus, Settings2, Trash2, X } from 'lucide-react'
 import { api, type Block, type Lesson } from './api'
 import { Button, ErrorState, Loading, Notice, Select } from './components/ui'
+import { prepareImageForUpload } from './utils/image'
 import { LessonTextEditor, parseLessonContent, RichLessonContent } from './components/LessonTextEditor'
 import { EditorLayout, type SaveState } from './layouts/EditorLayout'
 import { useLeaveWarning } from './useLeaveWarning'
@@ -83,8 +84,9 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
   const duplicateBlock = (index: number) => { const blocks = [...draftRef.current.blocks]; const copy = { ...blocks[index]!, id: undefined, config: { ...blocks[index]!.config } }; blocks.splice(index + 1, 0, copy); changeBlocks(blocks); setSelectedIndex(index + 1); setMenuIndex(null) }
   const upload = async (index: number, file: File) => {
     setUploading(true)
-    const form = new FormData(); form.append('file', file)
     try {
+      const prepared = await prepareImageForUpload(file)
+      const form = new FormData(); form.append('file', prepared)
       const media = await api<{ id: number; url: string }>('media/', 'POST', form)
       updateBlock(index, { media: media.id, media_url: media.url })
     } catch (error) { setSaveState('error'); setNotice(error instanceof Error ? error.message : 'Не удалось загрузить изображение') }
