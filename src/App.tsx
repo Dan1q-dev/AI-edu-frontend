@@ -10,8 +10,10 @@ const AuthPage = lazy(() => import('./AuthPage').then(module => ({ default: modu
 const CatalogPage = lazy(() => import('./StudentPages').then(module => ({ default: module.CatalogPage })))
 const CoursePage = lazy(() => import('./StudentPages').then(module => ({ default: module.CoursePage })))
 const LessonPage = lazy(() => import('./StudentPages').then(module => ({ default: module.LessonPage })))
+const LearningItemPage = lazy(() => import('./StudentPages').then(module => ({ default: module.LearningItemPage })))
 const ProfilePage = lazy(() => import('./StudentPages').then(module => ({ default: module.ProfilePage })))
 const EditorPage = lazy(() => import('./LessonEditorPage').then(module => ({ default: module.EditorPage })))
+const LearningItemEditorPage = lazy(() => import('./LearningItemEditorPage').then(module => ({ default: module.LearningItemEditorPage })))
 const TestEditor = lazy(() => import('./AdminPages').then(module => ({ default: module.TestEditor })))
 const AdminCurriculum = lazy(() => import('./AdminCurriculum').then(module => ({ default: module.AdminCurriculum })))
 const CurriculumEntityPage = lazy(() => import('./curriculum/CurriculumEntityPage').then(module => ({ default: module.CurriculumEntityPage })))
@@ -58,12 +60,14 @@ export default function App() {
     <Route path="/catalog" element={<ProtectedPage user={user}><CatalogPage/></ProtectedPage>}/>
     <Route path="/courses/:slug" element={<ProtectedPage user={user}><CoursePage/></ProtectedPage>}/>
     <Route path="/lessons/:id" element={user ? <LessonPage/> : <Navigate to="/login" replace/>}/>
+    <Route path="/items/:id" element={user ? <LearningItemPage/> : <Navigate to="/login" replace/>}/>
     <Route path="/profile" element={<ProtectedPage user={user}><ProfilePage user={user!}/></ProtectedPage>}/>
     <Route path="/admin" element={<ProtectedPage user={user} admin><AdminHome/></ProtectedPage>}/>
     <Route path="/admin/curriculum" element={<ProtectedPage user={user} admin><AdminCurriculum/></ProtectedPage>}/>
     <Route path="/admin/curriculum/courses/:courseId" element={<ProtectedPage user={user} admin><CurriculumEntityPage kind="course"/></ProtectedPage>}/>
     <Route path="/admin/curriculum/modules/:moduleId" element={<ProtectedPage user={user} admin><CurriculumEntityPage kind="module"/></ProtectedPage>}/>
     <Route path="/admin/curriculum/lessons/:id/edit" element={user?.role === 'ADMIN' ? <EditorPage/> : <Navigate to="/" replace/>}/>
+    <Route path="/admin/curriculum/items/:id/edit" element={user?.role === 'ADMIN' ? <LearningItemEditorPage/> : <Navigate to="/" replace/>}/>
     <Route path="/admin/tracks" element={<Navigate to="/admin/curriculum" replace/>}/>
     <Route path="/admin/modules" element={<Navigate to="/admin/curriculum" replace/>}/>
     <Route path="/admin/lessons" element={<Navigate to="/admin/curriculum" replace/>}/>

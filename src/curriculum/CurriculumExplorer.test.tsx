@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom'
-import { api, apiAll, type Course, type Lesson, type Module, type Track } from '../api'
+import { api, apiAll, type Course, type LearningItem, type Module, type Track } from '../api'
 import { AdminCurriculum } from './CurriculumExplorer'
 import { CurriculumEntityPage } from './CurriculumEntityPage'
 
@@ -12,9 +12,9 @@ const mockedApiAll = vi.mocked(apiAll)
 const track: Track = { id: 1, short_id: 'track-1', title: 'Разработка', description: '', cover: null, is_published: true, is_active: true, is_system: false }
 const course: Course = { id: 2, short_id: 'course-2', title: 'Основы Python', slug: 'python', description: '', learning_track: 1, cover: null, position: 0, is_published: true }
 const moduleItem: Module = { id: 3, short_id: 'module-3', title: 'Введение', description: '', course: 2, position: 0, is_published: true }
-const lesson: Lesson = { id: 4, short_id: 'lesson-4', title: 'Первый урок', description: '', module: 3, position: 0, status: 'DRAFT' }
+const item: LearningItem = { id: 4, short_id: 'item-4', title: 'Первая лекция', description: '', module: 3, position: 0, status: 'DRAFT', type: 'LECTURE', lesson: 8, lesson_short_id: 'lesson-4', test: null, practice: null }
 let modules: Module[]
-let lessons: Lesson[]
+let items: LearningItem[]
 
 function renderExplorer() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -22,7 +22,7 @@ function renderExplorer() {
     <Route path="/admin/curriculum" element={<AdminCurriculum/>}/>
     <Route path="/admin/curriculum/courses/:courseId" element={<><div>Страница курса</div><Link to="/admin/curriculum">Назад</Link></>}/>
     <Route path="/admin/curriculum/modules/:moduleId" element={<div>Страница модуля</div>}/>
-    <Route path="/admin/curriculum/lessons/:id/edit" element={<div>Редактор урока</div>}/>
+    <Route path="/admin/curriculum/items/:id/edit" element={<div>Редактор элемента</div>}/>
   </Routes></MemoryRouter></QueryClientProvider>)
 }
 
@@ -35,14 +35,14 @@ function renderEntity(kind: 'course' | 'module') {
 
 beforeEach(() => {
   modules = [moduleItem]
-  lessons = [lesson]
+  items = [item]
   mockedApi.mockReset()
   mockedApiAll.mockReset()
   mockedApiAll.mockImplementation(async path => {
     if (path === 'tracks/') return [track] as never
     if (path === 'courses/') return [course] as never
     if (path === 'modules/') return modules as never
-    if (path === 'lessons/') return lessons as never
+    if (path === 'items/') return items as never
     return [] as never
   })
 })
@@ -56,7 +56,7 @@ describe('curriculum explorer', () => {
       if (path === 'tracks/') return [track, secondTrack] as never
       if (path === 'courses/') return [course, secondCourse] as never
       if (path === 'modules/') return modules as never
-      if (path === 'lessons/') return lessons as never
+      if (path === 'items/') return items as never
       return [] as never
     })
     renderExplorer()
@@ -66,11 +66,11 @@ describe('curriculum explorer', () => {
     expect(screen.queryByRole('link', { name: 'Основы Python' })).toBeNull()
   })
 
-  it('navigates directly from course, module, and lesson names', async () => {
+  it('navigates directly from course, module, and learning item names', async () => {
     renderExplorer()
     await screen.findByRole('link', { name: 'Основы Python' })
     expect(screen.getByRole('link', { name: 'Введение' }).getAttribute('href')).toContain('/admin/curriculum/modules/module-3')
-    expect(screen.getByRole('link', { name: 'Первый урок' }).getAttribute('href')).toContain('/admin/curriculum/lessons/lesson-4/edit')
+    expect(screen.getByRole('link', { name: 'Первая лекция' }).getAttribute('href')).toContain('/admin/curriculum/items/item-4/edit')
     fireEvent.click(screen.getByRole('link', { name: 'Основы Python' }))
     expect(await screen.findByText('Страница курса')).toBeTruthy()
   })
@@ -82,22 +82,48 @@ describe('curriculum explorer', () => {
         modules = [...modules, created]
         return created as never
       }
-      if (path === 'lessons/lesson-4/' && method === 'DELETE') { lessons = []; return undefined as never }
+      if (path === 'items/item-4/' && method === 'DELETE') { items = []; return undefined as never }
       return {} as never
     })
     renderExplorer()
-    await screen.findByRole('link', { name: 'Первый урок' })
+    await screen.findByRole('link', { name: 'Первая лекция' })
     fireEvent.click(screen.getByRole('button', { name: 'Добавить модуль в курс Основы Python' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Название' }), { target: { value: 'Продолжение' } })
     fireEvent.click(screen.getByRole('button', { name: 'Создать' }))
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('modules/', 'POST', expect.objectContaining({ title: 'Продолжение', course: 2 })))
     await screen.findByRole('link', { name: 'Продолжение' })
-    fireEvent.click(screen.getByRole('button', { name: 'Действия: Первый урок' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Действия: Первая лекция' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Удалить' }))
     const dialog = screen.getByRole('dialog')
-    expect(dialog.textContent).toContain('Первый урок')
+    expect(dialog.textContent).toContain('Первая лекция')
     fireEvent.click(dialog.querySelector('.button.danger') as HTMLElement)
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('lessons/lesson-4/', 'DELETE'))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/item-4/', 'DELETE'))
+  })
+
+  it('creates a test item from the type menu and moves it before a lecture', async () => {
+    mockedApi.mockImplementation(async (path, method, body) => {
+      if (path === 'items/' && method === 'POST') {
+        const created = { ...item, id: 5, short_id: 'item-5', type: 'TEST' as const, title: (body as { title: string }).title, position: 1, lesson: null, lesson_short_id: null, test: 11 }
+        items = [...items, created]
+        return created as never
+      }
+      if (path === 'items/item-5/' && method === 'PATCH') {
+        items = [{ ...item, position: 1 }, { ...items[1]!, position: 0 }]
+        return items[1] as never
+      }
+      return {} as never
+    })
+    renderExplorer()
+    await screen.findByRole('link', { name: 'Первая лекция' })
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить элемент' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Тест' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Название' }), { target: { value: 'Проверка знаний' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Создать' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/', 'POST', expect.objectContaining({ type: 'TEST', module: 3 })))
+    await screen.findByRole('link', { name: 'Проверка знаний' })
+    fireEvent.click(screen.getByRole('button', { name: 'Действия: Проверка знаний' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Переместить выше' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/item-5/', 'PATCH', { position: 0 }))
   })
 
   it.each([

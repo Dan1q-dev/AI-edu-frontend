@@ -25,3 +25,33 @@
 .lesson-editor-shell:not(.with-settings) .lesson-document{width:min(100% - 40px,900px)}
 @media(max-width:900px){.editor-header{padding:10px 14px;gap:10px;flex-wrap:wrap}.editor-header-actions{gap:5px}.editor-header-actions .button{padding:8px 10px;font-size:12px}.editor-header-title{order:3;flex-basis:100%;padding:4px 0}.editor-main{padding-bottom:70px}.lesson-editor-shell.with-settings{grid-template-columns:minmax(0,1fr)}.lesson-settings-panel{position:fixed;z-index:35;top:0;right:0;width:min(88vw,360px);height:100dvh;box-shadow:-15px 0 45px #20395720}.lesson-editor-topline{padding:12px 18px}.lesson-document-heading{margin-top:30px}.document-block-tools{opacity:1}.insert-between{opacity:1}.document-image-block,.lesson-editor-shell:not(.with-settings) .document-image-block,.lesson-preview .preview-image{width:calc(100vw - 30px);max-width:calc(100vw - 30px)}}
 @media(max-width:560px){.editor-header{min-height:0}.editor-back span{display:none}.editor-header-actions{margin-left:auto}.editor-header-actions .button{min-width:0}.lesson-save-note{font-size:10px}.lesson-settings-toggle{font-size:0}.lesson-document,.lesson-document-heading{width:calc(100% - 30px)}.lesson-document-heading input{font-size:29px}.rich-editor-content .tiptap{font-size:15px}.lesson-preview h1{font-size:30px}}
+
+/* Document editor: one header, a centered reading surface, and an optional inspector. */
+.lesson-editor-shell{display:block;min-height:calc(100vh - 68px);padding-top:1px}
+.lesson-editor-shell.with-settings{display:block;padding-right:320px}
+.lesson-document-heading{margin:30px auto 0;gap:3px}
+.lesson-document-heading textarea{min-height:38px;resize:none;padding:0;border:0;font-size:14px}
+.lesson-document{margin:22px auto 90px}
+.lesson-settings-panel{position:fixed;z-index:29;top:68px;right:0;width:320px;height:calc(100vh - 68px);border-left:1px solid #e4eaf0}
+.inspector-heading{display:flex;align-items:center;justify-content:space-between;padding:17px 19px;border-bottom:1px solid #e8edf2;font-size:14px}
+.inspector-heading button,.editor-icon-action{display:grid;place-items:center;width:32px;height:32px;padding:0;border:0;border-radius:7px;background:transparent;color:#697c94;cursor:pointer}
+.inspector-heading button:hover,.editor-icon-action:hover{background:#eef3f8;color:#287db8}
+.editor-more-menu{position:relative}
+.editor-more-menu summary{list-style:none}
+.editor-more-menu summary::-webkit-details-marker{display:none}
+.editor-more-menu>div{position:absolute;z-index:40;right:0;top:37px;width:175px;padding:5px;border:1px solid #dfe7ef;border-radius:9px;background:white;box-shadow:0 12px 30px #152a432b}
+.editor-more-menu>div button{width:100%;padding:8px;border:0;border-radius:6px;background:white;color:#344b65;text-align:left;cursor:pointer}
+.editor-more-menu>div button:hover{background:#eef5fb}
+.editor-more-menu>div button:disabled{opacity:.45;cursor:default}
+.inspector-delete{width:100%;padding:9px;border:1px solid #f1d1d1;border-radius:7px;background:#fff;color:#b34f55;cursor:pointer}
+.settings-panel-content textarea{width:100%;padding:9px;border:1px solid #d9e2eb;border-radius:7px;font:inherit}
+.rich-editor-surface{position:relative}
+.rich-editor-content .tiptap:empty::before,.rich-editor-content .tiptap p:first-child:empty::before,.rich-editor-content .tiptap p:first-child:has(> br:only-child)::before{content:'Начните писать или введите / для команд';color:#a0acba;pointer-events:none}
+.slash-command-menu{position:absolute;z-index:20;display:grid;width:220px;max-height:270px;overflow:auto;padding:5px;border:1px solid #dfe7ef;border-radius:9px;background:white;box-shadow:0 12px 30px #152a432b}
+.slash-command-menu button{padding:8px 11px;border:0;border-radius:6px;background:transparent;color:#334b64;text-align:left;font-size:12px;cursor:pointer}
+.slash-command-menu button:hover{background:#eef5fb}
+.slash-command-menu button.active{background:#eef5fb;color:#247ab4}
+.practice-editor-page{max-width:860px;margin:0 auto;padding:40px 24px 80px}
+.practice-editor-page h1{margin:14px 0}
+.practice-editor-page>.card{margin-top:24px}
+@media(max-width:900px){.lesson-editor-shell.with-settings{padding-right:0}.lesson-settings-panel{z-index:35;top:0;width:min(88vw,320px);height:100dvh}.lesson-document-heading{margin-top:22px}}

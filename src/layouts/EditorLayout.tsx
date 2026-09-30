@@ -8,16 +8,17 @@ const saveLabel: Record<SaveState, string> = {
   saved: 'Сохранено', dirty: 'Есть изменения', saving: 'Сохранение…', error: 'Ошибка сохранения',
 }
 
-export function EditorLayout({ children, title, status, saveState, actions }: {
+export function EditorLayout({ children, title, status, saveState, actions, backLabel }: {
   children: ReactNode
   title: string
   status: string
   saveState: SaveState
   actions: ReactNode
+  backLabel?: string
 }) {
   return <div className="editor-layout">
     <header className="editor-header">
-      <Link to="/admin/curriculum" className="editor-back"><ArrowLeft size={17}/><span>Уроки</span></Link>
+      <Link to="/admin/curriculum" className="editor-back"><ArrowLeft size={17}/><span>{backLabel || 'Структура курса'}</span></Link>
       <div className="editor-header-title"><strong>{title}</strong><span className={`save-state ${saveState}`}><i/> {saveLabel[saveState]}</span></div>
       <div className="editor-header-actions">{actions}<span className={`status ${status === 'PUBLISHED' ? 'published' : ''}`}>{status === 'PUBLISHED' ? 'Опубликован' : 'Черновик'}</span></div>
     </header>

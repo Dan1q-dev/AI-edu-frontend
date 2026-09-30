@@ -35,6 +35,14 @@
 .curriculum-lesson-row .curriculum-row-title{font-size:13px;font-weight:500}
 .curriculum-lesson-row .curriculum-number{font-size:11px}
 .curriculum-row-icon{flex:none;color:#a5b1c0}
+.curriculum-item-icon{display:grid;place-items:center;flex:none;width:23px;height:23px;border-radius:6px;background:#eaf4fc;color:#3285b9}
+.curriculum-item-icon.type-test{background:#e9f5eb;color:#438f5d}
+.curriculum-item-icon.type-practice{background:#f3ecfb;color:#8764b2}
+.curriculum-item-type{min-width:66px;color:#8491a0;font-size:11px}
+.add-learning-item{position:relative;display:inline-flex;flex:none}
+.add-learning-item-menu{position:absolute;z-index:30;right:0;top:calc(100% + 4px);display:grid;width:215px;padding:5px;border:1px solid #dfe7ef;border-radius:9px;background:#fff;box-shadow:0 12px 30px #152a432b}
+.add-learning-item-menu button{display:flex;align-items:center;gap:9px;padding:9px;border:0;border-radius:6px;background:transparent;color:#344b65;text-align:left;font-size:12px;cursor:pointer}
+.add-learning-item-menu button:hover{background:#f1f6fa}
 .curriculum-empty-row{padding:13px 12px;color:#9aa6b5;font-size:12px}
 .curriculum-empty-row button{margin-left:8px;border:0;background:none;color:#2681be;font-size:12px;font-weight:700;cursor:pointer}
 .entity-actions{position:relative;flex:none}

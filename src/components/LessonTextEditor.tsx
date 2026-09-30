@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -99,11 +99,41 @@ export function RichLessonContent({ value }: { value: string }) {
   return <>{render(document, 'root')}</>
 }
 
-export function LessonTextEditor({ value, onChange, disabled = false }: { value: string; onChange: (value: string) => void; disabled?: boolean }) {
+type SlashAction = 'text' | 'heading' | 'bullet' | 'numbered' | 'quote' | 'code' | 'image'
+const slashOptions: { id: SlashAction; label: string }[] = [
+  { id: 'text', label: 'Text' }, { id: 'heading', label: 'Heading' },
+  { id: 'bullet', label: 'Bulleted List' }, { id: 'numbered', label: 'Numbered List' },
+  { id: 'quote', label: 'Quote' }, { id: 'code', label: 'Code Block' },
+  { id: 'image', label: 'Image' },
+]
+
+export function SlashCommandMenu({ query, activeIndex, position, onSelect }: { query: string; activeIndex: number; position: { top: number; left: number }; onSelect: (action: SlashAction) => void }) {
+  const options = slashOptions.filter(option => option.label.toLowerCase().includes(query.toLowerCase()))
+  if (!options.length) return null
+  return <div className="slash-command-menu" role="menu" aria-label="Вставить в документ" style={position}>{options.map((option, index) => <button key={option.id} className={index === activeIndex ? 'active' : ''} type="button" role="menuitem" onMouseDown={event => event.preventDefault()} onClick={() => onSelect(option.id)}>{option.label}</button>)}</div>
+}
+
+export function LessonTextEditor({ value, onChange, disabled = false, formatRequest, onInsertImage, onDropImage }: { value: string; onChange: (value: string) => void; disabled?: boolean; formatRequest?: string; onInsertImage?: () => void; onDropImage?: (file: File) => void }) {
+  const [slashQuery, setSlashQuery] = useState<string | null>(null)
+  const [activeSlashIndex, setActiveSlashIndex] = useState(0)
+  const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 })
+  const surfaceRef = useRef<HTMLDivElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: { levels: [2, 3] } }), Link.configure({ openOnClick: false, protocols: ['mailto'] })],
     content: parseLessonContent(value), editable: !disabled,
-    onUpdate: ({ editor: instance }) => onChange(JSON.stringify(instance.getJSON())),
+    onUpdate: ({ editor: instance }) => {
+      onChange(JSON.stringify(instance.getJSON()))
+      const { $from } = instance.state.selection
+      const before = $from.parent.textContent.slice(0, $from.parentOffset)
+      setSlashQuery(/\/([a-z]*)$/i.exec(before)?.[1] ?? null)
+      setActiveSlashIndex(0)
+      const surface = surfaceRef.current?.getBoundingClientRect()
+      if (surface) {
+        const caret = instance.view.coordsAtPos(instance.state.selection.from)
+        setSlashPosition({ top: caret.bottom - surface.top + 5, left: Math.max(0, Math.min(caret.left - surface.left, surface.width - 220)) })
+      }
+    },
   })
   useEffect(() => { editor?.setEditable(!disabled) }, [editor, disabled])
   useEffect(() => {
@@ -111,9 +141,36 @@ export function LessonTextEditor({ value, onChange, disabled = false }: { value:
     const incoming = parseLessonContent(value)
     if (JSON.stringify(editor.getJSON()) !== JSON.stringify(incoming)) editor.commands.setContent(incoming, { emitUpdate: false })
   }, [editor, value])
+  useEffect(() => {
+    if (!editor || !formatRequest) return
+    const type = formatRequest.split(':')[1]
+    if (type === 'paragraph') editor.chain().focus().setParagraph().run()
+    if (type === 'heading') editor.chain().focus().setHeading({ level: 2 }).run()
+    if (type === 'bulletList') editor.chain().focus().toggleBulletList().run()
+    if (type === 'orderedList') editor.chain().focus().toggleOrderedList().run()
+    if (type === 'blockquote') editor.chain().focus().toggleBlockquote().run()
+    if (type === 'codeBlock') editor.chain().focus().toggleCodeBlock().run()
+  }, [editor, formatRequest])
   if (!editor) return null
   const action = (label: string, icon: ReactNode, active: boolean, run: () => void) => <button type="button" title={label} aria-label={label} aria-pressed={active} disabled={disabled} className={active ? 'active' : ''} onMouseDown={event => event.preventDefault()} onClick={run}>{icon}</button>
   const setLink = () => { const current = editor.getAttributes('link').href as string | undefined; const href = window.prompt('Адрес ссылки', current || 'https://'); if (href === null) return; if (!href.trim()) editor.chain().focus().unsetLink().run(); else if (safeHref(href)) editor.chain().focus().extendMarkRange('link').setLink({ href }).run() }
+  const runSlash = (action: SlashAction) => {
+    if (slashQuery === null) return
+    const end = editor.state.selection.from
+    editor.chain().focus().deleteRange({ from: end - slashQuery.length - 1, to: end }).run()
+    setSlashQuery(null)
+    if (action === 'text') editor.chain().focus().setParagraph().run()
+    if (action === 'heading') editor.chain().focus().toggleHeading({ level: 2 }).run()
+    if (action === 'bullet') editor.chain().focus().toggleBulletList().run()
+    if (action === 'numbered') editor.chain().focus().toggleOrderedList().run()
+    if (action === 'quote') editor.chain().focus().toggleBlockquote().run()
+    if (action === 'code') editor.chain().focus().toggleCodeBlock().run()
+    if (action === 'image') {
+      if (onDropImage) imageInputRef.current?.click()
+      else onInsertImage?.()
+    }
+  }
+  const visibleSlashOptions = slashQuery === null ? [] : slashOptions.filter(option => option.label.toLowerCase().includes(slashQuery.toLowerCase()))
   return <div className="lesson-rich-editor">
     <div className="rich-toolbar" role="toolbar" aria-label="Форматирование текста">
       {action('Жирный', <Bold size={16}/>, editor.isActive('bold'), () => editor.chain().focus().toggleBold().run())}
@@ -130,6 +187,6 @@ export function LessonTextEditor({ value, onChange, disabled = false }: { value:
       {action('Отменить', <Undo2 size={16}/>, false, () => editor.chain().focus().undo().run())}
       {action('Повторить', <Redo2 size={16}/>, false, () => editor.chain().focus().redo().run())}
     </div>
-    <EditorContent editor={editor} className="rich-editor-content"/>
+    <div ref={surfaceRef} className="rich-editor-surface" onKeyDown={event => { if (slashQuery === null || !visibleSlashOptions.length) return; if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setActiveSlashIndex(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + visibleSlashOptions.length) % visibleSlashOptions.length) } else if (event.key === 'Enter') { event.preventDefault(); runSlash(visibleSlashOptions[activeSlashIndex % visibleSlashOptions.length]!.id) } else if (event.key === 'Escape') { event.preventDefault(); setSlashQuery(null) } }} onDragOver={event => { if (event.dataTransfer.types.includes('Files')) event.preventDefault() }} onDrop={event => { const file = Array.from(event.dataTransfer.files).find(candidate => candidate.type.startsWith('image/')); if (file && onDropImage) { event.preventDefault(); onDropImage(file) } }}><EditorContent editor={editor} className="rich-editor-content"/>{slashQuery !== null && <SlashCommandMenu query={slashQuery} activeIndex={activeSlashIndex} position={slashPosition} onSelect={runSlash}/>}<input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => { const file = event.target.files?.[0]; if (file) onDropImage?.(file); event.currentTarget.value = '' }}/></div>
   </div>
 }

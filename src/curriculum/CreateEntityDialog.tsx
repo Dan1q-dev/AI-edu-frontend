@@ -3,8 +3,8 @@ import { X } from 'lucide-react'
 import { Button, Input } from '../components/ui'
 import type { EntityKind } from './types'
 
-const names: Record<EntityKind, string> = { courses: 'курс', modules: 'модуль', lessons: 'урок' }
-const genitive: Record<EntityKind, string> = { courses: 'курса', modules: 'модуля', lessons: 'урока' }
+const names: Record<EntityKind, string> = { courses: 'курс', modules: 'модуль', items: 'учебный элемент' }
+const genitive: Record<EntityKind, string> = { courses: 'курса', modules: 'модуля', items: 'элемента' }
 
 export function CreateEntityDialog({ kind, onCreate, onClose }: {
   kind: EntityKind

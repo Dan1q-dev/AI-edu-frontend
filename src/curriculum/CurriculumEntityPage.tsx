@@ -69,7 +69,7 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
         : { title: form.title.trim(), description: form.description, course: form.course, position: form.position, is_published: form.is_published }
       const saved = await api<Course | Module>(`${kind}s/${id}/`, 'PATCH', payload)
       setForm(toForm(saved, kind)); setDirty(false); setIsError(false); setMessage('Изменения сохранены')
-      await Promise.all(['courses', 'modules', 'lessons'].map(key => queryClient.invalidateQueries({ queryKey: ['admin', key] })))
+      await Promise.all(['courses', 'modules', 'items'].map(key => queryClient.invalidateQueries({ queryKey: ['admin', key] })))
       if (kind === 'course') {
         const nextId = (saved as Course).short_id
         if (nextId && nextId !== courseId) {
