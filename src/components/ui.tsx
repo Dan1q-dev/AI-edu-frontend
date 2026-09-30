@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
 import { BookOpen, Loader2 } from 'lucide-react'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }
@@ -13,6 +13,16 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea {...props} className={`input ${props.className || ''}`} />
+}
+
+export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {}
+
+export function Select({ className = '', children, ...props }: SelectProps) {
+  return (
+    <select {...props} className={`input select ${className}`.trim()}>
+      {children}
+    </select>
+  )
 }
 
 export interface LoadingProps {

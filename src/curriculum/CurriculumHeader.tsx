@@ -1,10 +1,11 @@
 import { Plus, Search } from 'lucide-react'
 import type { Track } from '../api'
+import { Select } from '../components/ui'
 
 export function TrackSelector({ tracks, value, hasUnassigned, onChange }: {
   tracks: Track[]; value: string; hasUnassigned: boolean; onChange: (value: string) => void
 }) {
-  return <label className="curriculum-track-selector"><span>Траектория</span><select aria-label="Траектория обучения" value={value} onChange={event => onChange(event.target.value)}>{tracks.map(track => <option key={track.id} value={track.short_id}>{track.title}</option>)}{hasUnassigned && <option value="unassigned">Без траектории</option>}</select></label>
+  return <label className="curriculum-track-selector"><span>Траектория</span><Select aria-label="Траектория обучения" value={value} onChange={event => onChange(event.target.value)}>{tracks.map(track => <option key={track.id} value={track.short_id}>{track.title}</option>)}{hasUnassigned && <option value="unassigned">Без траектории</option>}</Select></label>
 }
 
 export function CurriculumHeader({ tracks, trackKey, hasUnassigned, search, onTrackChange, onSearchChange, onCreateCourse }: {

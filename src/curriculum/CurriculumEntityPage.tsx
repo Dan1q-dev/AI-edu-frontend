@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ImagePlus, Save, X } from 'lucide-react'
 import { api, apiAll, type Course, type Module, type Track } from '../api'
-import { Button, ErrorState, Input, Loading, Notice, Textarea } from '../components/ui'
+import { Button, ErrorState, Input, Loading, Notice, Select, Textarea } from '../components/ui'
 import { useLeaveWarning } from '../useLeaveWarning'
 import '../admin-curriculum.css'
 
@@ -45,6 +45,12 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
   useEffect(() => { if (detail.data && !dirty) setForm(toForm(detail.data, kind)) }, [detail.data, dirty, kind])
+  useEffect(() => {
+    if (kind === 'course' && detail.data && 'short_id' in detail.data && courseId !== detail.data.short_id) {
+      const trackParam = params.get('track') ? `?track=${encodeURIComponent(params.get('track')!)}` : ''
+      navigate(`/admin/curriculum/courses/${detail.data.short_id}${trackParam}`, { replace: true })
+    }
+  }, [kind, detail.data, courseId, params, navigate])
   useLeaveWarning(dirty)
   const update = (patch: Partial<Form>) => { setForm(current => current ? { ...current, ...patch } : current); setDirty(true); setMessage('') }
   const uploadCover = async (file: File) => {
@@ -59,12 +65,17 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
     setBusy(true); setMessage('')
     try {
       const payload = kind === 'course'
-        ? { title: form.title.trim(), description: form.description, slug: form.slug.trim(), learning_track: form.learning_track, cover: form.cover, position: form.position, is_published: form.is_published }
+        ? { title: form.title.trim(), description: form.description, learning_track: form.learning_track, cover: form.cover, position: form.position, is_published: form.is_published }
         : { title: form.title.trim(), description: form.description, course: form.course, position: form.position, is_published: form.is_published }
       const saved = await api<Course | Module>(`${kind}s/${id}/`, 'PATCH', payload)
       setForm(toForm(saved, kind)); setDirty(false); setIsError(false); setMessage('Изменения сохранены')
       await Promise.all(['courses', 'modules', 'lessons'].map(key => queryClient.invalidateQueries({ queryKey: ['admin', key] })))
-      if (kind === 'course' && (saved as Course).slug !== id) navigate(`/admin/curriculum/courses/${(saved as Course).slug}${params.get('track') ? `?track=${encodeURIComponent(params.get('track')!)}` : ''}`, { replace: true })
+      if (kind === 'course') {
+        const nextId = (saved as Course).short_id
+        if (nextId && nextId !== courseId) {
+          navigate(`/admin/curriculum/courses/${nextId}${params.get('track') ? `?track=${encodeURIComponent(params.get('track')!)}` : ''}`, { replace: true })
+        }
+      }
     } catch (error) { setIsError(true); setMessage(error instanceof Error ? error.message : 'Не удалось сохранить изменения') }
     finally { setBusy(false) }
   }
@@ -81,10 +92,9 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
     <div className="curriculum-entity-heading"><div><span className="eyebrow">{kind === 'course' ? 'КУРС' : 'МОДУЛЬ'}</span><h1>{title}</h1><p>Измените общие сведения и вернитесь к структуре учебной программы.</p></div><span className={`curriculum-status ${form.is_published ? 'is-published' : ''}`}>{form.is_published ? 'Опубликован' : 'Черновик'}</span></div>
     <div className="curriculum-entity-form">
       <section className="curriculum-form-section"><h2>Основные сведения</h2><label>Название<Input value={form.title} maxLength={200} onChange={event => update({ title: event.target.value })}/></label><label>Описание<Textarea rows={5} value={form.description} onChange={event => update({ description: event.target.value })}/></label></section>
-      <section className="curriculum-form-section"><h2>Размещение и доступ</h2>{kind === 'course' ? <>
-        <label>Траектория<select className="input" value={form.learning_track ?? ''} onChange={event => update({ learning_track: Number(event.target.value) })}>{tracks.data?.map(track => <option key={track.id} value={track.id}>{track.title}</option>)}</select></label>
-        <label>Адрес курса<Input value={form.slug} onChange={event => update({ slug: event.target.value })}/></label>
-      </> : <label>Курс<select className="input" value={form.course} onChange={event => update({ course: Number(event.target.value) })}>{courses.data?.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>}
+      <section className="curriculum-form-section"><h2>Размещение и доступ</h2>{kind === 'course' ? (
+        <label>Траектория<Select value={form.learning_track ?? ''} onChange={event => update({ learning_track: Number(event.target.value) })}>{tracks.data?.map(track => <option key={track.id} value={track.id}>{track.title}</option>)}</Select></label>
+      ) : <label>Курс<Select value={form.course} onChange={event => update({ course: Number(event.target.value) })}>{courses.data?.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}</Select></label>}
         <label>Порядок отображения<Input type="number" min="0" value={form.position} onChange={event => update({ position: Math.max(0, Number(event.target.value) || 0) })}/></label>
         <label className="curriculum-publish-setting"><input type="checkbox" checked={form.is_published} onChange={event => update({ is_published: event.target.checked })}/><span><strong>Опубликован</strong><small>Материал станет доступен студентам, когда опубликованы его родительские разделы.</small></span></label>
       </section>

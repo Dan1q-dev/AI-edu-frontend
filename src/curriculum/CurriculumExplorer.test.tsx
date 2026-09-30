@@ -28,7 +28,7 @@ function renderExplorer() {
 
 function renderEntity(kind: 'course' | 'module') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const path = kind === 'course' ? '/admin/curriculum/courses/python' : '/admin/curriculum/modules/module-3'
+  const path = kind === 'course' ? '/admin/curriculum/courses/course-2' : '/admin/curriculum/modules/module-3'
   const pattern = kind === 'course' ? '/admin/curriculum/courses/:courseId' : '/admin/curriculum/modules/:moduleId'
   return render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><Routes><Route path={pattern} element={<CurriculumEntityPage kind={kind}/>}/></Routes></MemoryRouter></QueryClientProvider>)
 }
@@ -101,7 +101,7 @@ describe('curriculum explorer', () => {
   })
 
   it.each([
-    ['course', 'courses/python/', 'Новое название курса'],
+    ['course', 'courses/course-2/', 'Новое название курса'],
     ['module', 'modules/module-3/', 'Новое название модуля'],
   ] as const)('saves %s settings on its own page', async (kind, endpoint, title) => {
     mockedApi.mockImplementation(async (path, method, body) => {
