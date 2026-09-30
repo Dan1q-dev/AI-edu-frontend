@@ -67,7 +67,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
   return (
     <div className="auth-page">
-      <div className="auth-language"><LanguageSelect/></div>
+      <div className="auth-language"><LanguageSelect compact/></div>
       <div className="auth-side">
         <Link to="/" className="brand">
           AI<span>edu</span>

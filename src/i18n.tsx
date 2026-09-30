@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Languages } from 'lucide-react'
 import ruMessages from './locales/ru.json'
 import kzMessages from './locales/kz.json'
 import enMessages from './locales/en.json'
@@ -47,6 +48,7 @@ export function LanguageSelect({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale, t } = useI18n()
   return <label className={`language-select ${compact ? 'compact' : ''}`}>
     {!compact && <span>{t('Язык интерфейса')}</span>}
+    {compact && <Languages className="language-select-icon" size={16} aria-hidden="true"/>}
     <select aria-label={t('Язык интерфейса')} value={locale} onChange={event => setLocale(event.target.value as Locale)}>
       <option value="ru">Русский</option><option value="kz">Қазақша</option><option value="en">English</option>
     </select>

@@ -622,9 +622,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .learning-header-title strong { font-size: .88rem; }
 .learning-header .outline-button { display: none; }
 .learning-header-tools { display: flex; align-items: center; justify-self: end; gap: 9px; }
-.language-select { display: inline-flex; align-items: center; gap: 8px; color: var(--color-muted); font-size: .77rem; }
-.language-select select { min-height: 34px; padding: 6px 28px 6px 10px; border: 1px solid var(--color-border); border-radius: 8px; background-color: #fff; color: var(--color-text); font-size: .76rem; }
-.language-select.compact select { min-height: 32px; }
+.language-select { position: relative; display: inline-flex; align-items: center; gap: 8px; color: var(--color-muted); font-size: .77rem; }
+.language-select select { appearance: none; min-height: 40px; padding: 8px 38px 8px 13px; border: 1px solid #dce3ef; border-radius: 11px; outline: none; background: linear-gradient(180deg, #fff 0%, #f9fbff 100%); box-shadow: 0 2px 6px #15264a0d, inset 0 1px #fff; color: #25334d; font-size: .8rem; font-weight: 650; cursor: pointer; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.language-select::after { content: ''; position: absolute; right: 15px; top: calc(50% - 5px); width: 7px; height: 7px; border-right: 1.7px solid #66748d; border-bottom: 1.7px solid #66748d; transform: rotate(45deg); pointer-events: none; }
+.language-select select:hover { border-color: #b7c5dd; box-shadow: 0 4px 12px #15264a14, inset 0 1px #fff; }
+.language-select select:focus-visible { border-color: #6478e8; box-shadow: 0 0 0 3px #6677ed24, 0 3px 10px #15264a12; }
+.language-select.compact select { min-width: 116px; min-height: 38px; padding-left: 36px; border-radius: 999px; }
+.language-select-icon { position: absolute; z-index: 1; left: 13px; color: #5868cf; pointer-events: none; }
 .auth-language { position: fixed; top: 20px; right: 22px; z-index: 20; }
 .main-header-inner > .language-select { margin-left: auto; }
 .main-header-inner > .user-menu { margin-left: 14px; }
@@ -675,7 +679,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 @media (max-width: 600px) {
   .learning-header .outline-button span { display: none; }
   .learning-header-tools { gap: 6px; }
-  .learning-header-tools .language-select select { min-height: 34px; padding-left: 7px; font-size: .7rem; }
+  .learning-header-tools .language-select select { min-width: 108px; min-height: 34px; padding-left: 33px; font-size: .7rem; }
   .learning-main { padding-top: 24px; }
   .learning-main .lesson-heading h1 { font-size: 1.8rem; }
   .learning-center .lesson-navigation { gap: 10px; }
