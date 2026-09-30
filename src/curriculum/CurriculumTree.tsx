@@ -1,0 +1,110 @@
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { BookOpen, ChevronDown, ChevronRight, FileText, MoreHorizontal, Plus } from 'lucide-react'
+import type { Course, Lesson, Module } from '../api'
+import { entityPath, type Entity, type EntityKind, type EntitySelection } from './types'
+
+export type ModuleGroup = { module: Module; lessons: Lesson[]; totalLessons: number }
+export type CourseGroup = { course: Course; modules: ModuleGroup[]; totalModules: number }
+
+function Status({ published }: { published: boolean }) {
+  return <span className={`curriculum-status ${published ? 'is-published' : ''}`}>{published ? 'Опубликован' : 'Черновик'}</span>
+}
+
+export function EntityActionsMenu({ kind, item, editHref, canMoveUp, canMoveDown, onMove, onDelete }: {
+  kind: EntityKind
+  item: Entity
+  editHref: string
+  canMoveUp: boolean
+  canMoveDown: boolean
+  onMove: (selection: EntitySelection, delta: number) => void
+  onDelete: (selection: EntitySelection) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const closeOutside = (event: MouseEvent) => { if (!ref.current?.contains(event.target as Node)) setOpen(false) }
+    const closeEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', closeOutside)
+    document.addEventListener('keydown', closeEscape)
+    return () => { document.removeEventListener('mousedown', closeOutside); document.removeEventListener('keydown', closeEscape) }
+  }, [open])
+  const selection = { kind, item }
+  return <div className="entity-actions" ref={ref}>
+    <button type="button" className="entity-actions-trigger" aria-label={`Действия: ${item.title}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(value => !value)}><MoreHorizontal size={19}/></button>
+    {open && <div role="menu" className="entity-actions-popover">
+      <Link role="menuitem" to={editHref} onClick={() => setOpen(false)}>Редактировать</Link>
+      <button role="menuitem" disabled={!canMoveUp} onClick={() => { onMove(selection, -1); setOpen(false) }}>Переместить выше</button>
+      <button role="menuitem" disabled={!canMoveDown} onClick={() => { onMove(selection, 1); setOpen(false) }}>Переместить ниже</button>
+      <span className="entity-actions-separator"/>
+      <button role="menuitem" className="danger" onClick={() => { onDelete(selection); setOpen(false) }}>Удалить</button>
+    </div>}
+  </div>
+}
+
+type TreeProps = {
+  trackKey: string
+  expanded: Record<string, boolean>
+  forceOpen: boolean
+  onToggle: (key: string) => void
+  onCreate: (kind: EntityKind, parentId: number) => void
+  onMove: (selection: EntitySelection, delta: number) => void
+  onDelete: (selection: EntitySelection) => void
+}
+
+function LessonRow({ lesson, index, length, trackKey, canReorder, onMove, onDelete }: {
+  lesson: Lesson; index: number; length: number; trackKey: string; canReorder: boolean
+  onMove: TreeProps['onMove']; onDelete: TreeProps['onDelete']
+}) {
+  const href = `${entityPath('lessons', lesson)}?track=${encodeURIComponent(trackKey)}`
+  return <div className="curriculum-lesson-row">
+    <FileText size={15} className="curriculum-row-icon"/>
+    <span className="curriculum-number">{String(index + 1).padStart(2, '0')}.</span>
+    <Link className="curriculum-row-title" to={href}>{lesson.title}</Link>
+    <Status published={lesson.status === 'PUBLISHED'}/>
+    <EntityActionsMenu kind="lessons" item={lesson} editHref={href} canMoveUp={canReorder && index > 0} canMoveDown={canReorder && index < length - 1} onMove={onMove} onDelete={onDelete}/>
+  </div>
+}
+
+function ModuleRow({ group, index, length, trackKey, expanded, forceOpen, onToggle, onCreate, onMove, onDelete }: {
+  group: ModuleGroup; index: number; length: number; trackKey: string
+  expanded: TreeProps['expanded']; forceOpen: boolean; onToggle: TreeProps['onToggle']
+  onCreate: TreeProps['onCreate']; onMove: TreeProps['onMove']; onDelete: TreeProps['onDelete']
+}) {
+  const { module, lessons, totalLessons } = group
+  const key = `module-${module.id}`
+  const open = forceOpen || (expanded[key] ?? true)
+  const href = `${entityPath('modules', module)}?track=${encodeURIComponent(trackKey)}`
+  return <div className="curriculum-module">
+    <div className="curriculum-module-row">
+      <button className="curriculum-expand" aria-label={`${open ? 'Свернуть' : 'Развернуть'} модуль ${module.title}`} aria-expanded={open} onClick={() => onToggle(key)}>{open ? <ChevronDown size={18}/> : <ChevronRight size={18}/>}</button>
+      <span className="curriculum-number">{String(index + 1).padStart(2, '0')}.</span>
+      <Link className="curriculum-row-title" to={href}>{module.title}</Link>
+      <span className="curriculum-count">{totalLessons} ур.</span>
+      <Status published={module.is_published}/>
+      <button className="curriculum-add-inline" aria-label={`Добавить урок в модуль ${module.title}`} title="Добавить урок" onClick={() => onCreate('lessons', module.id)}><Plus size={17}/><span>Урок</span></button>
+      <EntityActionsMenu kind="modules" item={module} editHref={href} canMoveUp={!forceOpen && index > 0} canMoveDown={!forceOpen && index < length - 1} onMove={onMove} onDelete={onDelete}/>
+    </div>
+    {open && <div className="curriculum-lessons">{lessons.length ? lessons.map((lesson, lessonIndex) => <LessonRow key={lesson.id} lesson={lesson} index={lessonIndex} length={lessons.length} trackKey={trackKey} canReorder={!forceOpen} onMove={onMove} onDelete={onDelete}/>) : <div className="curriculum-empty-row">Уроков пока нет <button onClick={() => onCreate('lessons', module.id)}>Добавить урок</button></div>}</div>}
+  </div>
+}
+
+export function CourseSection({ group, index, length, trackKey, expanded, forceOpen, onToggle, onCreate, onMove, onDelete }: TreeProps & { group: CourseGroup; index: number; length: number }) {
+  const { course, modules, totalModules } = group
+  const key = `course-${course.id}`
+  const open = forceOpen || (expanded[key] ?? true)
+  const href = `${entityPath('courses', course)}?track=${encodeURIComponent(trackKey)}`
+  return <section className="curriculum-course-section" aria-label={`Курс ${course.title}`}>
+    <div className="curriculum-course-row">
+      <button className="curriculum-expand" aria-label={`${open ? 'Свернуть' : 'Развернуть'} курс ${course.title}`} aria-expanded={open} onClick={() => onToggle(key)}>{open ? <ChevronDown size={20}/> : <ChevronRight size={20}/>}</button>
+      <span className="curriculum-course-icon"><BookOpen size={20}/></span>
+      <Link className="curriculum-row-title" to={href}>{course.title}</Link>
+      <span className="curriculum-count">{totalModules} мод.</span>
+      <Status published={course.is_published}/>
+      <button className="curriculum-add-inline" aria-label={`Добавить модуль в курс ${course.title}`} title="Добавить модуль" onClick={() => onCreate('modules', course.id)}><Plus size={17}/><span>Модуль</span></button>
+      <EntityActionsMenu kind="courses" item={course} editHref={href} canMoveUp={!forceOpen && index > 0} canMoveDown={!forceOpen && index < length - 1} onMove={onMove} onDelete={onDelete}/>
+    </div>
+    {open && <div className="curriculum-course-body">{modules.length ? modules.map((moduleGroup, moduleIndex) => <ModuleRow key={moduleGroup.module.id} group={moduleGroup} index={moduleIndex} length={modules.length} trackKey={trackKey} expanded={expanded} forceOpen={forceOpen} onToggle={onToggle} onCreate={onCreate} onMove={onMove} onDelete={onDelete}/>) : <div className="curriculum-empty-row">Модулей пока нет <button onClick={() => onCreate('modules', course.id)}>Добавить модуль</button></div>}</div>}
+  </section>
+}

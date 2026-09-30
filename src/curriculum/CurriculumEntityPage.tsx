@@ -1,0 +1,96 @@
+import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, ImagePlus, Save, X } from 'lucide-react'
+import { api, apiAll, type Course, type Module, type Track } from '../api'
+import { Button, ErrorState, Input, Loading, Notice, Textarea } from '../components/ui'
+import { useLeaveWarning } from '../useLeaveWarning'
+import '../admin-curriculum.css'
+
+type Kind = 'course' | 'module'
+type Form = {
+  title: string
+  description: string
+  position: number
+  is_published: boolean
+  learning_track: number | null
+  course: number
+  slug: string
+  cover: number | null
+}
+
+function toForm(item: Course | Module, kind: Kind): Form {
+  return {
+    title: item.title, description: item.description, position: item.position, is_published: item.is_published,
+    learning_track: kind === 'course' ? (item as Course).learning_track : null,
+    course: kind === 'module' ? (item as Module).course : 0,
+    slug: kind === 'course' ? (item as Course).slug : '',
+    cover: kind === 'course' ? (item as Course).cover : null,
+  }
+}
+
+export function CurriculumEntityPage({ kind }: { kind: Kind }) {
+  const { courseId, moduleId } = useParams()
+  const id = kind === 'course' ? courseId : moduleId
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const queryClient = useQueryClient()
+  const detail = useQuery({ queryKey: ['admin', kind, id], queryFn: () => api<Course | Module>(`${kind}s/${id}/`), enabled: Boolean(id) })
+  const tracks = useQuery({ queryKey: ['admin', 'tracks'], queryFn: () => apiAll<Track>('tracks/') })
+  const courses = useQuery({ queryKey: ['admin', 'courses'], queryFn: () => apiAll<Course>('courses/') })
+  const [form, setForm] = useState<Form | null>(null)
+  const [dirty, setDirty] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [message, setMessage] = useState('')
+  const [isError, setIsError] = useState(false)
+  useEffect(() => { if (detail.data && !dirty) setForm(toForm(detail.data, kind)) }, [detail.data, dirty, kind])
+  useLeaveWarning(dirty)
+  const update = (patch: Partial<Form>) => { setForm(current => current ? { ...current, ...patch } : current); setDirty(true); setMessage('') }
+  const uploadCover = async (file: File) => {
+    setUploading(true); setMessage('')
+    const body = new FormData(); body.append('file', file)
+    try { const media = await api<{ id: number; url: string }>('media/', 'POST', body); update({ cover: media.id }) }
+    catch (error) { setIsError(true); setMessage(error instanceof Error ? error.message : 'Не удалось загрузить обложку') }
+    finally { setUploading(false) }
+  }
+  const save = async () => {
+    if (!form || !id || busy || uploading) return
+    setBusy(true); setMessage('')
+    try {
+      const payload = kind === 'course'
+        ? { title: form.title.trim(), description: form.description, slug: form.slug.trim(), learning_track: form.learning_track, cover: form.cover, position: form.position, is_published: form.is_published }
+        : { title: form.title.trim(), description: form.description, course: form.course, position: form.position, is_published: form.is_published }
+      const saved = await api<Course | Module>(`${kind}s/${id}/`, 'PATCH', payload)
+      setForm(toForm(saved, kind)); setDirty(false); setIsError(false); setMessage('Изменения сохранены')
+      await Promise.all(['courses', 'modules', 'lessons'].map(key => queryClient.invalidateQueries({ queryKey: ['admin', key] })))
+      if (kind === 'course' && (saved as Course).slug !== id) navigate(`/admin/curriculum/courses/${(saved as Course).slug}${params.get('track') ? `?track=${encodeURIComponent(params.get('track')!)}` : ''}`, { replace: true })
+    } catch (error) { setIsError(true); setMessage(error instanceof Error ? error.message : 'Не удалось сохранить изменения') }
+    finally { setBusy(false) }
+  }
+  if (detail.isLoading || tracks.isLoading || courses.isLoading) return <Loading/>
+  if (detail.error || tracks.error || courses.error) return <ErrorState error={detail.error || tracks.error || courses.error}/>
+  if (!form) return <Loading/>
+  const parentCourse = kind === 'module' ? courses.data?.find(course => course.id === form.course) : null
+  const currentTrackId = kind === 'course' ? form.learning_track : parentCourse?.learning_track
+  const trackKey = tracks.data?.find(track => track.id === currentTrackId)?.short_id ?? params.get('track')
+  const backHref = `/admin/curriculum${trackKey ? `?track=${encodeURIComponent(trackKey)}` : ''}`
+  const title = kind === 'course' ? 'Настройки курса' : 'Настройки модуля'
+  return <div className="curriculum-entity-page">
+    <Link className="curriculum-entity-back" to={backHref}><ArrowLeft size={17}/> Учебная структура</Link>
+    <div className="curriculum-entity-heading"><div><span className="eyebrow">{kind === 'course' ? 'КУРС' : 'МОДУЛЬ'}</span><h1>{title}</h1><p>Измените общие сведения и вернитесь к структуре учебной программы.</p></div><span className={`curriculum-status ${form.is_published ? 'is-published' : ''}`}>{form.is_published ? 'Опубликован' : 'Черновик'}</span></div>
+    <div className="curriculum-entity-form">
+      <section className="curriculum-form-section"><h2>Основные сведения</h2><label>Название<Input value={form.title} maxLength={200} onChange={event => update({ title: event.target.value })}/></label><label>Описание<Textarea rows={5} value={form.description} onChange={event => update({ description: event.target.value })}/></label></section>
+      <section className="curriculum-form-section"><h2>Размещение и доступ</h2>{kind === 'course' ? <>
+        <label>Траектория<select className="input" value={form.learning_track ?? ''} onChange={event => update({ learning_track: Number(event.target.value) })}>{tracks.data?.map(track => <option key={track.id} value={track.id}>{track.title}</option>)}</select></label>
+        <label>Адрес курса<Input value={form.slug} onChange={event => update({ slug: event.target.value })}/></label>
+      </> : <label>Курс<select className="input" value={form.course} onChange={event => update({ course: Number(event.target.value) })}>{courses.data?.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>}
+        <label>Порядок отображения<Input type="number" min="0" value={form.position} onChange={event => update({ position: Math.max(0, Number(event.target.value) || 0) })}/></label>
+        <label className="curriculum-publish-setting"><input type="checkbox" checked={form.is_published} onChange={event => update({ is_published: event.target.checked })}/><span><strong>Опубликован</strong><small>Материал станет доступен студентам, когда опубликованы его родительские разделы.</small></span></label>
+      </section>
+      {kind === 'course' && <section className="curriculum-form-section"><h2>Обложка курса</h2><p>Изображение показывается в каталоге студентам.</p>{form.cover && <div className="curriculum-cover-preview"><img src={`/api/v1/media/${form.cover}/`} alt="Обложка курса"/><button aria-label="Убрать обложку" onClick={() => update({ cover: null })}><X size={16}/></button></div>}<label className="curriculum-cover-upload"><ImagePlus size={18}/>{form.cover ? 'Заменить изображение' : 'Загрузить изображение'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={event => { const file = event.target.files?.[0]; if (file) void uploadCover(file); event.currentTarget.value = '' }}/></label></section>}
+    </div>
+    <div className="curriculum-form-footer"><span>{dirty ? 'Есть несохранённые изменения' : 'Все изменения сохранены'}</span><Button onClick={() => void save()} disabled={!dirty || busy || uploading || !form.title.trim() || (kind === 'course' && !form.learning_track)}><Save size={16}/>{busy ? 'Сохранение…' : 'Сохранить'}</Button></div>
+    {message && <Notice text={message} kind={isError ? 'error' : 'success'}/>}
+  </div>
+}

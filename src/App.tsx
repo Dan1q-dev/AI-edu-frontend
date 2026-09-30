@@ -14,6 +14,7 @@ const ProfilePage = lazy(() => import('./StudentPages').then(module => ({ defaul
 const EditorPage = lazy(() => import('./LessonEditorPage').then(module => ({ default: module.EditorPage })))
 const TestEditor = lazy(() => import('./AdminPages').then(module => ({ default: module.TestEditor })))
 const AdminCurriculum = lazy(() => import('./AdminCurriculum').then(module => ({ default: module.AdminCurriculum })))
+const CurriculumEntityPage = lazy(() => import('./curriculum/CurriculumEntityPage').then(module => ({ default: module.CurriculumEntityPage })))
 
 function Home({ user }: { user: User }) {
   const isAdmin = user.role === 'ADMIN'
@@ -60,6 +61,9 @@ export default function App() {
     <Route path="/profile" element={<ProtectedPage user={user}><ProfilePage user={user!}/></ProtectedPage>}/>
     <Route path="/admin" element={<ProtectedPage user={user} admin><AdminHome/></ProtectedPage>}/>
     <Route path="/admin/curriculum" element={<ProtectedPage user={user} admin><AdminCurriculum/></ProtectedPage>}/>
+    <Route path="/admin/curriculum/courses/:courseId" element={<ProtectedPage user={user} admin><CurriculumEntityPage kind="course"/></ProtectedPage>}/>
+    <Route path="/admin/curriculum/modules/:moduleId" element={<ProtectedPage user={user} admin><CurriculumEntityPage kind="module"/></ProtectedPage>}/>
+    <Route path="/admin/curriculum/lessons/:id/edit" element={user?.role === 'ADMIN' ? <EditorPage/> : <Navigate to="/" replace/>}/>
     <Route path="/admin/tracks" element={<Navigate to="/admin/curriculum" replace/>}/>
     <Route path="/admin/modules" element={<Navigate to="/admin/curriculum" replace/>}/>
     <Route path="/admin/lessons" element={<Navigate to="/admin/curriculum" replace/>}/>
