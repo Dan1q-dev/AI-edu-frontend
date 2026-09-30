@@ -54,9 +54,9 @@ export function LearningLayout({ children, tutor, courseTitle, moduleTitle, sect
       <aside className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>
       <div className="learning-center"><main className="learning-main">{children}</main>
         <footer className="lesson-navigation">
-          {previous ? <Link className="button secondary" to={entryHref(previous)} aria-label={`${t('Предыдущий')}: ${previous.title}`}><ArrowLeft size={16}/><span><small>{t('Предыдущий')}</small>{previous.title}</span></Link> : <span/>}
+          {previous ? <Link className="button secondary" to={entryHref(previous)} aria-label={`${t('Предыдущий элемент')}: ${previous.title}`}><ArrowLeft size={16}/><span><small>{t('Предыдущий')}</small>{previous.title}</span></Link> : <span/>}
           <span className="lesson-counter">{totalLessons ? `${(currentIndex || 0) + 1} ${t('из')} ${totalLessons}` : t('Элемент')}</span>
-          {next ? <Link className="button secondary" to={entryHref(next)} aria-label={`${t('Следующий')}: ${next.title}`}><span><small>{t('Следующий')}</small>{next.title}</span><ArrowLeft className="next-arrow" size={16}/></Link> : <span className="course-end"><Check size={16}/>{t('Последний элемент')}</span>}
+          {next ? <Link className="button secondary" to={entryHref(next)} aria-label={`${t('Следующий элемент')}: ${next.title}`}><span><small>{t('Следующий')}</small>{next.title}</span><ArrowLeft className="next-arrow" size={16}/></Link> : <span className="course-end"><Check size={16}/>{t('Последний элемент')}</span>}
         </footer>
       </div>
       <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor ?? <AITutorPlaceholder/>}</aside>
