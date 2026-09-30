@@ -1,5 +1,6 @@
 import { BookOpen, FlaskConical, GraduationCap } from 'lucide-react'
 import type { Track } from '../api'
+import { useI18n } from '../i18n'
 
 export interface TrackSelectProps {
   tracks: Track[]
@@ -21,15 +22,17 @@ export function TrackSelect({
   error = null,
   hasError = false,
   errorMessage = null,
-  label = 'Траектория обучения',
+  label,
   disabled = false
 }: TrackSelectProps) {
+  const { t } = useI18n()
+  const visibleLabel = label ?? t('Траектория обучения')
   return (
     <div className="track-selector">
-      {label && <label className="track-selector-label">{label}</label>}
+      {visibleLabel && <label className="track-selector-label">{visibleLabel}</label>}
 
       {isLoading ? (
-        <div className="track-options-grid loading" role="status" aria-label="Загрузка траекторий">
+        <div className="track-options-grid loading" role="status" aria-label={t('Загрузка траекторий')}>
           <div className="track-option-btn skeleton" />
           <div className="track-option-btn skeleton" />
         </div>
@@ -37,7 +40,7 @@ export function TrackSelect({
         <div
           className={`track-options-grid ${hasError ? 'has-error' : ''}`}
           role="radiogroup"
-          aria-label={label}
+          aria-label={visibleLabel}
         >
           {tracks.map((track, index) => {
             const isSelected = track.id === selectedTrackId

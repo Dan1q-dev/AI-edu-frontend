@@ -621,6 +621,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .learning-header-title { text-align: left; }
 .learning-header-title strong { font-size: .88rem; }
 .learning-header .outline-button { display: none; }
+.learning-header-tools { display: flex; align-items: center; justify-self: end; gap: 9px; }
+.language-select { display: inline-flex; align-items: center; gap: 8px; color: var(--color-muted); font-size: .77rem; }
+.language-select select { min-height: 34px; padding: 6px 28px 6px 10px; border: 1px solid var(--color-border); border-radius: 8px; background-color: #fff; color: var(--color-text); font-size: .76rem; }
+.language-select.compact select { min-height: 32px; }
+.auth-language { position: fixed; top: 20px; right: 22px; z-index: 20; }
+.main-header-inner > .language-select { margin-left: auto; }
+.main-header-inner > .user-menu { margin-left: 14px; }
 .learning-workspace { display: grid; grid-template-columns: 264px minmax(0, 1fr) 300px; min-height: calc(100vh - 62px); max-width: 1920px; margin: auto; }
 .learning-workspace > * { min-width: 0; }
 .learning-workspace .desktop-outline { position: sticky; top: 62px; width: auto; height: calc(100vh - 62px); box-shadow: none; animation: none; border-right: 1px solid var(--color-border); }
@@ -667,6 +674,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 }
 @media (max-width: 600px) {
   .learning-header .outline-button span { display: none; }
+  .learning-header-tools { gap: 6px; }
+  .learning-header-tools .language-select select { min-height: 34px; padding-left: 7px; font-size: .7rem; }
   .learning-main { padding-top: 24px; }
   .learning-main .lesson-heading h1 { font-size: 1.8rem; }
   .learning-center .lesson-navigation { gap: 10px; }

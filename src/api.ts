@@ -4,7 +4,7 @@ export type Track = { id: number; short_id: string; title: string; description: 
 export type Course = { id: number; short_id: string; learning_track: number | null; title: string; slug: string; description: string; cover: number | null; position: number; is_published: boolean }
 export type Module = { id: number; short_id: string; course: number; title: string; description: string; position: number; is_published: boolean }
 export type Lesson = { id: number; short_id: string; module: number; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED' }
-export type LearningItem = { id: number; short_id: string; module: number; type: 'LECTURE' | 'TEST' | 'PRACTICE'; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED'; lesson: number | null; lesson_short_id: string | null; test: number | null; practice: number | null }
+export type LearningItem = { id: number; short_id: string; module: number; module_short_id?: string; module_title?: string; module_position?: number; course_id?: number; course_short_id?: string; course_title?: string; type: 'LECTURE' | 'TEST' | 'PRACTICE'; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED'; lesson: number | null; lesson_short_id: string | null; test: number | null; practice: number | null }
 export type Block = { id?: number; type: 'TEXT' | 'IMAGE'; position: number; content: string; media: number | null; media_url?: string | null; config: Record<string, unknown> }
 export type Option = { id?: number; text: string; position: number; is_correct?: boolean }
 export type Question = { id?: number; text: string; position: number; points: number; options: Option[] }
@@ -24,11 +24,11 @@ export async function api<T>(path: string, method = 'GET', data?: unknown): Prom
   const res = await fetch('/api/v1/' + path.replace(/^\//, ''), { method, body, headers, credentials: 'include' })
   if (!res.ok) {
     if (res.status === 413) {
-      throw new ApiError('Размер файла превышает лимит сервера (до 10 МБ). Попробуйте уменьшить размер изображения.', 413)
+      throw new ApiError(translateCurrentLocale('Размер файла превышает лимит сервера (до 10 МБ). Попробуйте уменьшить размер изображения.'), 413)
     }
     const payload = await res.json().catch(() => ({}))
     const rawDetail = payload.error?.detail ?? payload.detail
-    const detail = typeof rawDetail === 'object' && rawDetail !== null && 'file' in rawDetail ? (rawDetail as { file: unknown }).file : rawDetail ?? 'Ошибка запроса'
+    const detail = typeof rawDetail === 'object' && rawDetail !== null && 'file' in rawDetail ? (rawDetail as { file: unknown }).file : rawDetail ?? translateCurrentLocale('Ошибка запроса')
     throw new ApiError(typeof detail === 'string' ? detail : JSON.stringify(detail), res.status)
   }
   return res.status === 204 ? undefined as T : res.json()
@@ -47,3 +47,4 @@ export async function apiAll<T>(path: string): Promise<T[]> {
   }
   return results
 }
+import { translateCurrentLocale } from './i18n'

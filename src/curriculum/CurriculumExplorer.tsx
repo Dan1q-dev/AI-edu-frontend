@@ -7,15 +7,15 @@ import { CreateEntityDialog } from './CreateEntityDialog'
 import { CurriculumHeader } from './CurriculumHeader'
 import { CourseSection, type CourseGroup } from './CurriculumTree'
 import { entityKey, sortByPosition, type Entity, type EntityKind, type EntitySelection } from './types'
+import { useI18n } from '../i18n'
 import '../admin-curriculum.css'
 
 type Creation = { kind: EntityKind; parentId: number; type?: LearningItem['type'] }
 type Feedback = { text: string; kind: 'success' | 'error' }
-const labels: Record<EntityKind, string> = { courses: 'Курс', modules: 'Модуль', items: 'Элемент' }
-const plural: Record<EntityKind, string> = { courses: 'курс', modules: 'модуль', items: 'элемент' }
 const nextPosition = (items: { position: number }[]) => Math.max(-1, ...items.map(item => item.position)) + 1
 
 export function AdminCurriculum() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [params, setParams] = useSearchParams()
   const tracksQuery = useQuery({ queryKey: ['admin', 'tracks'], queryFn: () => apiAll<Track>('tracks/') })
@@ -64,7 +64,7 @@ export function AdminCurriculum() {
     const result = await api<Entity>(`${kind}/`, 'POST', body)
     await refresh()
     setExpanded(current => ({ ...current, ...(kind === 'modules' ? { [`course-${parentId}`]: true } : kind === 'items' ? { [`module-${parentId}`]: true } : {}) }))
-    setFeedback({ text: `${labels[kind]} «${result.title}» создан. Нажмите на название, чтобы открыть настройки.`, kind: 'success' })
+    setFeedback({ text: `${t(({ courses: 'Курс', modules: 'Модуль', items: 'Элемент' } as const)[kind])} «${result.title}» ${t('создан. Нажмите на название, чтобы открыть настройки.')}`, kind: 'success' })
   }
   const destroy = async () => {
     if (!deletion || busy) return
@@ -73,9 +73,9 @@ export function AdminCurriculum() {
       const { kind, item } = deletion
       await api(`${kind}/${entityKey(kind, item)}/`, 'DELETE')
       await refresh()
-      setFeedback({ text: `${labels[kind]} «${item.title}» удалён`, kind: 'success' })
+      setFeedback({ text: `${t(({ courses: 'Курс', modules: 'Модуль', items: 'Элемент' } as const)[kind])} «${item.title}» ${t('удалён')}`, kind: 'success' })
       setDeletion(null)
-    } catch (cause) { setFeedback({ text: cause instanceof Error ? cause.message : 'Не удалось удалить материал', kind: 'error' }); setDeletion(null) }
+    } catch (cause) { setFeedback({ text: cause instanceof Error ? cause.message : t('Не удалось удалить материал'), kind: 'error' }); setDeletion(null) }
     finally { setBusy(false) }
   }
   const move = async ({ kind, item }: EntitySelection, delta: number) => {
@@ -94,8 +94,8 @@ export function AdminCurriculum() {
       if (kind === 'items') await api(`${kind}/${entityKey(kind, item)}/`, 'PATCH', { position: target })
       else await Promise.all(siblings.map((sibling, position) => sibling.position === position ? Promise.resolve() : api(`${kind}/${entityKey(kind, sibling)}/`, 'PATCH', { position })))
       await refresh()
-      setFeedback({ text: 'Порядок обновлён', kind: 'success' })
-    } catch (cause) { await refresh(); setFeedback({ text: cause instanceof Error ? cause.message : 'Не удалось изменить порядок', kind: 'error' }) }
+      setFeedback({ text: t('Порядок обновлён'), kind: 'success' })
+    } catch (cause) { await refresh(); setFeedback({ text: cause instanceof Error ? cause.message : t('Не удалось изменить порядок'), kind: 'error' }) }
     finally { setBusy(false) }
   }
   const loading = tracksQuery.isLoading || coursesQuery.isLoading || modulesQuery.isLoading || itemsQuery.isLoading
@@ -103,8 +103,8 @@ export function AdminCurriculum() {
   return <div className="curriculum-explorer">
     <CurriculumHeader tracks={tracks} trackKey={trackKey} hasUnassigned={hasUnassigned} search={search} onTrackChange={selectTrack} onSearchChange={setSearch} onCreateCourse={() => { if (selectedTrack) setCreation({ kind: 'courses', parentId: selectedTrack.id }) }}/>
     {feedback && <Notice text={feedback.text} kind={feedback.kind}/>}
-    {loading ? <Loading/> : error ? <ErrorState error={error}/> : groups.length ? <div className="curriculum-course-list" aria-label="Структура учебных курсов">{groups.map((group, index) => <CourseSection key={group.course.id} group={group} index={index} length={groups.length} trackKey={trackKey} expanded={expanded} forceOpen={Boolean(needle)} onToggle={key => setExpanded(current => ({ ...current, [key]: !(current[key] ?? true) }))} onCreate={(kind, parentId, type) => setCreation({ kind, parentId, type })} onMove={(selection, delta) => void move(selection, delta)} onDelete={setDeletion}/>)}</div> : <div className="curriculum-empty"><h2>{needle ? 'Ничего не найдено' : 'Курсов пока нет'}</h2><p>{needle ? 'Попробуйте другое название курса, модуля или элемента.' : selectedTrack ? 'Создайте первый курс в этой траектории.' : 'Выберите траекторию обучения.'}</p></div>}
+    {loading ? <Loading/> : error ? <ErrorState error={error}/> : groups.length ? <div className="curriculum-course-list" aria-label={t('Структура учебных курсов')}>{groups.map((group, index) => <CourseSection key={group.course.id} group={group} index={index} length={groups.length} trackKey={trackKey} expanded={expanded} forceOpen={Boolean(needle)} onToggle={key => setExpanded(current => ({ ...current, [key]: !(current[key] ?? true) }))} onCreate={(kind, parentId, type) => setCreation({ kind, parentId, type })} onMove={(selection, delta) => void move(selection, delta)} onDelete={setDeletion}/>)}</div> : <div className="curriculum-empty"><h2>{t(needle ? 'Ничего не найдено' : 'Курсов пока нет')}</h2><p>{t(needle ? 'Попробуйте другое название курса, модуля или элемента.' : selectedTrack ? 'Создайте первый курс в этой траектории.' : 'Выберите траекторию обучения.')}</p></div>}
     {creation && <CreateEntityDialog kind={creation.kind} onCreate={create} onClose={() => setCreation(null)}/ >}
-    {deletion && <Confirm title={`Удалить ${plural[deletion.kind]} «${deletion.item.title}»?${deletion.kind === 'items' ? '' : ' Вложенные материалы также будут удалены.'}`} onConfirm={() => void destroy()} onCancel={() => setDeletion(null)}/ >}
+    {deletion && <Confirm title={`${t('Удалить')} ${t(({ courses: 'курс', modules: 'модуль', items: 'элемент' } as const)[deletion.kind])} «${deletion.item.title}»?${deletion.kind === 'items' ? '' : ` ${t('Вложенные материалы также будут удалены.')}`}`} onConfirm={() => void destroy()} onCancel={() => setDeletion(null)}/ >}
   </div>
 }

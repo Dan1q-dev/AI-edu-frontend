@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
 import { BookOpen, Loader2 } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }
 
@@ -34,12 +35,14 @@ export interface LoadingProps {
 }
 
 export function Loading({
-  label = 'Загрузка…',
+  label,
   description,
   fullPage = false,
   variant,
   className = ''
 }: LoadingProps) {
+  const { t } = useI18n()
+  label ??= t('Загрузка…')
   const isFull = fullPage || variant === 'fullscreen'
 
   if (isFull) {
@@ -102,7 +105,8 @@ export function Loading({
 }
 
 export function ErrorState({ error }: { error: unknown }) {
-  return <div className="notice error" role="alert">{error instanceof Error ? error.message : 'Не удалось загрузить данные'}</div>
+  const { t } = useI18n()
+  return <div className="notice error" role="alert">{error instanceof Error ? error.message : t('Не удалось загрузить данные')}</div>
 }
 
 export function Notice({ text, kind = 'success' }: { text: string; kind?: 'success' | 'error' }) {
@@ -110,10 +114,11 @@ export function Notice({ text, kind = 'success' }: { text: string; kind?: 'succe
 }
 
 export function Confirm({ title, onConfirm, onCancel }: { title: string; onConfirm: () => void; onCancel: () => void }) {
+  const { t } = useI18n()
   return <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) onCancel() }}>
     <div className="modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
       <h3 id="confirm-title">{title}</h3>
-      <div className="row"><Button variant="danger" onClick={onConfirm}>Подтвердить</Button><Button variant="secondary" onClick={onCancel}>Отмена</Button></div>
+      <div className="row"><Button variant="danger" onClick={onConfirm}>{t('Подтвердить')}</Button><Button variant="secondary" onClick={onCancel}>{t('Отмена')}</Button></div>
     </div>
   </div>
 }

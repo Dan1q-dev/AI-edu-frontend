@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -7,18 +7,21 @@ import { Link, useNavigate } from 'react-router-dom'
 import { BookOpen } from 'lucide-react'
 import { api, apiAll, type Track, type User } from './api'
 import { Button, Input, Notice, TrackSelect } from './components/ui'
+import { LanguageSelect, useI18n } from './i18n'
 
-const schema = z.object({
-  email: z.email('Введите корректный email'),
-  password: z.string().min(8, 'Минимум 8 символов'),
+const makeSchema = (t: (key: string) => string) => z.object({
+  email: z.email(t('Введите корректный email')),
+  password: z.string().min(8, t('Минимум 8 символов')),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   learning_track: z.number().optional()
 })
 
-type Form = z.infer<typeof schema>
+type Form = z.infer<ReturnType<typeof makeSchema>>
 
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
+  const { t } = useI18n()
+  const schema = useMemo(() => makeSchema(t), [t])
   const {
     register,
     handleSubmit,
@@ -43,7 +46,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const submit = async (values: Form) => {
     setError('')
     if (mode === 'register' && !values.learning_track) {
-      setError('Выберите траекторию обучения')
+      setError(t('Выберите траекторию обучения'))
       return
     }
 
@@ -64,6 +67,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
   return (
     <div className="auth-page">
+      <div className="auth-language"><LanguageSelect/></div>
       <div className="auth-side">
         <Link to="/" className="brand">
           AI<span>edu</span>
@@ -72,10 +76,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           <div className="auth-icon">
             <BookOpen size={46} />
           </div>
-          <h1>Обучение начинается здесь.</h1>
-          <p>Создавайте свой путь в мире технологий и гуманитарных наук.</p>
+          <h1>{t('Обучение начинается здесь.')}</h1>
+          <p>{t('Создавайте свой путь в мире технологий и гуманитарных наук.')}</p>
         </div>
-        <small>© AI Edu · Образовательная платформа</small>
+        <small>© AI Edu · {t('Образовательная платформа')}</small>
       </div>
 
       <div className="auth-form-wrap">
@@ -83,23 +87,23 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           className={`auth-form card ${mode === 'register' ? 'auth-form-register' : ''}`}
           onSubmit={handleSubmit(submit)}
         >
-          <span className="eyebrow">ДОБРО ПОЖАЛОВАТЬ</span>
-          <h2>{mode === 'login' ? 'Вход в аккаунт' : 'Создать аккаунт'}</h2>
+          <span className="eyebrow">{t('ДОБРО ПОЖАЛОВАТЬ')}</span>
+          <h2>{mode === 'login' ? t('Вход в аккаунт') : t('Создать аккаунт')}</h2>
           <p>
             {mode === 'login'
-              ? 'Продолжите обучение там, где остановились.'
-              : 'Начните изучать новые траектории.'}
+              ? t('Продолжите обучение там, где остановились.')
+              : t('Начните изучать новые траектории.')}
           </p>
 
           {mode === 'register' && (
             <div className="row">
               <label>
-                Имя
-                <Input {...register('first_name')} placeholder="Имя" />
+                {t('Имя')}
+                <Input {...register('first_name')} placeholder={t('Имя')} />
               </label>
               <label>
-                Фамилия
-                <Input {...register('last_name')} placeholder="Фамилия" />
+                {t('Фамилия')}
+                <Input {...register('last_name')} placeholder={t('Фамилия')} />
               </label>
             </div>
           )}
@@ -116,11 +120,11 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           </label>
 
           <label>
-            Пароль
+            {t('Пароль')}
             <Input
               type="password"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              placeholder="Минимум 8 символов"
+              placeholder={t('Минимум 8 символов')}
               {...register('password')}
             />
             <small className="field-error">{errors.password?.message}</small>
@@ -140,10 +144,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
                 selectedTrackId={selectedTrackId}
                 onSelect={trackId => {
                   setValue('learning_track', trackId, { shouldValidate: true })
-                  if (error === 'Выберите траекторию обучения') setError('')
+                  if (error === t('Выберите траекторию обучения')) setError('')
                 }}
                 isLoading={tracks.isLoading}
-                error={tracks.error ? 'Не удалось загрузить траектории' : null}
+                error={tracks.error ? t('Не удалось загрузить траектории') : null}
                 hasError={Boolean(error && !selectedTrackId)}
                 errorMessage={error && !selectedTrackId ? error : null}
               />
@@ -161,20 +165,20 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             className="wide"
           >
             {isSubmitting
-              ? 'Подождите…'
+              ? t('Подождите…')
               : mode === 'login'
-              ? 'Войти'
-              : 'Зарегистрироваться'}
+              ? t('Войти')
+              : t('Зарегистрироваться')}
           </Button>
 
           <div className="auth-switch">
             {mode === 'login' ? (
               <>
-                Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+                {t('Нет аккаунта?')} <Link to="/register">{t('Зарегистрироваться')}</Link>
               </>
             ) : (
               <>
-                Уже есть аккаунт? <Link to="/login">Войти</Link>
+                {t('Уже есть аккаунт?')} <Link to="/login">{t('Войти')}</Link>
               </>
             )}
           </div>

@@ -6,27 +6,31 @@ import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Clock3, Code2, Layers 
 import { api, apiAll, ApiError, type Attempt, type Block, type Course, type CourseProgress, type LearningItem, type Lesson, type Module, type Page, type Test, type Track, type User } from './api'
 import { Button, ErrorState, Input, Loading, Notice, Select } from './components/ui'
 import { LearningLayout, type CourseSection } from './layouts/LearningLayout'
-import { RichLessonContent } from './components/LessonTextEditor'
+import { RichLessonContent } from './components/RichLessonContent'
 import { LectureProgress } from './LectureProgress'
+import { useI18n } from './i18n'
 
 function isTiptapContent(value: string) { try { return JSON.parse(value)?.type === 'doc' } catch { return false } }
 
 export function CatalogPage() {
+  const { t } = useI18n()
   const { data, isLoading, error } = useQuery({ queryKey: ['courses'], queryFn: () => apiAll<Course>('courses/') })
-  return <><div className="page-heading-row"><div><span className="eyebrow">КАТАЛОГ ОБУЧЕНИЯ</span><h1>Мои курсы</h1><p>Материалы доступны в рамках выбранной траектории обучения.</p></div><span className="catalog-count">{data?.length ?? 0} {data?.length === 1 ? 'курс' : 'курсов'}</span></div>{isLoading ? <Loading/> : error ? <ErrorState error={error}/> : data?.length ? <div className="catalog-grid">{data.map((course, i) => <Link className="catalog-card" key={course.id} to={`/courses/${course.slug}`}><div className={`catalog-card-art ${course.cover ? 'has-cover' : `tone-${i % 3}`}`}>{course.cover ? <img src={`/api/v1/media/${course.cover}/`} alt={course.title} className="catalog-card-image"/> : <><Layers size={29}/><span>AI Edu · {String(i + 1).padStart(2, '0')}</span></>}</div><div className="catalog-card-body"><span className="eyebrow">КУРС</span><h2>{course.title}</h2><p>{course.description || 'Уроки и тесты для системного обучения.'}</p><span className="card-link">Открыть курс <ChevronRight size={16}/></span></div></Link>)}</div> : <div className="empty-state"><Layers size={28}/><h2>Курсы пока не опубликованы</h2><p>Загляните позже — здесь появятся материалы по вашей траектории.</p></div>}</>
+  return <><div className="page-heading-row"><div><span className="eyebrow">{t('КАТАЛОГ ОБУЧЕНИЯ')}</span><h1>{t('Мои курсы')}</h1><p>{t('Материалы доступны в рамках выбранной траектории обучения.')}</p></div><span className="catalog-count">{data?.length ?? 0} {t(data?.length === 1 ? 'курс' : 'курсов')}</span></div>{isLoading ? <Loading/> : error ? <ErrorState error={error}/> : data?.length ? <div className="catalog-grid">{data.map((course, i) => <Link className="catalog-card" key={course.id} to={`/courses/${course.slug}`}><div className={`catalog-card-art ${course.cover ? 'has-cover' : `tone-${i % 3}`}`}>{course.cover ? <img src={`/api/v1/media/${course.cover}/`} alt={course.title} className="catalog-card-image"/> : <><Layers size={29}/><span>AI Edu · {String(i + 1).padStart(2, '0')}</span></>}</div><div className="catalog-card-body"><span className="eyebrow">{t('КУРС')}</span><h2>{course.title}</h2><p>{course.description || t('Уроки и тесты для системного обучения.')}</p><span className="card-link">{t('Открыть курс')} <ChevronRight size={16}/></span></div></Link>)}</div> : <div className="empty-state"><Layers size={28}/><h2>{t('Курсы пока не опубликованы')}</h2><p>{t('Загляните позже — здесь появятся материалы по вашей траектории.')}</p></div>}</>
 }
 
 export function CoursePage() {
+  const { t } = useI18n()
   const { slug } = useParams()
   const course = useQuery({ queryKey: ['course', slug], queryFn: () => api<Course>(`courses/${slug}/`) })
   const modules = useQuery({ queryKey: ['modules', course.data?.id], queryFn: () => apiAll<Module>(`modules/?course=${course.data!.id}`), enabled: Boolean(course.data) })
-  const items = useQuery({ queryKey: ['course-items', course.data?.id, modules.data?.length], queryFn: async () => (await Promise.all((modules.data ?? []).map(module => apiAll<LearningItem>(`items/?module=${module.id}`)))).flat(), enabled: modules.isSuccess })
+  const items = useQuery({ queryKey: ['course-items', course.data?.id], queryFn: () => apiAll<LearningItem>(`items/?course=${course.data!.id}&page_size=100`), enabled: Boolean(course.data) })
   if (course.isLoading || modules.isLoading || items.isLoading) return <Loading/>
   if (course.error || modules.error || items.error) return <ErrorState error={course.error || modules.error || items.error}/>
-  return <><Link className="back" to="/catalog"><ArrowLeft size={16}/> Все курсы</Link>{course.data?.cover && <div className="course-banner"><img src={`/api/v1/media/${course.data.cover}/`} alt={course.data.title}/></div>}<div className="page-heading-row"><div><span className="eyebrow">КУРС · {course.data?.learning_track ? 'ВАША ТРАЕКТОРИЯ' : 'ТРАЕКТОРИЯ'}</span><h1>{course.data?.title}</h1><p>{course.data?.description}</p></div><span className="catalog-count">{items.data?.length ?? 0} элементов</span></div><div className="module-list">{modules.data?.map((module, index) => <section className="module-card card" key={module.id}><div className="module-number">{String(index + 1).padStart(2, '0')}</div><div className="module-content"><div><span className="eyebrow">МОДУЛЬ {index + 1}</span><h2>{module.title}</h2><p>{module.description}</p></div><div className="module-lesson-list">{items.data?.filter(item => item.module === module.id).sort((a, b) => a.position - b.position).map(item => <Link to={`/items/${item.short_id}`} key={item.id}><span className="lesson-list-icon">{item.type === 'TEST' ? <CheckCircle2 size={17}/> : item.type === 'PRACTICE' ? <Code2 size={17}/> : <BookOpen size={17}/>}</span><span className="module-lesson-copy"><strong>{item.title}</strong><small>{item.type === 'LECTURE' ? 'Лекция' : item.type === 'TEST' ? 'Тест' : 'Практика'}</small></span><ChevronRight size={17}/></Link>)}</div></div></section>)}</div></>
+  return <><Link className="back" to="/catalog"><ArrowLeft size={16}/> {t('Все курсы')}</Link>{course.data?.cover && <div className="course-banner"><img src={`/api/v1/media/${course.data.cover}/`} alt={course.data.title}/></div>}<div className="page-heading-row"><div><span className="eyebrow">{t(course.data?.learning_track ? 'Курс · ВАША ТРАЕКТОРИЯ' : 'Курс · ТРАЕКТОРИЯ')}</span><h1>{course.data?.title}</h1><p>{course.data?.description}</p></div><span className="catalog-count">{items.data?.length ?? 0} {t('элементов')}</span></div><div className="module-list">{modules.data?.map((module, index) => <section className="module-card card" key={module.id}><div className="module-number">{String(index + 1).padStart(2, '0')}</div><div className="module-content"><div><span className="eyebrow">{t('МОДУЛЬ')} {index + 1}</span><h2>{module.title}</h2><p>{module.description}</p></div><div className="module-lesson-list">{items.data?.filter(item => item.module === module.id).sort((a, b) => a.position - b.position).map(item => <Link to={`/items/${item.short_id}`} key={item.id}><span className="lesson-list-icon">{item.type === 'TEST' ? <CheckCircle2 size={17}/> : item.type === 'PRACTICE' ? <Code2 size={17}/> : <BookOpen size={17}/>}</span><span className="module-lesson-copy"><strong>{item.title}</strong><small>{t(item.type === 'LECTURE' ? 'Лекция' : item.type === 'TEST' ? 'Тест' : 'Практика')}</small></span><ChevronRight size={17}/></Link>)}</div></div></section>)}</div></>
 }
 
 function TestRunner({ lessonId, itemId }: { lessonId?: string; itemId?: string }) {
+  const { t, locale } = useI18n()
   const endpoint = itemId ? `items/${itemId}` : `lessons/${lessonId}`
   const key = itemId ?? lessonId
   const qc = useQueryClient()
@@ -45,10 +49,11 @@ function TestRunner({ lessonId, itemId }: { lessonId?: string; itemId?: string }
       if (itemId) qc.invalidateQueries({ queryKey: ['course-progress'] })
     } catch (e) { setMessage((e as Error).message) } finally { setSubmitting(false) }
   }
-  return <section className="test-section"><div className="section-heading"><div><span className="eyebrow">ПРОВЕРЬТЕ СЕБЯ</span><h2>{test.title}</h2><p>{test.description}</p></div><span className="pill">Проходной балл {test.passing_percent}%</span></div>{result ? <div className={`result-card ${result.passed ? 'passed' : 'failed'}`}><CheckCircle2 size={32}/><h3>{result.passed ? 'Тест пройден!' : 'Попробуйте ещё раз'}</h3><strong>{result.percent}%</strong><p>{result.earned_points} из {result.total_points} баллов</p></div> : <div className="stack">{test.questions.map((q, index) => <div key={q.id} className="card question-card"><span className="eyebrow">ВОПРОС {index + 1} · {q.points} БАЛЛ</span><h3>{q.text}</h3><div className="options">{q.options.map(o => <label key={o.id} className={answers[q.id!] === o.id ? 'selected' : ''}><input type="radio" name={`q-${q.id}`} checked={answers[q.id!] === o.id} onChange={() => setAnswers({ ...answers, [q.id!]: o.id! })}/>{o.text}</label>)}</div></div>)}<Notice text={message} kind="error"/><Button disabled={submitting || test.questions.some(q => !answers[q.id!])} onClick={submit}>Отправить ответы</Button></div>}{attempts.data && attempts.data.results.length > 0 && <div className="history"><h3>История попыток</h3>{attempts.data.results.map(a => <div key={a.id} className="history-row"><Clock3 size={16}/><span>{new Date(a.completed_at).toLocaleString('ru-RU')}</span><strong>{a.percent}%</strong><span className={a.passed ? 'good' : 'bad'}>{a.passed ? 'Пройдено' : 'Не пройдено'}</span></div>)}</div>}</section>
+  return <section className="test-section"><div className="section-heading"><div><span className="eyebrow">{t('ПРОВЕРЬТЕ СЕБЯ')}</span><h2>{test.title}</h2><p>{test.description}</p></div><span className="pill">{t('Проходной балл')} {test.passing_percent}%</span></div>{result ? <div className={`result-card ${result.passed ? 'passed' : 'failed'}`}><CheckCircle2 size={32}/><h3>{result.passed ? t('Тест пройден!') : t('Попробуйте ещё раз')}</h3><strong>{result.percent}%</strong><p>{result.earned_points} {t('из')} {result.total_points} {t('баллов')}</p></div> : <div className="stack">{test.questions.map((q, index) => <div key={q.id} className="card question-card"><span className="eyebrow">{t('ВОПРОС')} {index + 1} · {q.points} {t('БАЛЛ')}</span><h3>{q.text}</h3><div className="options">{q.options.map(o => <label key={o.id} className={answers[q.id!] === o.id ? 'selected' : ''}><input type="radio" name={`q-${q.id}`} checked={answers[q.id!] === o.id} onChange={() => setAnswers({ ...answers, [q.id!]: o.id! })}/>{o.text}</label>)}</div></div>)}<Notice text={message} kind="error"/><Button disabled={submitting || test.questions.some(q => !answers[q.id!])} onClick={submit}>{t('Отправить ответы')}</Button></div>}{attempts.data && attempts.data.results.length > 0 && <div className="history"><h3>{t('История попыток')}</h3>{attempts.data.results.map(a => <div key={a.id} className="history-row"><Clock3 size={16}/><span>{new Date(a.completed_at).toLocaleString(locale === 'kz' ? 'kk-KZ' : locale === 'en' ? 'en-US' : 'ru-RU')}</span><strong>{a.percent}%</strong><span className={a.passed ? 'good' : 'bad'}>{t(a.passed ? 'Пройдено' : 'Не пройдено')}</span></div>)}</div>}</section>
 }
 
 export function LessonPage() {
+  const { t } = useI18n()
   const { id } = useParams()
   const lesson = useQuery({ queryKey: ['lesson', id], queryFn: () => api<Lesson>(`lessons/${id}/`) })
   const blocks = useQuery({ queryKey: ['blocks', id], queryFn: () => api<Block[]>(`lessons/${id}/blocks/`) })
@@ -68,55 +73,74 @@ export function LessonPage() {
   const sections: CourseSection[] = (courseSectionsQuery.data ?? []).map(section => ({ ...section, lessons: section.lessons }))
   const courseLessons = sections.flatMap(section => section.lessons)
   const currentIndex = courseLessons.findIndex(item => item.short_id === id)
-  return <LearningLayout courseTitle={course.data?.title} moduleTitle={currentModule?.title} sections={sections} lessonId={id!} lessonTitle={lesson.data?.title || 'Урок'} currentIndex={currentIndex >= 0 ? currentIndex : 0} totalLessons={courseLessons.length || undefined} previous={currentIndex > 0 ? courseLessons[currentIndex - 1] : undefined} next={currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1] : undefined}>
-    <div className="lesson-heading"><span className="eyebrow">УЧЕБНЫЙ МАТЕРИАЛ</span><h1>{lesson.data?.title}</h1><p>{lesson.data?.description}</p></div>
-    <article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown">{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={block.content || 'Изображение урока'}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article>
+  return <LearningLayout courseTitle={course.data?.title} moduleTitle={currentModule?.title} sections={sections} lessonId={id!} lessonTitle={lesson.data?.title || t('Урок')} currentIndex={currentIndex >= 0 ? currentIndex : 0} totalLessons={courseLessons.length || undefined} previous={currentIndex > 0 ? courseLessons[currentIndex - 1] : undefined} next={currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1] : undefined}>
+    <div className="lesson-heading"><span className="eyebrow">{t('УЧЕБНЫЙ МАТЕРИАЛ')}</span><h1>{lesson.data?.title}</h1><p>{lesson.data?.description}</p></div>
+    <article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown">{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={block.content || t('Изображение урока')}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article>
     <TestRunner lessonId={id!}/>
   </LearningLayout>
 }
 
 export function LearningItemPage() {
+  const { t } = useI18n()
   const { id = '' } = useParams()
   const item = useQuery({ queryKey: ['learning-item', id], queryFn: () => api<LearningItem>(`items/${id}/`) })
   const blocks = useQuery({ queryKey: ['item-blocks', item.data?.lesson_short_id], queryFn: () => api<Block[]>(`lessons/${item.data!.lesson_short_id}/blocks/`), enabled: item.data?.type === 'LECTURE' && Boolean(item.data.lesson_short_id) })
-  const modules = useQuery({ queryKey: ['learning-modules'], queryFn: () => apiAll<Module>('modules/'), enabled: Boolean(item.data) })
-  const currentModule = modules.data?.find(module => module.id === item.data?.module)
-  const course = useQuery({ queryKey: ['learning-course', currentModule?.course], queryFn: async () => (await apiAll<Course>('courses/')).find(entry => entry.id === currentModule?.course) ?? null, enabled: Boolean(currentModule) })
-  const sectionsQuery = useQuery({ queryKey: ['learning-items', currentModule?.course], queryFn: async () => {
-    const courseModules = [...(modules.data ?? []).filter(module => module.course === currentModule?.course)].sort((a, b) => a.position - b.position || a.id - b.id)
-    return Promise.all(courseModules.map(async module => ({ module, lessons: (await apiAll<LearningItem>(`items/?module=${module.id}`)).sort((a, b) => a.position - b.position || a.id - b.id) })))
-  }, enabled: Boolean(currentModule) })
-  const progress = useQuery({ queryKey: ['course-progress', course.data?.short_id], queryFn: () => api<CourseProgress>(`courses/${course.data!.short_id}/progress/`), enabled: Boolean(course.data) })
-  if (item.isLoading || blocks.isLoading || modules.isLoading || course.isLoading || sectionsQuery.isLoading || progress.isLoading) return <Loading/>
-  if (item.error || blocks.error || modules.error || course.error || sectionsQuery.error || progress.error) return <ErrorState error={item.error || blocks.error || modules.error || course.error || sectionsQuery.error || progress.error}/>
-  const sections: CourseSection[] = sectionsQuery.data ?? []
+  const courseItems = useQuery({ queryKey: ['learning-items', item.data?.course_id], queryFn: () => apiAll<LearningItem>(`items/?course=${item.data!.course_id}&page_size=100`), enabled: Boolean(item.data?.course_id) })
+  const progress = useQuery({ queryKey: ['course-progress', item.data?.course_short_id], queryFn: () => api<CourseProgress>(`courses/${item.data!.course_short_id}/progress/`), enabled: Boolean(item.data?.course_short_id) })
+  if (item.isLoading || blocks.isLoading) return <Loading/>
+  if (item.error || blocks.error) return <ErrorState error={item.error || blocks.error}/>
+  const grouped = new Map<number, CourseSection>()
+  for (const entry of courseItems.data ?? []) {
+    let section = grouped.get(entry.module)
+    if (!section) {
+      section = {
+        module: {
+          id: entry.module,
+          short_id: entry.module_short_id ?? String(entry.module),
+          course: entry.course_id ?? 0,
+          title: entry.module_title ?? '',
+          description: '',
+          position: entry.module_position ?? 0,
+          is_published: true,
+        },
+        lessons: [],
+      }
+      grouped.set(entry.module, section)
+    }
+    section.lessons.push(entry)
+  }
+  const sections: CourseSection[] = [...grouped.values()].sort((a, b) => a.module.position - b.module.position || a.module.id - b.module.id)
+  for (const section of sections) section.lessons.sort((a, b) => a.position - b.position || a.id - b.id)
   const entries = sections.flatMap(section => section.lessons)
   const index = entries.findIndex(entry => entry.short_id === id)
-  const kind = item.data?.type === 'TEST' ? 'ТЕСТ' : item.data?.type === 'PRACTICE' ? 'ПРАКТИКА' : 'ЛЕКЦИЯ'
-  return <LearningLayout courseTitle={course.data?.title} moduleTitle={currentModule?.title} sections={sections} lessonId={id} lessonTitle={item.data?.title || 'Материал'} currentIndex={Math.max(index, 0)} totalLessons={entries.length || undefined} previous={index > 0 ? entries[index - 1] : undefined} next={index >= 0 ? entries[index + 1] : undefined} courseProgress={progress.data?.percent} itemProgress={progress.data?.items}>
+  const kind = item.data?.type === 'TEST' ? t('ТЕСТ') : item.data?.type === 'PRACTICE' ? t('ПРАКТИКА') : t('ЛЕКЦИЯ')
+  return <LearningLayout courseTitle={item.data?.course_title} moduleTitle={item.data?.module_title} sections={sections} lessonId={id} lessonTitle={item.data?.title || t('Материал')} currentIndex={Math.max(index, 0)} totalLessons={entries.length || undefined} previous={index > 0 ? entries[index - 1] : undefined} next={index >= 0 ? entries[index + 1] : undefined} courseProgress={progress.data?.percent} itemProgress={progress.data?.items}>
     <div className="lesson-heading"><span className="eyebrow">{kind}</span><h1>{item.data?.title}</h1><p>{item.data?.description}</p></div>
-    {item.data?.type === 'LECTURE' && course.data && <LectureProgress key={id} itemId={id} courseId={course.data.short_id} savedPercent={progress.data?.items[id]?.progress_percent ?? 0}><article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown" style={{ textAlign: block.config?.align === 'center' || block.config?.align === 'right' ? block.config.align : 'left' }}>{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={String(block.config?.alt || block.content || 'Изображение лекции')}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article></LectureProgress>}
+    {item.data?.type === 'LECTURE' && <LectureProgress key={id} itemId={id} courseId={item.data.course_short_id ?? ''} savedPercent={progress.data?.items[id]?.progress_percent ?? 0}><article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown" style={{ textAlign: block.config?.align === 'center' || block.config?.align === 'right' ? block.config.align : 'left' }}>{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={String(block.config?.alt || block.content || 'Изображение лекции')}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article></LectureProgress>}
     {item.data?.type === 'TEST' && <TestRunner itemId={id}/>}
-    {item.data?.type === 'PRACTICE' && <div className="card form-card"><h2>Практическая работа</h2><p>Интерактивное выполнение этой практики скоро появится.</p></div>}
+    {item.data?.type === 'PRACTICE' && <div className="card form-card"><h2>{t('Практическая работа')}</h2><p>{t('Интерактивное выполнение этой практики скоро появится.')}</p></div>}
   </LearningLayout>
 }
 
 function PasswordSection() {
+  const { t } = useI18n()
   const [current, setCurrent] = useState(''), [next, setNext] = useState(''), [message, setMessage] = useState('')
   const save = async () => {
     try {
       await api('auth/password/', 'POST', { current_password: current, new_password: next })
-      setCurrent(''); setNext(''); setMessage('Пароль изменён')
+      setCurrent(''); setNext(''); setMessage(t('Пароль изменён'))
     } catch (e) { setMessage((e as Error).message) }
   }
-  return <div className="card form-card"><h3>Изменить пароль</h3><div className="row"><label>Текущий пароль<Input type="password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)}/></label><label>Новый пароль<Input type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)}/></label></div><Button disabled={!current || next.length < 8} onClick={save}>Обновить пароль</Button><Notice text={message} kind={message === 'Пароль изменён' ? 'success' : 'error'}/></div>
+  return <div className="card form-card"><h3>{t('Изменить пароль')}</h3><div className="row"><label>{t('Текущий пароль')}<Input type="password" autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)}/></label><label>{t('Новый пароль')}<Input type="password" autoComplete="new-password" value={next} onChange={e => setNext(e.target.value)}/></label></div><Button disabled={!current || next.length < 8} onClick={save}>{t('Обновить пароль')}</Button><Notice text={message} kind={message === t('Пароль изменён') ? 'success' : 'error'}/></div>
 }
 
 export function ProfilePage({ user }: { user: User }) {
+  const { t, locale } = useI18n()
   const qc = useQueryClient()
   const attempts = useQuery({ queryKey: ['attempts-all'], queryFn: () => api<Page<Attempt>>('attempts/') })
   const tracks = useQuery({ queryKey: ['profile-tracks'], queryFn: () => apiAll<Track>('tracks/') })
   const [first, setFirst] = useState(user.first_name), [last, setLast] = useState(user.last_name), [selectedTrack, setSelectedTrack] = useState(String(user.learning_track?.id ?? '')), [message, setMessage] = useState('')
-  const save = async () => { try { const u = await api<User>('auth/me/', 'PATCH', { first_name: first, last_name: last, learning_track: selectedTrack ? Number(selectedTrack) : null }); qc.setQueryData(['me'], u); qc.invalidateQueries({ queryKey: ['courses'] }); setMessage('Профиль сохранён') } catch (e) { setMessage((e as Error).message) } }
-  return <><div className="page-head"><div><span className="eyebrow">ЛИЧНЫЕ ДАННЫЕ</span><h1>Профиль</h1><p>Управляйте личной информацией и смотрите результаты.</p></div></div><div className="card profile-card"><div className="avatar large">{(user.first_name || user.email)[0].toUpperCase()}</div><div><strong>{user.email}</strong><p>Траектория: {user.learning_track?.title ?? 'не выбрана'}</p>{user.date_joined && <p>С нами с {new Date(user.date_joined).toLocaleDateString('ru-RU')}</p>}</div></div><div className="card form-card"><h3>Личные данные</h3><div className="row"><label>Имя<Input value={first} onChange={e => setFirst(e.target.value)}/></label><label>Фамилия<Input value={last} onChange={e => setLast(e.target.value)}/></label></div><label>Траектория обучения<Select value={selectedTrack} onChange={e => setSelectedTrack(e.target.value)}><option value="">Не выбрана</option>{tracks.data?.map(track => <option key={track.id} value={track.id}>{track.title}</option>)}</Select></label><Button onClick={save}>Сохранить</Button><Notice text={message}/></div><PasswordSection/><h2 className="section-title">Результаты тестов</h2>{attempts.isLoading ? <Loading/> : attempts.error ? <ErrorState error={attempts.error}/> : <div className="card">{attempts.data?.results.length ? attempts.data.results.map(a => <div key={a.id} className="history-row"><Clock3 size={16}/><span>{new Date(a.completed_at).toLocaleString('ru-RU')}</span><strong>{a.percent}%</strong><span className={a.passed ? 'good' : 'bad'}>{a.passed ? 'Пройдено' : 'Не пройдено'}</span></div>) : <p>Попыток пока нет.</p>}</div>}</>
+  const save = async () => { try { const u = await api<User>('auth/me/', 'PATCH', { first_name: first, last_name: last, learning_track: selectedTrack ? Number(selectedTrack) : null }); qc.setQueryData(['me'], u); qc.invalidateQueries({ queryKey: ['courses'] }); setMessage(t('Профиль сохранён')) } catch (e) { setMessage((e as Error).message) } }
+  const dateLocale = locale === 'kz' ? 'kk-KZ' : locale === 'en' ? 'en-US' : 'ru-RU'
+  return <><div className="page-head"><div><span className="eyebrow">{t('ЛИЧНЫЕ ДАННЫЕ')}</span><h1>{t('Профиль')}</h1><p>{t('Управляйте личной информацией и смотрите результаты.')}</p></div></div><div className="card profile-card"><div className="avatar large">{(user.first_name || user.email)[0].toUpperCase()}</div><div><strong>{user.email}</strong><p>{t('Траектория:')} {user.learning_track?.title ?? t('не выбрана')}</p>{user.date_joined && <p>{t('С нами с')} {new Date(user.date_joined).toLocaleDateString(dateLocale)}</p>}</div></div><div className="card form-card"><h3>{t('Личные данные')}</h3><div className="row"><label>{t('Имя')}<Input value={first} onChange={e => setFirst(e.target.value)}/></label><label>{t('Фамилия')}<Input value={last} onChange={e => setLast(e.target.value)}/></label></div><label>{t('Траектория обучения')}<Select value={selectedTrack} onChange={e => setSelectedTrack(e.target.value)}><option value="">{t('Не выбрана')}</option>{tracks.data?.map(track => <option key={track.id} value={track.id}>{track.title}</option>)}</Select></label><Button onClick={save}>{t('Сохранить')}</Button><Notice text={message}/></div><PasswordSection/><h2 className="section-title">{t('Результаты тестов')}</h2>{attempts.isLoading ? <Loading/> : attempts.error ? <ErrorState error={attempts.error}/> : <div className="card">{attempts.data?.results.length ? attempts.data.results.map(a => <div key={a.id} className="history-row"><Clock3 size={16}/><span>{new Date(a.completed_at).toLocaleString(dateLocale)}</span><strong>{a.percent}%</strong><span className={a.passed ? 'good' : 'bad'}>{t(a.passed ? 'Пройдено' : 'Не пройдено')}</span></div>) : <p>{t('Попыток пока нет.')}</p>}</div>}</>
 }

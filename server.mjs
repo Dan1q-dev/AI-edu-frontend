@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
+import { createGzip } from 'node:zlib'
 
 const root = resolve('/app/dist')
 const mimeTypes = {
@@ -60,13 +61,22 @@ createServer(async (request, response) => {
     }
 
     const isEntry = file === resolve(root, 'index.html')
+    const compressible = /\.(?:css|html|js|json|svg|txt|xml)$/i.test(file)
+    const acceptsGzip = /(?:^|,)\s*gzip\s*(?:,|;|$)/i.test(request.headers['accept-encoding'] ?? '')
+      && !/gzip\s*;\s*q=0(?:\.0*)?(?:,|$)/i.test(request.headers['accept-encoding'] ?? '')
+    const shouldCompress = compressible && info.size >= 1024 && acceptsGzip
     response.writeHead(200, {
-      'Content-Length': info.size,
       'Content-Type': mimeTypes[extname(file).toLowerCase()] ?? 'application/octet-stream',
       'Cache-Control': isEntry ? 'no-cache' : 'public, max-age=31536000, immutable',
+      'Vary': 'Accept-Encoding',
+      ...(shouldCompress ? { 'Content-Encoding': 'gzip' } : { 'Content-Length': info.size }),
     })
     if (request.method === 'HEAD') response.end()
-    else createReadStream(file).pipe(response)
+    else {
+      const stream = createReadStream(file)
+      if (shouldCompress) stream.pipe(createGzip()).pipe(response)
+      else stream.pipe(response)
+    }
   } catch {
     response.writeHead(404).end('Not found')
   }

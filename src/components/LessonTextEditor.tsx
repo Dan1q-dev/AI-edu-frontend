@@ -4,6 +4,7 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import { Bold, Code, Code2, Heading2, Heading3, Italic, Link2, List, ListOrdered, Quote, Redo2, Undo2 } from 'lucide-react'
+import { useI18n } from '../i18n'
 
 type Node = { type?: string; text?: string; attrs?: Record<string, unknown>; marks?: { type: string; attrs?: Record<string, unknown> }[]; content?: Node[] }
 const safeHref = (value: string) => /^(https?:|mailto:)/i.test(value) ? value : undefined
@@ -101,19 +102,21 @@ export function RichLessonContent({ value }: { value: string }) {
 
 type SlashAction = 'text' | 'heading' | 'bullet' | 'numbered' | 'quote' | 'code' | 'image'
 const slashOptions: { id: SlashAction; label: string }[] = [
-  { id: 'text', label: 'Text' }, { id: 'heading', label: 'Heading' },
-  { id: 'bullet', label: 'Bulleted List' }, { id: 'numbered', label: 'Numbered List' },
-  { id: 'quote', label: 'Quote' }, { id: 'code', label: 'Code Block' },
-  { id: 'image', label: 'Image' },
+  { id: 'text', label: 'Текст' }, { id: 'heading', label: 'Заголовок' },
+  { id: 'bullet', label: 'Маркированный список' }, { id: 'numbered', label: 'Нумерованный список' },
+  { id: 'quote', label: 'Цитата' }, { id: 'code', label: 'Блок кода' },
+  { id: 'image', label: 'Изображение' },
 ]
 
 export function SlashCommandMenu({ query, activeIndex, position, onSelect }: { query: string; activeIndex: number; position: { top: number; left: number }; onSelect: (action: SlashAction) => void }) {
-  const options = slashOptions.filter(option => option.label.toLowerCase().includes(query.toLowerCase()))
+  const { t } = useI18n()
+  const options = slashOptions.filter(option => t(option.label).toLowerCase().includes(query.toLowerCase()))
   if (!options.length) return null
-  return <div className="slash-command-menu" role="menu" aria-label="Вставить в документ" style={position}>{options.map((option, index) => <button key={option.id} className={index === activeIndex ? 'active' : ''} type="button" role="menuitem" onMouseDown={event => event.preventDefault()} onClick={() => onSelect(option.id)}>{option.label}</button>)}</div>
+  return <div className="slash-command-menu" role="menu" aria-label={t('Вставить в документ')} style={position}>{options.map((option, index) => <button key={option.id} className={index === activeIndex ? 'active' : ''} type="button" role="menuitem" onMouseDown={event => event.preventDefault()} onClick={() => onSelect(option.id)}>{t(option.label)}</button>)}</div>
 }
 
 export function LessonTextEditor({ value, onChange, disabled = false, formatRequest, onInsertImage, onDropImage }: { value: string; onChange: (value: string) => void; disabled?: boolean; formatRequest?: string; onInsertImage?: () => void; onDropImage?: (file: File) => void }) {
+  const { t } = useI18n()
   const [slashQuery, setSlashQuery] = useState<string | null>(null)
   const [activeSlashIndex, setActiveSlashIndex] = useState(0)
   const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 })
@@ -153,7 +156,7 @@ export function LessonTextEditor({ value, onChange, disabled = false, formatRequ
   }, [editor, formatRequest])
   if (!editor) return null
   const action = (label: string, icon: ReactNode, active: boolean, run: () => void) => <button type="button" title={label} aria-label={label} aria-pressed={active} disabled={disabled} className={active ? 'active' : ''} onMouseDown={event => event.preventDefault()} onClick={run}>{icon}</button>
-  const setLink = () => { const current = editor.getAttributes('link').href as string | undefined; const href = window.prompt('Адрес ссылки', current || 'https://'); if (href === null) return; if (!href.trim()) editor.chain().focus().unsetLink().run(); else if (safeHref(href)) editor.chain().focus().extendMarkRange('link').setLink({ href }).run() }
+  const setLink = () => { const current = editor.getAttributes('link').href as string | undefined; const href = window.prompt(t('Адрес ссылки'), current || 'https://'); if (href === null) return; if (!href.trim()) editor.chain().focus().unsetLink().run(); else if (safeHref(href)) editor.chain().focus().extendMarkRange('link').setLink({ href }).run() }
   const runSlash = (action: SlashAction) => {
     if (slashQuery === null) return
     const end = editor.state.selection.from
@@ -170,22 +173,22 @@ export function LessonTextEditor({ value, onChange, disabled = false, formatRequ
       else onInsertImage?.()
     }
   }
-  const visibleSlashOptions = slashQuery === null ? [] : slashOptions.filter(option => option.label.toLowerCase().includes(slashQuery.toLowerCase()))
+  const visibleSlashOptions = slashQuery === null ? [] : slashOptions.filter(option => t(option.label).toLowerCase().includes(slashQuery.toLowerCase()))
   return <div className="lesson-rich-editor">
-    <div className="rich-toolbar" role="toolbar" aria-label="Форматирование текста">
-      {action('Жирный', <Bold size={16}/>, editor.isActive('bold'), () => editor.chain().focus().toggleBold().run())}
-      {action('Курсив', <Italic size={16}/>, editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run())}
-      {action('Заголовок 2', <Heading2 size={16}/>, editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
-      {action('Заголовок 3', <Heading3 size={16}/>, editor.isActive('heading', { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run())}
-      {action('Маркированный список', <List size={16}/>, editor.isActive('bulletList'), () => editor.chain().focus().toggleBulletList().run())}
-      {action('Нумерованный список', <ListOrdered size={16}/>, editor.isActive('orderedList'), () => editor.chain().focus().toggleOrderedList().run())}
-      {action('Цитата', <Quote size={16}/>, editor.isActive('blockquote'), () => editor.chain().focus().toggleBlockquote().run())}
-      {action('Встроенный код', <Code size={16}/>, editor.isActive('code'), () => editor.chain().focus().toggleCode().run())}
-      {action('Блок кода', <Code2 size={16}/>, editor.isActive('codeBlock'), () => editor.chain().focus().toggleCodeBlock().run())}
-      {action('Ссылка', <Link2 size={16}/>, editor.isActive('link'), setLink)}
+    <div className="rich-toolbar" role="toolbar" aria-label={t('Форматирование текста')}>
+      {action(t('Жирный'), <Bold size={16}/>, editor.isActive('bold'), () => editor.chain().focus().toggleBold().run())}
+      {action(t('Курсив'), <Italic size={16}/>, editor.isActive('italic'), () => editor.chain().focus().toggleItalic().run())}
+      {action(t('Заголовок 2'), <Heading2 size={16}/>, editor.isActive('heading', { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
+      {action(t('Заголовок 3'), <Heading3 size={16}/>, editor.isActive('heading', { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run())}
+      {action(t('Маркированный список'), <List size={16}/>, editor.isActive('bulletList'), () => editor.chain().focus().toggleBulletList().run())}
+      {action(t('Нумерованный список'), <ListOrdered size={16}/>, editor.isActive('orderedList'), () => editor.chain().focus().toggleOrderedList().run())}
+      {action(t('Цитата'), <Quote size={16}/>, editor.isActive('blockquote'), () => editor.chain().focus().toggleBlockquote().run())}
+      {action(t('Встроенный код'), <Code size={16}/>, editor.isActive('code'), () => editor.chain().focus().toggleCode().run())}
+      {action(t('Блок кода'), <Code2 size={16}/>, editor.isActive('codeBlock'), () => editor.chain().focus().toggleCodeBlock().run())}
+      {action(t('Ссылка'), <Link2 size={16}/>, editor.isActive('link'), setLink)}
       <span className="rich-toolbar-spacer"/>
-      {action('Отменить', <Undo2 size={16}/>, false, () => editor.chain().focus().undo().run())}
-      {action('Повторить', <Redo2 size={16}/>, false, () => editor.chain().focus().redo().run())}
+      {action(t('Отменить'), <Undo2 size={16}/>, false, () => editor.chain().focus().undo().run())}
+      {action(t('Повторить'), <Redo2 size={16}/>, false, () => editor.chain().focus().redo().run())}
     </div>
     <div ref={surfaceRef} className="rich-editor-surface" onKeyDown={event => { if (slashQuery === null || !visibleSlashOptions.length) return; if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setActiveSlashIndex(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + visibleSlashOptions.length) % visibleSlashOptions.length) } else if (event.key === 'Enter') { event.preventDefault(); runSlash(visibleSlashOptions[activeSlashIndex % visibleSlashOptions.length]!.id) } else if (event.key === 'Escape') { event.preventDefault(); setSlashQuery(null) } }} onDragOver={event => { if (event.dataTransfer.types.includes('Files')) event.preventDefault() }} onDrop={event => { const file = Array.from(event.dataTransfer.files).find(candidate => candidate.type.startsWith('image/')); if (file && onDropImage) { event.preventDefault(); onDropImage(file) } }}><EditorContent editor={editor} className="rich-editor-content"/>{slashQuery !== null && <SlashCommandMenu query={slashQuery} activeIndex={activeSlashIndex} position={slashPosition} onSelect={runSlash}/>}<input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => { const file = event.target.files?.[0]; if (file) onDropImage?.(file); event.currentTarget.value = '' }}/></div>
   </div>

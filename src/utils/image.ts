@@ -1,4 +1,5 @@
 export const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024 // 10 MB
+import { translateCurrentLocale } from '../i18n'
 
 async function compressImage(file: File, maxBytes: number): Promise<File | null> {
   if (typeof window === 'undefined' || typeof document === 'undefined') return null
@@ -78,7 +79,7 @@ export async function prepareImageForUpload(
   maxBytes: number = MAX_IMAGE_SIZE_BYTES
 ): Promise<File> {
   if (!file.type.startsWith('image/')) {
-    throw new Error('Поддерживаются только изображения (JPEG, PNG, WebP)')
+    throw new Error(translateCurrentLocale('Поддерживаются только изображения (JPEG, PNG, WebP)'))
   }
 
   if (file.size <= maxBytes) {
@@ -95,5 +96,5 @@ export async function prepareImageForUpload(
   }
 
   const sizeMb = (file.size / (1024 * 1024)).toFixed(1)
-  throw new Error(`Размер файла (${sizeMb} МБ) превышает лимит 10 МБ. Выберите файл меньшего размера.`)
+  throw new Error(translateCurrentLocale('Размер файла ({size} МБ) превышает лимит 10 МБ. Выберите файл меньшего размера.').replace('{size}', sizeMb))
 }
