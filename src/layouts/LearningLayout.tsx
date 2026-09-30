@@ -1,52 +1,63 @@
-import { useState, type ReactNode } from 'react'
-import { ArrowLeft, BookOpen, Check, CheckCircle2, Code2, List, X } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { ArrowLeft, BookOpen, Check, CheckCircle2, Code2, List, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { LearningItem, Lesson, Module } from '../api'
 
 type ContentEntry = Lesson | LearningItem
-const entryHref = (item: ContentEntry) => 'type' in item ? `/items/${item.short_id}` : `/lessons/${item.short_id}`
-const entryIcon = (item: ContentEntry) => 'type' in item && item.type === 'TEST' ? <CheckCircle2 size={16}/> : 'type' in item && item.type === 'PRACTICE' ? <Code2 size={16}/> : <BookOpen size={16}/>
+export type ItemProgress = { progress_percent: number; is_completed: boolean }
 export type CourseSection = { module: Module; lessons: ContentEntry[] }
+const entryHref = (item: ContentEntry) => 'type' in item ? `/items/${item.short_id}` : `/lessons/${item.short_id}`
+const entryIcon = (item: ContentEntry) => 'type' in item && item.type === 'TEST' ? <CheckCircle2 size={15}/> : 'type' in item && item.type === 'PRACTICE' ? <Code2 size={15}/> : <BookOpen size={15}/>
 
-export function LearningLayout({
-  children, courseTitle, sections, lessonId, lessonTitle, currentIndex, totalLessons, previous, next,
-}: {
-  children: ReactNode
-  courseTitle?: string
-  sections?: CourseSection[]
-  lessonId: string
-  lessonTitle: string
-  currentIndex?: number
-  totalLessons?: number
-  previous?: ContentEntry
-  next?: ContentEntry
+function AITutorPlaceholder() {
+  return <><div className="tutor-icon"><Sparkles size={18}/></div><h2>AI Tutor</h2><p>Персональный помощник появится здесь позже.</p></>
+}
+
+export function LearningLayout({ children, tutor, courseTitle, moduleTitle, sections, lessonId, lessonTitle, currentIndex, totalLessons, previous, next, courseProgress, itemProgress = {} }: {
+  children: ReactNode; courseTitle?: string; moduleTitle?: string; sections?: CourseSection[]; lessonId: string; lessonTitle: string
+  currentIndex?: number; totalLessons?: number; previous?: ContentEntry; next?: ContentEntry; tutor?: ReactNode
+  courseProgress?: number; itemProgress?: Record<string, ItemProgress>
 }) {
   const [outlineOpen, setOutlineOpen] = useState(false)
-  const progress = totalLessons ? Math.round(((currentIndex || 0) + 1) / totalLessons * 100) : 0
+  useEffect(() => { setOutlineOpen(false) }, [lessonId])
+  useEffect(() => {
+    if (!outlineOpen) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOutlineOpen(false) }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [outlineOpen])
+
+  const outline = <>
+    <div className="outline-header"><div><span className="eyebrow">СОДЕРЖАНИЕ КУРСА</span><h2>{courseTitle || 'Оглавление'}</h2></div><button className="icon-button outline-close" onClick={() => setOutlineOpen(false)} aria-label="Закрыть оглавление"><X size={19}/></button></div>
+    {totalLessons ? <div className="outline-progress"><div><span>Ваш прогресс</span><strong>{courseProgress ?? 0}%</strong></div><div className="progress-track"><span style={{ width: `${courseProgress ?? 0}%` }}/></div></div> : null}
+    <div className="outline-scroll">{sections?.map((section, sectionIndex) => <section className="outline-section" key={section.module.id}>
+      <h3>Модуль {sectionIndex + 1} · {section.module.title}</h3>
+      {section.lessons.map(item => {
+        const state = itemProgress[item.short_id]
+        return <Link key={item.id} to={entryHref(item)} onClick={() => setOutlineOpen(false)} className={`outline-lesson ${item.short_id === lessonId ? 'active' : ''}`} aria-current={item.short_id === lessonId ? 'page' : undefined}>
+          {entryIcon(item)}<span className="outline-lesson-title">{item.title}</span>{state?.is_completed ? <Check size={15} className="outline-complete" aria-label="Выполнено"/> : state?.progress_percent ? <small>{state.progress_percent}%</small> : null}
+        </Link>
+      })}
+    </section>)}</div>
+  </>
 
   return <div className="learning-layout">
     <header className="learning-header">
-      <Link to="/catalog" className="learning-back" aria-label="Вернуться в каталог"><ArrowLeft size={18}/><span>Каталог</span></Link>
-      <div className="learning-header-title"><span>{courseTitle || 'Моё обучение'}</span><strong>{lessonTitle}</strong></div>
-      <button className="button secondary outline-button" onClick={() => setOutlineOpen(true)} aria-expanded={outlineOpen} aria-controls="course-outline"><List size={17}/>Оглавление</button>
+      <Link to="/catalog" className="learning-back" aria-label="Вернуться в каталог"><ArrowLeft size={17}/><span>Каталог</span></Link>
+      <div className="learning-header-title"><span>{courseTitle || 'Моё обучение'}</span><strong>{moduleTitle || lessonTitle}</strong></div>
+      <button className="button secondary outline-button" onClick={() => setOutlineOpen(true)} aria-expanded={outlineOpen} aria-controls="course-outline"><List size={17}/><span>Содержание</span></button>
     </header>
-    <div className="learning-progress" aria-label={`Прогресс: ${progress}%`}><span style={{ width: `${progress}%` }}/></div>
-    <div className="learning-crumbs"><Link to="/catalog">Каталог</Link>{courseTitle && <><span>/</span><span>{courseTitle}</span></>}<span>/</span><strong>{lessonTitle}</strong></div>
-    <main className="learning-main">{children}</main>
-    <footer className="lesson-navigation">
-      {previous ? <Link className="button secondary" to={entryHref(previous)} aria-label={`Предыдущий элемент: ${previous.title}`}><ArrowLeft size={16}/><span><small>Предыдущий элемент</small>{previous.title}</span></Link> : <span/>}
-      <span className="lesson-counter">{totalLessons ? `${(currentIndex || 0) + 1} из ${totalLessons}` : 'Элемент'}</span>
-      {next ? <Link className="button primary" to={entryHref(next)} aria-label={`Следующий элемент: ${next.title}`}><span><small>Следующий элемент</small>{next.title}</span><ArrowLeft className="next-arrow" size={16}/></Link> : <span className="course-end"><Check size={16}/>Последний элемент</span>}
-    </footer>
-    {outlineOpen && <div className="outline-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOutlineOpen(false) }}>
-      <aside id="course-outline" className="course-outline" aria-label="Оглавление курса">
-        <div className="outline-header"><div><span className="eyebrow">СОДЕРЖАНИЕ КУРСА</span><h2>{courseTitle || 'Оглавление'}</h2></div><button className="icon-button" onClick={() => setOutlineOpen(false)} aria-label="Закрыть оглавление"><X size={20}/></button></div>
-        {totalLessons ? <div className="outline-progress"><div><span>Ваш прогресс</span><strong>{progress}%</strong></div><div className="progress-track"><span style={{ width: `${progress}%` }}/></div></div> : null}
-        <div className="outline-scroll">{sections?.map(section => <section className="outline-section" key={section.module.id}>
-          <h3>{section.module.title}</h3>
-          {section.lessons.map(item => <Link key={item.id} to={entryHref(item)} onClick={() => setOutlineOpen(false)} className={`outline-lesson ${item.short_id === lessonId ? 'active' : ''}`} aria-current={item.short_id === lessonId ? 'page' : undefined}>{entryIcon(item)}<span>{item.title}</span>{item.short_id === lessonId && <span className="outline-active-label">Сейчас</span>}</Link>)}
-        </section>)}</div>
-      </aside>
-    </div>}
+    <div className="learning-workspace">
+      <aside className="course-outline desktop-outline" aria-label="Содержание курса">{outline}</aside>
+      <div className="learning-center"><main className="learning-main">{children}</main>
+        <footer className="lesson-navigation">
+          {previous ? <Link className="button secondary" to={entryHref(previous)} aria-label={`Предыдущий элемент: ${previous.title}`}><ArrowLeft size={16}/><span><small>Предыдущий</small>{previous.title}</span></Link> : <span/>}
+          <span className="lesson-counter">{totalLessons ? `${(currentIndex || 0) + 1} из ${totalLessons}` : 'Элемент'}</span>
+          {next ? <Link className="button secondary" to={entryHref(next)} aria-label={`Следующий элемент: ${next.title}`}><span><small>Следующий</small>{next.title}</span><ArrowLeft className="next-arrow" size={16}/></Link> : <span className="course-end"><Check size={16}/>Последний элемент</span>}
+        </footer>
+      </div>
+      <aside className="learning-tutor" aria-label="AI Tutor">{tutor ?? <AITutorPlaceholder/>}</aside>
+    </div>
+    {outlineOpen && <div className="outline-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOutlineOpen(false) }}><aside id="course-outline" className="course-outline mobile-outline" aria-label="Содержание курса">{outline}</aside></div>}
   </div>
 }

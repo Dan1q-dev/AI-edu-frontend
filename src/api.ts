@@ -10,6 +10,7 @@ export type Option = { id?: number; text: string; position: number; is_correct?:
 export type Question = { id?: number; text: string; position: number; points: number; options: Option[] }
 export type Test = { id?: number; lesson?: number; title: string; description: string; passing_percent: number; max_attempts: number | null; is_published?: boolean; version?: number; questions: Question[] }
 export type Attempt = { id: number; test: number; test_version: number; answers: { question: number; option: number }[]; snapshot: { question: string; selected: string; correct: string; points: number }[]; earned_points: number; total_points: number; percent: number; passed: boolean; completed_at: string }
+export type CourseProgress = { percent: number; items: Record<string, { progress_percent: number; is_completed: boolean }> }
 export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] }
 
 function cookie(name: string) { return document.cookie.split('; ').find(x => x.startsWith(name + '='))?.split('=')[1] || '' }

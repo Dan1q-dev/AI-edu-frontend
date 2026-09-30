@@ -3,10 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import { ArrowLeft, BookOpen, CheckCircle2, ChevronRight, Clock3, Code2, Layers } from 'lucide-react'
-import { api, apiAll, ApiError, type Attempt, type Block, type Course, type LearningItem, type Lesson, type Module, type Page, type Test, type Track, type User } from './api'
+import { api, apiAll, ApiError, type Attempt, type Block, type Course, type CourseProgress, type LearningItem, type Lesson, type Module, type Page, type Test, type Track, type User } from './api'
 import { Button, ErrorState, Input, Loading, Notice, Select } from './components/ui'
 import { LearningLayout, type CourseSection } from './layouts/LearningLayout'
 import { RichLessonContent } from './components/LessonTextEditor'
+import { LectureProgress } from './LectureProgress'
 
 function isTiptapContent(value: string) { try { return JSON.parse(value)?.type === 'doc' } catch { return false } }
 
@@ -41,6 +42,7 @@ function TestRunner({ lessonId, itemId }: { lessonId?: string; itemId?: string }
     try {
       const attempt = await api<Attempt>(`${endpoint}/attempts/`, 'POST', { answers: test.questions.map(q => ({ question: q.id, option: answers[q.id!] })) })
       setResult(attempt); qc.invalidateQueries({ queryKey: ['attempts', key] })
+      if (itemId) qc.invalidateQueries({ queryKey: ['course-progress'] })
     } catch (e) { setMessage((e as Error).message) } finally { setSubmitting(false) }
   }
   return <section className="test-section"><div className="section-heading"><div><span className="eyebrow">ПРОВЕРЬТЕ СЕБЯ</span><h2>{test.title}</h2><p>{test.description}</p></div><span className="pill">Проходной балл {test.passing_percent}%</span></div>{result ? <div className={`result-card ${result.passed ? 'passed' : 'failed'}`}><CheckCircle2 size={32}/><h3>{result.passed ? 'Тест пройден!' : 'Попробуйте ещё раз'}</h3><strong>{result.percent}%</strong><p>{result.earned_points} из {result.total_points} баллов</p></div> : <div className="stack">{test.questions.map((q, index) => <div key={q.id} className="card question-card"><span className="eyebrow">ВОПРОС {index + 1} · {q.points} БАЛЛ</span><h3>{q.text}</h3><div className="options">{q.options.map(o => <label key={o.id} className={answers[q.id!] === o.id ? 'selected' : ''}><input type="radio" name={`q-${q.id}`} checked={answers[q.id!] === o.id} onChange={() => setAnswers({ ...answers, [q.id!]: o.id! })}/>{o.text}</label>)}</div></div>)}<Notice text={message} kind="error"/><Button disabled={submitting || test.questions.some(q => !answers[q.id!])} onClick={submit}>Отправить ответы</Button></div>}{attempts.data && attempts.data.results.length > 0 && <div className="history"><h3>История попыток</h3>{attempts.data.results.map(a => <div key={a.id} className="history-row"><Clock3 size={16}/><span>{new Date(a.completed_at).toLocaleString('ru-RU')}</span><strong>{a.percent}%</strong><span className={a.passed ? 'good' : 'bad'}>{a.passed ? 'Пройдено' : 'Не пройдено'}</span></div>)}</div>}</section>
@@ -66,7 +68,7 @@ export function LessonPage() {
   const sections: CourseSection[] = (courseSectionsQuery.data ?? []).map(section => ({ ...section, lessons: section.lessons }))
   const courseLessons = sections.flatMap(section => section.lessons)
   const currentIndex = courseLessons.findIndex(item => item.short_id === id)
-  return <LearningLayout courseTitle={course.data?.title} sections={sections} lessonId={id!} lessonTitle={lesson.data?.title || 'Урок'} currentIndex={currentIndex >= 0 ? currentIndex : 0} totalLessons={courseLessons.length || undefined} previous={currentIndex > 0 ? courseLessons[currentIndex - 1] : undefined} next={currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1] : undefined}>
+  return <LearningLayout courseTitle={course.data?.title} moduleTitle={currentModule?.title} sections={sections} lessonId={id!} lessonTitle={lesson.data?.title || 'Урок'} currentIndex={currentIndex >= 0 ? currentIndex : 0} totalLessons={courseLessons.length || undefined} previous={currentIndex > 0 ? courseLessons[currentIndex - 1] : undefined} next={currentIndex >= 0 && currentIndex < courseLessons.length - 1 ? courseLessons[currentIndex + 1] : undefined}>
     <div className="lesson-heading"><span className="eyebrow">УЧЕБНЫЙ МАТЕРИАЛ</span><h1>{lesson.data?.title}</h1><p>{lesson.data?.description}</p></div>
     <article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown">{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={block.content || 'Изображение урока'}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article>
     <TestRunner lessonId={id!}/>
@@ -84,15 +86,16 @@ export function LearningItemPage() {
     const courseModules = [...(modules.data ?? []).filter(module => module.course === currentModule?.course)].sort((a, b) => a.position - b.position || a.id - b.id)
     return Promise.all(courseModules.map(async module => ({ module, lessons: (await apiAll<LearningItem>(`items/?module=${module.id}`)).sort((a, b) => a.position - b.position || a.id - b.id) })))
   }, enabled: Boolean(currentModule) })
-  if (item.isLoading || blocks.isLoading || modules.isLoading || course.isLoading || sectionsQuery.isLoading) return <Loading/>
-  if (item.error || blocks.error || modules.error || course.error || sectionsQuery.error) return <ErrorState error={item.error || blocks.error || modules.error || course.error || sectionsQuery.error}/>
+  const progress = useQuery({ queryKey: ['course-progress', course.data?.short_id], queryFn: () => api<CourseProgress>(`courses/${course.data!.short_id}/progress/`), enabled: Boolean(course.data) })
+  if (item.isLoading || blocks.isLoading || modules.isLoading || course.isLoading || sectionsQuery.isLoading || progress.isLoading) return <Loading/>
+  if (item.error || blocks.error || modules.error || course.error || sectionsQuery.error || progress.error) return <ErrorState error={item.error || blocks.error || modules.error || course.error || sectionsQuery.error || progress.error}/>
   const sections: CourseSection[] = sectionsQuery.data ?? []
   const entries = sections.flatMap(section => section.lessons)
   const index = entries.findIndex(entry => entry.short_id === id)
   const kind = item.data?.type === 'TEST' ? 'ТЕСТ' : item.data?.type === 'PRACTICE' ? 'ПРАКТИКА' : 'ЛЕКЦИЯ'
-  return <LearningLayout courseTitle={course.data?.title} sections={sections} lessonId={id} lessonTitle={item.data?.title || 'Материал'} currentIndex={Math.max(index, 0)} totalLessons={entries.length || undefined} previous={index > 0 ? entries[index - 1] : undefined} next={index >= 0 ? entries[index + 1] : undefined}>
+  return <LearningLayout courseTitle={course.data?.title} moduleTitle={currentModule?.title} sections={sections} lessonId={id} lessonTitle={item.data?.title || 'Материал'} currentIndex={Math.max(index, 0)} totalLessons={entries.length || undefined} previous={index > 0 ? entries[index - 1] : undefined} next={index >= 0 ? entries[index + 1] : undefined} courseProgress={progress.data?.percent} itemProgress={progress.data?.items}>
     <div className="lesson-heading"><span className="eyebrow">{kind}</span><h1>{item.data?.title}</h1><p>{item.data?.description}</p></div>
-    {item.data?.type === 'LECTURE' && <article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown" style={{ textAlign: block.config?.align === 'center' || block.config?.align === 'right' ? block.config.align : 'left' }}>{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={String(block.config?.alt || block.content || 'Изображение лекции')}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article>}
+    {item.data?.type === 'LECTURE' && course.data && <LectureProgress key={id} itemId={id} courseId={course.data.short_id} savedPercent={progress.data?.items[id]?.progress_percent ?? 0}><article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown" style={{ textAlign: block.config?.align === 'center' || block.config?.align === 'right' ? block.config.align : 'left' }}>{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={String(block.config?.alt || block.content || 'Изображение лекции')}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}</article></LectureProgress>}
     {item.data?.type === 'TEST' && <TestRunner itemId={id}/>}
     {item.data?.type === 'PRACTICE' && <div className="card form-card"><h2>Практическая работа</h2><p>Интерактивное выполнение этой практики скоро появится.</p></div>}
   </LearningLayout>
