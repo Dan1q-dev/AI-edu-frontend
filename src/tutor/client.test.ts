@@ -39,4 +39,15 @@ describe('tutor stream transport', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ detail: 'Лимит исчерпан' }, { status: 429 })))
     await expect(sendTutorMessage(input, new AbortController().signal, vi.fn())).rejects.toThrow('Лимит исчерпан')
   })
+  it('reads the platform nested error envelope for avatar availability', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ error: { code: 'error', detail: { detail: 'Кевин завершает предыдущий ответ.' } } }, { status: 429 })))
+    await expect(sendTutorMessage(input, new AbortController().signal, vi.fn())).rejects.toThrow('Кевин завершает предыдущий ответ.')
+  })
+  it('forwards incremental neural packets and skips SSE keepalive comments', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamResponse(': keepalive\n\nevent: avatar\ndata: {"kind":"segment","pcm":"AAA=","offset":0,"frames":[{"t":0,"weights":[0.1]}]}\n\nevent: done\ndata: {}\n\n', 5)))
+    const events = vi.fn()
+    await sendTutorMessage({ ...input, avatar: true }, new AbortController().signal, events)
+    expect(events).toHaveBeenCalledWith('avatar', expect.objectContaining({ kind: 'segment', frames: [{ t: 0, weights: [.1] }] }))
+    expect(events).toHaveBeenCalledTimes(2)
+  })
 })

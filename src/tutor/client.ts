@@ -1,9 +1,10 @@
 export type TutorMessage = { role: 'user' | 'assistant'; content: string }
 export type TutorSource = { chunk_id: number; label: string; snippet?: string; text?: string }
-export type TutorEvent = { text?: string; error?: string; message?: string; sources?: TutorSource[]; locateSnippet?: string | null }
+import type { AvatarPacket } from './KevinAvatar'
+export type TutorEvent = Partial<AvatarPacket> & { text?: string; error?: string; message?: string; sources?: TutorSource[]; locateSnippet?: string | null }
 
 export async function sendTutorMessage(
-  input: { context_type: 'lesson' | 'item'; context_id: string; session_id: string; messages: TutorMessage[] },
+  input: { context_type: 'lesson' | 'item'; context_id: string; session_id: string; messages: TutorMessage[]; avatar?: boolean; avatar_speech?: boolean },
   signal: AbortSignal,
   onEvent: (event: string, data: TutorEvent) => void,
 ) {
@@ -19,7 +20,7 @@ export async function sendTutorMessage(
   })
   if (!response.ok) {
     const data = await response.json().catch(() => null)
-    const detail = data?.detail ?? data?.error
+    const detail = data?.detail ?? data?.error?.detail?.detail ?? data?.error?.detail ?? data?.error
     throw new Error(typeof detail === 'string' ? detail : response.status === 403 ? 'Войдите в аккаунт, чтобы продолжить.' : 'Не удалось получить ответ тьютора. Попробуйте ещё раз.')
   }
   if (!response.body || !response.headers.get('Content-Type')?.includes('text/event-stream')) {

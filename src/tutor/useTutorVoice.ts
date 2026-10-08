@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-async function voiceRequest(path: string, body: string | FormData, signal: AbortSignal) {
+export async function voiceRequest(path: string, body: string | FormData, signal: AbortSignal) {
   const csrf = () => document.cookie.split('; ').find(value => value.startsWith('csrftoken='))?.slice(10) ?? ''
   if (!csrf()) await fetch('/api/v1/csrf/', { credentials: 'include', signal })
   const response = await fetch(`/api/v1/tutor/${path}/`, {

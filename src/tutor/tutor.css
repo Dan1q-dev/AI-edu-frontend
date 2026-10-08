@@ -47,6 +47,10 @@
 .tutor-mic.recording { color: #b53131; background: #fff0ef; border-color: #eb9a95; }
 .tutor-mic:disabled { opacity: .4; cursor: default; }
 .tutor-voice-status { padding: 8px 18px; color: var(--color-subtle); font-size: .75rem; }
+.tutor-call.connected { color: #087854; background: #e5f6ee; }
+.tutor-live-status { display: flex; align-items: center; gap: 8px; flex: none; min-height: 34px; color: #087854; border-top: 1px solid var(--color-border); }
+.tutor-live-status .tutor-pulse { flex: none; background: #087854; animation: none; }
+.tutor-live-status.hearing .tutor-pulse { animation: tutor-pulse .5s ease-in-out infinite alternate; }
 .tutor-spinner { animation: tutor-spin 1s linear infinite; }
 @keyframes tutor-spin { to { transform: rotate(360deg); } }
 .tutor-toggle { display: none; }
@@ -60,3 +64,9 @@
 }
 @media (max-width: 600px) { .tutor-toggle span { display: none; } .tutor-composer { padding-bottom: max(14px, env(safe-area-inset-bottom)); } }
 @media (prefers-reduced-motion: reduce) { .tutor-pulse, .tutor-spinner { animation: none; } }
+.tutor-avatar { position: relative; flex: none; height: 210px; min-height: 0; overflow: hidden; background: #e2e8e6; }
+.tutor-avatar iframe { display: block; width: 100%; height: 100%; border: 0; }
+.tutor-avatar-name { position: absolute; left: 12px; bottom: 10px; padding: 2px 6px; color: #202323; background: #ffffffd9; font-size: 12px; pointer-events: none; }
+.tutor-avatar-stop { position: absolute; right: 10px; bottom: 10px; background: #ffffffd9; }
+.tutor-avatar-loading { position: absolute; inset: 0; display: grid; place-items: center; background: #e2e8e6; font-size: 13px; }
+@media (max-height: 700px) { .tutor-avatar { height: 160px; } }

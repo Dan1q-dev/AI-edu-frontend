@@ -15,6 +15,8 @@ const mimeTypes = {
   '.jpeg': 'image/jpeg',
   '.jpg': 'image/jpeg',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.wasm': 'application/wasm',
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
@@ -88,7 +90,7 @@ createServer(async (request, response) => {
     const shouldCompress = compressible && info.size >= 1024 && acceptsGzip
     response.writeHead(200, {
       'Content-Type': mimeTypes[extname(file).toLowerCase()] ?? 'application/octet-stream',
-      'Cache-Control': isEntry ? 'no-cache' : 'public, max-age=31536000, immutable',
+      'Cache-Control': isEntry || pathname.startsWith('/voice-assets/') ? 'no-cache' : 'public, max-age=31536000, immutable',
       'Vary': 'Accept-Encoding',
       ...(shouldCompress ? { 'Content-Encoding': 'gzip' } : { 'Content-Length': info.size }),
     })
