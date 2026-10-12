@@ -19,30 +19,49 @@ export type CourseProgress = { percent: number; items: Record<string, { progress
 export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] }
 
 function cookie(name: string) { return document.cookie.split('; ').find(x => x.startsWith(name + '='))?.split('=')[1] || '' }
-export class ApiError extends Error { constructor(message: string, public status: number) { super(message) } }
+export class ApiError extends Error { constructor(message: string, public status: number, public code?: string) { super(message) } }
 function errorMessage(value: unknown): string {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) return value.map(errorMessage).join(' ')
   if (value && typeof value === 'object') return Object.values(value).map(errorMessage).join(' ')
   return translateCurrentLocale('Ошибка запроса')
 }
+async function responseError(res: Response): Promise<ApiError> {
+  if (res.status === 413) return new ApiError(translateCurrentLocale('Размер файла превышает лимит сервера (до 10 МБ). Попробуйте уменьшить размер изображения.'), 413)
+  const payload = await res.json().catch(() => ({}))
+  const rawDetail = payload.error?.detail ?? payload.detail
+  const detail = typeof rawDetail === 'object' && rawDetail !== null && 'file' in rawDetail ? (rawDetail as { file: unknown }).file : rawDetail ?? translateCurrentLocale('Ошибка запроса')
+  return new ApiError(errorMessage(detail), res.status, payload.error?.code)
+}
+
+let csrfRequest: Promise<void> | undefined
+async function ensureCsrfToken(force = false) {
+  if (!force && cookie('csrftoken') && !csrfRequest) return
+  if (!csrfRequest) {
+    csrfRequest = (async () => {
+      const response = await fetch('/api/v1/csrf/', { credentials: 'include' })
+      if (!response.ok) throw await responseError(response)
+    })().finally(() => { csrfRequest = undefined })
+  }
+  await csrfRequest
+}
+
 export async function api<T>(path: string, method = 'GET', data?: unknown): Promise<T> {
-  if (method !== 'GET' && !cookie('csrftoken')) await fetch('/api/v1/csrf/', { credentials: 'include' })
+  const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())
+  if (unsafe) await ensureCsrfToken()
   const body = data instanceof FormData ? data : data === undefined ? undefined : JSON.stringify(data)
   const headers: Record<string, string> = {}
   if (body && !(data instanceof FormData)) headers['Content-Type'] = 'application/json'
-  if (method !== 'GET') headers['X-CSRFToken'] = decodeURIComponent(cookie('csrftoken'))
-  const res = await fetch('/api/v1/' + path.replace(/^\//, ''), { method, body, headers, credentials: 'include' })
-  if (!res.ok) {
-    if (res.status === 413) {
-      throw new ApiError(translateCurrentLocale('Размер файла превышает лимит сервера (до 10 МБ). Попробуйте уменьшить размер изображения.'), 413)
-    }
-    const payload = await res.json().catch(() => ({}))
-    const rawDetail = payload.error?.detail ?? payload.detail
-    const detail = typeof rawDetail === 'object' && rawDetail !== null && 'file' in rawDetail ? (rawDetail as { file: unknown }).file : rawDetail ?? translateCurrentLocale('Ошибка запроса')
-    throw new ApiError(errorMessage(detail), res.status)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (unsafe) headers['X-CSRFToken'] = decodeURIComponent(cookie('csrftoken'))
+    const res = await fetch('/api/v1/' + path.replace(/^\//, ''), { method, body, headers, credentials: 'include' })
+    if (res.ok) return res.status === 204 ? undefined as T : res.json()
+    const error = await responseError(res)
+    const csrfFailed = error.status === 403 && (error.code === 'csrf_failed' || (error.code === 'permission_denied' && error.message.startsWith('CSRF Failed:')))
+    if (!unsafe || attempt > 0 || !csrfFailed) throw error
+    await ensureCsrfToken(true)
   }
-  return res.status === 204 ? undefined as T : res.json()
+  throw new ApiError(translateCurrentLocale('Ошибка запроса'), 403)
 }
 
 export async function apiAll<T>(path: string): Promise<T[]> {

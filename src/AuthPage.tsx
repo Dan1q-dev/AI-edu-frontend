@@ -6,12 +6,13 @@ import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { BookOpen } from 'lucide-react'
 import { api, apiAll, type Track, type User } from './api'
+import { updateSession } from './session'
 import { Button, Input, Notice, TrackSelect } from './components/ui'
 import { LanguageSelect, useI18n } from './i18n'
 
-const makeSchema = (t: (key: string) => string) => z.object({
-  email: z.email(t('Введите корректный email')),
-  password: z.string().min(8, t('Минимум 8 символов')),
+const makeSchema = (t: (key: string) => string, mode: 'login' | 'register') => z.object({
+  email: z.string().trim().pipe(z.email(t('Введите корректный email'))),
+  password: z.string().min(mode === 'register' ? 8 : 1, t(mode === 'register' ? 'Минимум 8 символов' : 'Введите пароль')),
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   learning_track: z.number().optional()
@@ -21,7 +22,7 @@ type Form = z.infer<ReturnType<typeof makeSchema>>
 
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { t } = useI18n()
-  const schema = useMemo(() => makeSchema(t), [t])
+  const schema = useMemo(() => makeSchema(t, mode), [t, mode])
   const {
     register,
     handleSubmit,
@@ -58,9 +59,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           ? values
           : { email: values.email, password: values.password }
       )
-      qc.clear()
-      qc.setQueryData(['me'], user)
-      navigate(user.role === 'ADMIN' ? '/admin/curriculum' : '/')
+      await updateSession(qc, user)
+      navigate(user.role === 'ADMIN' ? '/admin/curriculum' : '/', { replace: true })
     } catch (e) {
       setError((e as Error).message)
     }
@@ -125,7 +125,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             <Input
               type="password"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              placeholder={t('Минимум 8 символов')}
+              placeholder={t(mode === 'register' ? 'Минимум 8 символов' : 'Введите пароль')}
               {...register('password')}
             />
             <small className="field-error">{errors.password?.message}</small>

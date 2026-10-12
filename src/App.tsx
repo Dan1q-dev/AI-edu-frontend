@@ -1,8 +1,9 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { BookOpen, Layers3 } from 'lucide-react'
-import { api, apiAll, type Course, type User } from './api'
+import { apiAll, type Course, type User } from './api'
+import { currentUser } from './session'
 import { MainLayout } from './layouts/MainLayout'
 import { AdminLayout } from './layouts/AdminLayout'
 import { ErrorState, Loading } from './components/ui'
@@ -50,13 +51,12 @@ export function ProtectedPage({ user, children, admin = false }: { user: User | 
 
 export default function App() {
   const { t } = useI18n()
-  const { data: user, isLoading, error } = useQuery({ queryKey: ['me'], queryFn: () => api<User>('auth/me/').catch(() => null), staleTime: 60000 })
-  useEffect(() => { fetch('/api/v1/csrf/', { credentials: 'include' }).catch(() => {}) }, [])
+  const { data: user, isLoading, error } = useQuery({ queryKey: ['me'], queryFn: currentUser, staleTime: 60000, refetchOnWindowFocus: true })
   if (isLoading) return <Loading fullPage label={t('Загрузка платформы…')} description={t('Подготовка образовательного пространства…')} />
   if (error) return <ErrorState error={error}/>
   return <Suspense fallback={<Loading fullPage label={t('Загрузка страницы…')} />}><Routes>
-    <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage mode="login"/>}/>
-    <Route path="/register" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage mode="register"/>}/>
+    <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage key="login" mode="login"/>}/>
+    <Route path="/register" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage key="register" mode="register"/>}/>
     <Route path="/" element={<ProtectedPage user={user}>{user?.role === 'ADMIN' ? <Navigate to="/admin/curriculum" replace/> : <Home user={user!}/>}</ProtectedPage>}/>
     <Route path="/catalog" element={<ProtectedPage user={user}><CatalogPage/></ProtectedPage>}/>
     <Route path="/courses/:slug" element={<ProtectedPage user={user}><CoursePage/></ProtectedPage>}/>
