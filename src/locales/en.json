@@ -458,5 +458,15 @@
   "Траектория изменена. Проверьте список курсов перед сохранением. История обучения сохранится.": "Track changed. Review the course list before saving. Learning history is preserved.",
   "Траектория недоступна": "Track unavailable",
   "Управление аккаунтами, траекториями и доступом к курсам.": "Manage accounts, learning tracks and course access.",
-  "Фильтры": "Filters"
+  "Фильтры": "Filters",
+  "Дополнительные материалы": "Additional materials",
+  "Добавить файлы": "Add files",
+  "Загрузка файлов…": "Uploading files…",
+  "Скачать": "Download",
+  "Скачать файл": "Download file",
+  "Удалить файл": "Remove file",
+  "К лекции можно прикрепить не более 20 файлов.": "You can attach up to 20 files to a lecture.",
+  "Максимальный размер файла — 20 МБ.": "Maximum file size is 20 MB.",
+  "Не удалось загрузить файл": "Could not upload file",
+  "PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 20 МБ на файл. Ученики увидят файлы после публикации.": "PDF, Word, PowerPoint, Excel, TXT, CSV or ZIP · up to 20 MB per file. Students will see files after publication."
 }

@@ -2,20 +2,21 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { ArrowDown, ArrowUp, Copy, Eye, ImagePlus, MoreHorizontal, Plus, Settings2, Trash2, X } from 'lucide-react'
-import { api, type Block, type Lesson } from './api'
+import { ArrowDown, ArrowUp, Copy, Eye, ImagePlus, MoreHorizontal, Paperclip, Plus, Settings2, Trash2, X } from 'lucide-react'
+import { api, type Block, type Lesson, type LessonAttachment } from './api'
 import { Button, ErrorState, Loading, Notice, Select } from './components/ui'
 import { prepareImageForUpload } from './utils/image'
 import { LessonTextEditor, parseLessonContent } from './components/LessonTextEditor'
 import { RichLessonContent } from './components/RichLessonContent'
+import { LessonAttachments } from './components/LessonAttachments'
 import { EditorLayout, type SaveState } from './layouts/EditorLayout'
 import { useLeaveWarning } from './useLeaveWarning'
 import './lesson-editor.css'
 import { useI18n } from './i18n'
 
-type Draft = { title: string; description: string; blocks: Block[] }
+type Draft = { title: string; description: string; blocks: Block[]; attachments: LessonAttachment[] }
 const normalize = (blocks: Block[]) => blocks.map((block, position) => ({ ...block, position }))
-const blankDraft: Draft = { title: '', description: '', blocks: [] }
+const blankDraft: Draft = { title: '', description: '', blocks: [], attachments: [] }
 const emptyTextBlock = (): Block => ({ type: 'TEXT', position: 0, content: JSON.stringify(parseLessonContent('')), media: null, config: {} })
 
 export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLabel?: string } = {}) {
@@ -27,6 +28,7 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
   const [dirty, setDirty] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('saved')
   const [notice, setNotice] = useState('')
+  const [noticeKind, setNoticeKind] = useState<'success' | 'error'>('success')
   const [busy, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -40,7 +42,7 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
   useEffect(() => {
     if (!draftQuery.data || dirtyRef.current) return
     const blocks = normalize(draftQuery.data.blocks ?? [])
-    const next = { ...draftQuery.data, blocks: blocks.length ? blocks : [emptyTextBlock()] }
+    const next = { ...draftQuery.data, attachments: draftQuery.data.attachments ?? [], blocks: blocks.length ? blocks : [emptyTextBlock()] }
     setDraft(next); draftRef.current = next; setSelectedIndex(null)
   }, [draftQuery.data])
   useLeaveWarning(dirty)
@@ -48,7 +50,7 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
   const updateDraft = (next: Draft) => {
     const normalized = { ...next, blocks: normalize(next.blocks) }
     draftRef.current = normalized; dirtyRef.current = true
-    setDraft(normalized); setDirty(true); setSaveState('dirty'); setNotice('')
+    setDraft(normalized); setDirty(true); setSaveState('dirty'); setNotice(''); setNoticeKind('success')
   }
   const persistLatest = useCallback(async (): Promise<void> => {
     if (requestRef.current) { await requestRef.current; if (dirtyRef.current) return persistLatestRef.current() }
@@ -60,7 +62,7 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
       if (JSON.stringify(draftRef.current) === JSON.stringify(snapshot)) {
         dirtyRef.current = false; setDirty(false); setSaveState('saved')
       }
-    }).catch(error => { setSaveState('error'); setNotice(error instanceof Error ? error.message : t('Не удалось сохранить черновик')) }).finally(() => { requestRef.current = null })
+    }).catch(error => { setSaveState('error'); setNoticeKind('error'); setNotice(error instanceof Error ? error.message : t('Не удалось сохранить черновик')) }).finally(() => { requestRef.current = null })
     requestRef.current = task
     await task
   }, [id, qc])
@@ -92,10 +94,23 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
       const form = new FormData(); form.append('file', prepared)
       const media = await api<{ id: number; url: string }>('media/', 'POST', form)
       updateBlock(index, { media: media.id, media_url: media.url })
-    } catch (error) { setSaveState('error'); setNotice(error instanceof Error ? error.message : t('Не удалось загрузить изображение')) }
+    } catch (error) { setSaveState('error'); setNoticeKind('error'); setNotice(error instanceof Error ? error.message : t('Не удалось загрузить изображение')) }
     finally { setUploading(false) }
   }
-  const saveDraft = async () => { setBusy(true); setNotice(''); try { await persistLatest(); if (dirtyRef.current) throw new Error(t('Черновик не сохранён. Проверьте подключение и повторите попытку.')); setNotice(t('Черновик сохранён')) } catch (error) { setSaveState('error'); setNotice(error instanceof Error ? error.message : t('Не удалось сохранить черновик')) } finally { setBusy(false) } }
+  const uploadAttachments = async (files: FileList) => {
+    setUploading(true); setNotice('')
+    try {
+      for (const file of Array.from(files)) {
+        if (draftRef.current.attachments.length >= 20) throw new Error(t('К лекции можно прикрепить не более 20 файлов.'))
+        if (file.size > 20 * 1024 * 1024) throw new Error(t('Максимальный размер файла — 20 МБ.'))
+        const form = new FormData(); form.append('file', file)
+        const uploaded = await api<LessonAttachment>('media/files/', 'POST', form)
+        updateDraft({ ...draftRef.current, attachments: [...draftRef.current.attachments, uploaded] })
+      }
+    } catch (error) { setSaveState('error'); setNoticeKind('error'); setNotice(error instanceof Error ? error.message : t('Не удалось загрузить файл')) }
+    finally { setUploading(false) }
+  }
+  const saveDraft = async () => { setBusy(true); setNotice(''); try { await persistLatest(); if (dirtyRef.current) throw new Error(t('Черновик не сохранён. Проверьте подключение и повторите попытку.')); setNoticeKind('success'); setNotice(t('Черновик сохранён')) } catch (error) { setSaveState('error'); setNoticeKind('error'); setNotice(error instanceof Error ? error.message : t('Не удалось сохранить черновик')) } finally { setBusy(false) } }
   const publish = async () => {
     setBusy(true); setNotice('')
     try {
@@ -104,8 +119,8 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
       await api(`lessons/${id}/draft/`, 'POST')
       await qc.invalidateQueries({ queryKey: ['admin-lesson', id] }); await qc.invalidateQueries({ queryKey: ['admin-draft', id] })
       await qc.invalidateQueries({ queryKey: ['admin', 'items'] })
-      setNotice(t('Лекция опубликована'))
-    } catch (error) { setSaveState('error'); setNotice(error instanceof Error ? error.message : t('Не удалось опубликовать урок')) }
+      setNoticeKind('success'); setNotice(t('Лекция опубликована'))
+    } catch (error) { setSaveState('error'); setNoticeKind('error'); setNotice(error instanceof Error ? error.message : t('Не удалось опубликовать урок')) }
     finally { setBusy(false) }
   }
   const lesson = lessonQuery.data
@@ -115,8 +130,8 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
   const editorActions = <><button className="editor-icon-action" aria-label={t("Панель свойств")} aria-expanded={settingsOpen} onClick={() => setSettingsOpen(value => !value)}><Settings2 size={17}/></button><Button variant="secondary" onClick={() => setPreview(value => !value)}><Eye size={16}/>{preview ? t('Редактор') : t('Предпросмотр')}</Button><Button disabled={busy || uploading} onClick={() => void publish()}>{status === 'PUBLISHED' ? t('Опубликовать изменения') : t('Опубликовать')}</Button><details className="editor-more-menu"><summary className="editor-icon-action" aria-label={t("Дополнительные действия")}><MoreHorizontal size={18}/></summary><div><button disabled={!dirty || busy} onClick={() => void saveDraft()}>{t('Сохранить сейчас')}</button></div></details></>
   return <EditorLayout title={draft.title || t('Новая лекция')} status={status} saveState={uploading ? 'saving' : saveState} actions={editorActions} backLabel={backLabel}>
     <div className={`lesson-editor-shell ${settingsOpen ? 'with-settings' : ''}`}>
-      {notice && <Notice text={notice} kind={saveState === 'error' ? 'error' : 'success'}/>}
-      {preview ? <article className="lesson-document lesson-preview"><h1>{draft.title}</h1>{draft.description && <p className="lesson-summary">{draft.description}</p>}{draft.blocks.map((block, index) => <BlockPreview key={block.id ?? index} block={block}/>)}</article> : <>
+      {notice && <Notice text={notice} kind={noticeKind}/>}
+      {preview ? <article className="lesson-document lesson-preview"><h1>{draft.title}</h1>{draft.description && <p className="lesson-summary">{draft.description}</p>}{draft.blocks.map((block, index) => <BlockPreview key={block.id ?? index} block={block}/>)}<LessonAttachments attachments={draft.attachments}/></article> : <>
         <div className="lesson-document-heading"><input aria-label={t("Название лекции")} value={draft.title} placeholder={t("Название лекции")} maxLength={200} onChange={event => updateDraft({ ...draft, title: event.target.value })}/><textarea aria-label={t("Описание лекции")} value={draft.description} placeholder={t("Краткое описание…")} rows={1} onChange={event => updateDraft({ ...draft, description: event.target.value })}/></div>
         <section className="lesson-document" aria-label={t("Содержание лекции")}>
           {draft.blocks.map((block, index) => <div key={block.id ?? `draft-${index}`} className="document-block" draggable onDragStart={event => event.dataTransfer.setData('text/plain', String(index))} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); const from = Number(event.dataTransfer.getData('text/plain')); if (Number.isInteger(from)) moveBlock(from, index) }}>
@@ -128,6 +143,7 @@ export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLab
           </div>)}
           <div className="document-add-row"><button onClick={() => insert(draft.blocks.length, 'TEXT')}><Plus size={16}/>{t('Текст')}</button><button onClick={() => insert(draft.blocks.length, 'IMAGE')}><ImagePlus size={16}/>{t('Изображение')}</button></div>
         </section>
+        <div className="lesson-document lesson-editor-attachments"><LessonAttachments attachments={draft.attachments} onRemove={media => updateDraft({ ...draftRef.current, attachments: draftRef.current.attachments.filter(file => file.media !== media) })}/><label className="lesson-attachment-upload"><Paperclip size={18}/><span>{uploading ? t('Загрузка файлов…') : t('Добавить файлы')}</span><input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip" disabled={uploading || draft.attachments.length >= 20} onChange={event => { if (event.target.files?.length) void uploadAttachments(event.target.files); event.currentTarget.value = '' }}/></label><p>{t('PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 20 МБ на файл. Ученики увидят файлы после публикации.')}</p></div>
       </>}
       {settingsOpen && <aside className="lesson-settings-panel">
         <div className="inspector-heading"><strong>{selected?.type === 'IMAGE' ? t('Изображение') : selected?.type === 'TEXT' ? t('Текст') : t('Параметры лекции')}</strong><button aria-label={t("Закрыть панель")} onClick={() => setSettingsOpen(false)}><X size={17}/></button></div>

@@ -55,3 +55,12 @@
 .practice-editor-page h1{margin:14px 0}
 .practice-editor-page>.card{margin-top:24px}
 @media(max-width:900px){.lesson-editor-shell.with-settings{padding-right:0}.lesson-settings-panel{z-index:35;top:0;width:min(88vw,320px);height:100dvh}.lesson-document-heading{margin-top:22px}}
+
+.lesson-editor-shell section.lesson-document{margin-bottom:0}
+.lesson-editor-attachments{margin-top:10px;margin-bottom:80px}
+.lesson-editor-attachments .lesson-attachments{margin-top:0}
+.lesson-attachment-upload{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:10px 14px;border:1px dashed #b9cde0;border-radius:8px;background:#f8fbfe;color:#287db5;font-size:13px;cursor:pointer}
+.lesson-attachment-upload:hover{background:#edf6fd;border-color:#86b9dc}
+.lesson-attachment-upload:has(input:disabled){opacity:.55;cursor:default}
+.lesson-attachment-upload input{display:none}
+.lesson-editor-attachments>p{margin:9px 0 0;color:#8997a8;font-size:12px}

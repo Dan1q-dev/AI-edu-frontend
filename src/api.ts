@@ -9,6 +9,7 @@ export type Module = { id: number; short_id: string; course: number; title: stri
 export type Lesson = { id: number; short_id: string; module: number; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED'; is_locked?: boolean }
 export type LearningItem = { id: number; short_id: string; module: number; module_short_id?: string; module_title?: string; module_position?: number; course_id?: number; course_short_id?: string; course_title?: string; type: 'LECTURE' | 'TEST' | 'PRACTICE'; title: string; description: string; position: number; status: 'DRAFT' | 'PUBLISHED'; lesson: number | null; lesson_short_id: string | null; test: number | null; practice: number | null; practice_criteria?: string[]; is_locked?: boolean }
 export type Block = { id?: number; type: 'TEXT' | 'IMAGE'; position: number; content: string; media: number | null; media_url?: string | null; config: Record<string, unknown> }
+export type LessonAttachment = { media: number; name: string; size: number; url: string }
 export type Option = { id?: number; text: string; position: number; is_correct?: boolean }
 export type Question = { id?: number; text: string; position: number; points: number; competency?: string; options: Option[] }
 export type Test = { id?: number; lesson?: number; title: string; description: string; passing_percent: number; max_attempts: number | null; is_published?: boolean; version?: number; questions: Question[] }
