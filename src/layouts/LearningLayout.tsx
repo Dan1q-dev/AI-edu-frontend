@@ -1,11 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, BookOpen, Check, CheckCircle2, Code2, List, LockKeyhole, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import type { LearningItem, Lesson, Module } from '../api'
+import type { LearningItem, Lesson, Module, User } from '../api'
 import { LanguageSelect, useI18n } from '../i18n'
+import { AccountMenu } from './AccountMenu'
+import { LearningStatus } from '../components/LearningStatus'
 
 type ContentEntry = Lesson | LearningItem
-export type ItemProgress = { progress_percent: number; is_completed: boolean }
+export type ItemProgress = { progress_percent: number; is_completed: boolean; is_started?: boolean }
 export type CourseSection = { module: Module; lessons: ContentEntry[] }
 const entryHref = (item: ContentEntry) => 'type' in item ? `/items/${item.short_id}` : `/lessons/${item.short_id}`
 const entryIcon = (item: ContentEntry) => 'type' in item && item.type === 'TEST' ? <CheckCircle2 size={15}/> : 'type' in item && item.type === 'PRACTICE' ? <Code2 size={15}/> : <BookOpen size={15}/>
@@ -16,19 +18,36 @@ function AITutorPlaceholder() {
   return <><div className="tutor-icon"><Sparkles size={18}/></div><h2>{t('AI Tutor')}</h2><p>{t('Персональный помощник появится здесь позже.')}</p></>
 }
 
-export function LearningLayout({ children, tutor, courseTitle, moduleTitle, sections, lessonId, lessonTitle, currentIndex, totalLessons, previous, next, courseProgress, itemProgress = {} }: {
+export function LearningLayout({ children, tutor, courseTitle, courseSlug, user, moduleTitle, sections, lessonId, lessonTitle, currentIndex, totalLessons, previous, next, courseProgress, itemProgress = {} }: {
+  user?: User; courseSlug?: string
   children: ReactNode; courseTitle?: string; moduleTitle?: string; sections?: CourseSection[]; lessonId: string; lessonTitle: string
   currentIndex?: number; totalLessons?: number; previous?: ContentEntry; next?: ContentEntry; tutor?: ReactNode
   courseProgress?: number; itemProgress?: Record<string, ItemProgress>
 }) {
   const [outlineOpen, setOutlineOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const drawerRef = useRef<HTMLElement>(null)
   const { t } = useI18n()
   useEffect(() => { setOutlineOpen(false) }, [lessonId])
   useEffect(() => {
     if (!outlineOpen) return
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setOutlineOpen(false) }
+    const drawer = drawerRef.current
+    const focusable = () => [...(drawer?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input, select, textarea, [tabindex="0"]') ?? [])]
+    focusable()[0]?.focus()
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); setOutlineOpen(false) }
+      if (event.key === 'Tab') {
+        const nodes = focusable(), first = nodes[0], last = nodes[nodes.length - 1]
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+      }
+    }
     window.addEventListener('keydown', close)
-    return () => window.removeEventListener('keydown', close)
+    const onResize = () => { if (window.innerWidth > 900) setOutlineOpen(false) }
+    window.addEventListener('resize', onResize)
+    return () => { window.removeEventListener('keydown', close); window.removeEventListener('resize', onResize); document.body.style.overflow = previousOverflow; triggerRef.current?.focus() }
   }, [outlineOpen])
 
   const outline = <>
@@ -40,19 +59,19 @@ export function LearningLayout({ children, tutor, courseTitle, moduleTitle, sect
         const state = itemProgress[item.short_id]
         if (section.module.is_locked || entryLocked(item)) return <div key={item.id} className="outline-lesson is-locked" aria-disabled="true" title={t('Сначала завершите предыдущий модуль')}><LockKeyhole size={15}/><span className="outline-lesson-title">{item.title}</span></div>
         return <Link key={item.id} to={entryHref(item)} onClick={() => setOutlineOpen(false)} className={`outline-lesson ${item.short_id === lessonId ? 'active' : ''}`} aria-current={item.short_id === lessonId ? 'page' : undefined}>
-          {entryIcon(item)}<span className="outline-lesson-title">{item.title}</span>{state?.is_completed ? <Check size={15} className="outline-complete" aria-label={t('Выполнено')}/> : state?.progress_percent ? <small>{state.progress_percent}%</small> : null}
+          {entryIcon(item)}<span className="outline-lesson-title">{item.title}</span>{state?.progress_percent && !state.is_completed ? <small>{state.progress_percent}%</small> : <LearningStatus completed={state?.is_completed} started={state?.is_started}/>}
         </Link>
       })}
     </section>)}</div>
   </>
 
   return <div className="learning-layout">
-    <header className="learning-header">
-      <Link to="/catalog" className="learning-back" aria-label={t('Вернуться в каталог')}><ArrowLeft size={17}/><span>{t('Каталог')}</span></Link>
-      <div className="learning-header-title"><span>{courseTitle || t('Моё обучение')}</span><strong>{moduleTitle || lessonTitle}</strong></div>
-      <div className="learning-header-tools"><LanguageSelect compact/><button className="button secondary outline-button" onClick={() => setOutlineOpen(true)} aria-expanded={outlineOpen} aria-controls="course-outline"><List size={17}/><span>{t('Содержание')}</span></button></div>
+    <header className="learning-header" inert={outlineOpen}>
+      <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'} className="learning-back" aria-label={t(courseSlug ? 'Вернуться к курсу' : 'Вернуться в каталог')}><ArrowLeft size={17}/><span>{t(courseSlug ? 'К курсу' : 'Каталог')}</span></Link>
+      <nav className="learning-header-title learning-breadcrumbs" aria-label={t('Путь обучения')}>{courseTitle && <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'}>{courseTitle}</Link>}<span>{moduleTitle && <>{moduleTitle} <span aria-hidden="true">›</span> </>}<strong aria-current="page">{lessonTitle}</strong></span></nav>
+      <div className="learning-header-tools"><LanguageSelect compact/><button ref={triggerRef} className="button secondary outline-button" onClick={() => setOutlineOpen(true)} aria-label={t('Содержание')} aria-expanded={outlineOpen} aria-controls="course-outline"><List size={17}/><span>{t('Содержание')}</span></button>{user && <div className="workspace-account"><AccountMenu user={user}/></div>}</div>
     </header>
-    <div className="learning-workspace">
+    <div className="learning-workspace" inert={outlineOpen}>
       <aside className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>
       <div className="learning-center"><main className="learning-main">{children}</main>
         <footer className="lesson-navigation">
@@ -63,6 +82,6 @@ export function LearningLayout({ children, tutor, courseTitle, moduleTitle, sect
       </div>
       <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor ?? <AITutorPlaceholder/>}</aside>
     </div>
-    {outlineOpen && <div className="outline-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOutlineOpen(false) }}><aside id="course-outline" className="course-outline mobile-outline" aria-label={t('Содержание курса')}>{outline}</aside></div>}
+    {outlineOpen && <div className="outline-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOutlineOpen(false) }}><aside ref={drawerRef} role="dialog" aria-modal="true" id="course-outline" className="course-outline mobile-outline" aria-label={t('Содержание курса')}>{outline}</aside></div>}
   </div>
 }

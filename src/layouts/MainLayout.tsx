@@ -16,7 +16,7 @@ export function MainLayout({ user, children }: { user: User; children: ReactNode
     <header className="main-header"><div className="main-header-inner">
       <Link to="/" className="brand" aria-label={t('AI Edu — на главную')}>AI<span>edu</span></Link>
       <nav className="main-nav" aria-label={t('Основная навигация')}>{navItems.map(({ to, label, icon: Icon, end }) => <NavLink key={to} to={to} end={end} className={({ isActive }) => `main-nav-link ${isActive ? 'active' : ''}`}><Icon size={17}/>{label}</NavLink>)}</nav>
-      <LanguageSelect compact/><AccountMenu user={user}/>
+      <LanguageSelect compact/><AccountMenu user={user} showProfile={false}/>
     </div></header>
     <main className="main-content">{children}</main>
   </div>

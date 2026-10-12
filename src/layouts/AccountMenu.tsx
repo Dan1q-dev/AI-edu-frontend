@@ -6,7 +6,7 @@ import { api, type User } from '../api'
 import { updateSession } from '../session'
 import { useI18n } from '../i18n'
 
-export function AccountMenu({ user, admin = false }: { user: User; admin?: boolean }) {
+export function AccountMenu({ user, admin = false, showProfile = true }: { user: User; admin?: boolean; showProfile?: boolean }) {
   const { t } = useI18n()
   const ref = useRef<HTMLDetailsElement>(null)
   const location = useLocation()
@@ -48,6 +48,6 @@ export function AccountMenu({ user, admin = false }: { user: User; admin?: boole
   }
   return <details ref={ref} className="user-menu">
     <summary aria-label={t('Меню пользователя')}><span className="avatar">{(user.first_name || user.email)[0].toUpperCase()}</span><span className="user-menu-name">{admin ? t('Администратор') : user.first_name || user.email}</span><ChevronDown size={15}/></summary>
-    <div className="user-menu-panel"><span className="user-menu-email" title={user.email}>{user.email}</span><Link to={admin ? '/admin/profile' : '/profile'} onClick={close}><UserRound size={16}/>{t('Профиль')}</Link><button type="button" disabled={isLoggingOut} onClick={() => { void logout() }}><LogOut size={16}/>{t(isLoggingOut ? 'Подождите…' : 'Выйти')}</button>{error && <p role="alert" className="field-error">{error}</p>}</div>
+    <div className="user-menu-panel"><span className="user-menu-email" title={user.email}>{user.email}</span>{showProfile && <Link to={admin ? '/admin/profile' : '/profile'} onClick={close}><UserRound size={16}/>{t('Профиль')}</Link>}<button type="button" disabled={isLoggingOut} onClick={() => { void logout() }}><LogOut size={16}/>{t(isLoggingOut ? 'Подождите…' : 'Выйти')}</button>{error && <p role="alert" className="field-error">{error}</p>}</div>
   </details>
 }

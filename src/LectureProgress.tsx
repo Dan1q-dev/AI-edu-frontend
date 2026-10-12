@@ -12,6 +12,7 @@ export function LectureProgress({ itemId, courseId, savedPercent, children }: {
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
+  const refreshProgress = () => Promise.all(['course-progress', 'learning-summary'].map(key => queryClient.invalidateQueries({ queryKey: key === 'course-progress' ? [key, courseId] : [key] })))
 
   useEffect(() => {
     let maximum = savedPercent
@@ -27,10 +28,10 @@ export function LectureProgress({ itemId, courseId, savedPercent, children }: {
           method: 'PATCH', credentials: 'include', keepalive: true,
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
           body: JSON.stringify({ progress_percent: maximum }),
-        }).then(response => { if (response.ok) queryClient.invalidateQueries({ queryKey: ['course-progress', courseId] }) }).catch(() => {})
+        }).then(response => { if (response.ok) void refreshProgress() }).catch(() => {})
       } else {
         api(`items/${itemId}/progress/`, 'PATCH', { progress_percent: maximum })
-          .then(() => queryClient.invalidateQueries({ queryKey: ['course-progress', courseId] }))
+          .then(refreshProgress)
           .catch(() => { lastSent = Math.min(lastSent, savedPercent) })
       }
     }

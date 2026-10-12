@@ -35,3 +35,15 @@ npm run dev
 Vite использует `API_PROXY_TARGET` из `.env`; значение по умолчанию — `http://backend:8000`. Для запуска Vite вне Docker укажите `API_PROXY_TARGET=http://localhost:8000`.
 
 Проверки: `npm run test`, `npm run build`.
+### Student learning links
+
+The student flow uses `/items/:id`. Existing `/lessons/:id` bookmarks resolve the
+explicit `learning_item_short_id` relation returned by the lesson API and redirect
+with history replacement. Migrated lectures keep their original public ID, but
+the relation is used rather than assuming the IDs always match. If a legacy
+lesson has no LearningItem relation, the page explains that it is unavailable
+and offers the catalog; it does not run a second learning/progress flow.
+
+`GET /api/v1/me/learning/` supplies the dashboard in one request. Course progress
+uses the same server derivation for completion and resume. Scroll percentages
+are preserved; exact scroll restoration is intentionally left for a later step.

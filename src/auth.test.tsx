@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'
@@ -36,27 +36,36 @@ async function login(email = student.email, password = 'StrongPass321!') {
   fireEvent.click(screen.getByRole('button', { name: 'Войти' }))
 }
 
+// Resolve real lazy modules before assertions; cold Vitest transforms are not UI latency.
+beforeAll(async () => { await Promise.all([import('./AuthPage'), import('./MyLearningPage')]) })
 beforeEach(() => {
   vi.mocked(api).mockReset()
   vi.mocked(apiAll).mockReset().mockResolvedValue([])
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}')))
   vi.mocked(api).mockImplementation(async path => {
     if (path === 'auth/me/') throw anonymous()
+    if (path === 'me/learning/') return { resume_course: null, active_courses: [], completed_courses: [], available_courses: [] } as never
     if (path === 'auth/login/' || path === 'auth/register/') return student as never
     return undefined as never
   })
 })
-afterEach(() => { cleanup(); clients.splice(0).forEach(client => client.clear()); vi.unstubAllGlobals() })
+afterEach(async () => {
+  cleanup()
+  await Promise.all(clients.map(client => client.cancelQueries()))
+  clients.splice(0).forEach(client => client.clear())
+  vi.unstubAllGlobals()
+  localStorage.clear(); sessionStorage.clear()
+})
 
 describe('authentication with mounted application', () => {
-  it('updates the page on login and fetches courses for the new session', async () => {
+  it('updates the page on login and fetches learning for the new session', async () => {
     const client = mount()
     client.setQueryData(['courses'], [{ id: 99, title: 'Previous account course' }])
     await login()
     expect(await screen.findByLabelText('Меню пользователя')).toBeTruthy()
     expect(screen.getByTestId('location').textContent).toBe('/')
     expect(client.getQueryData(['me'])).toEqual(student)
-    await waitFor(() => expect(vi.mocked(apiAll)).toHaveBeenCalledWith('courses/'))
+    await waitFor(() => expect(vi.mocked(api)).toHaveBeenCalledWith('me/learning/'))
     expect(screen.queryByText('Previous account course')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(screen.queryByRole('heading', { name: 'Вход в аккаунт' })).toBeNull()
@@ -81,6 +90,7 @@ describe('authentication with mounted application', () => {
     fireEvent.click(screen.getByText('Выйти'))
     await screen.findByRole('heading', { name: 'Вход в аккаунт' })
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/login'))
+    // Change the login response after logout settles; auth/me must still represent an anonymous session.
     vi.mocked(api).mockImplementation(async path => {
       if (path === 'auth/me/') throw anonymous()
       return path === 'auth/login/' ? admin as never : undefined as never

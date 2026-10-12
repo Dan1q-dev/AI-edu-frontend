@@ -4,10 +4,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AuthPage } from './AuthPage'
 import { EditorPage } from './AdminPages'
-import { LessonPage, CatalogPage } from './StudentPages'
+import { CatalogPage } from './StudentPages'
+import { TestRunner } from './TestRunner'
 import { api, apiAll } from './api'
 
-vi.mock('./api', () => ({ api: vi.fn(), apiAll: vi.fn() }))
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), api: vi.fn(), apiAll: vi.fn() }))
 const mockedApi = vi.mocked(api)
 const mockedApiAll = vi.mocked(apiAll)
 function renderAt(path: string, element: React.ReactNode) {
@@ -49,16 +50,16 @@ describe('main flows', () => {
     mockedApi.mockImplementation(async (path, method) => {
       if (path === 'lessons/1/') return { id: 1, title: 'Intro', description: '' } as never
       if (path === 'lessons/1/blocks/') return [] as never
-      if (path === 'lessons/1/test/') return { title: 'Quiz', description: '', passing_percent: 70, max_attempts: 1, questions: [{ id: 10, text: 'Question?', points: 1, position: 0, options: [{ id: 20, text: 'Answer', position: 0 }, { id: 21, text: 'Other', position: 1 }] }] } as never
-      if (path === 'lessons/1/attempts/' && method === 'POST') return { id: 1, passed: true, percent: 100, earned_points: 1, total_points: 1 } as never
-      if (path === 'lessons/1/attempts/') return { results: [] } as never
+      if (path === 'items/1/test/') return { title: 'Quiz', description: '', passing_percent: 70, max_attempts: 1, questions: [{ id: 10, text: 'Question?', points: 1, position: 0, options: [{ id: 20, text: 'Answer', position: 0 }, { id: 21, text: 'Other', position: 1 }] }] } as never
+      if (path === 'items/1/attempts/' && method === 'POST') return { id: 1, passed: true, percent: 100, earned_points: 1, total_points: 1 } as never
+      if (path === 'items/1/attempts/') return { count: 0, results: [], next: null, previous: null } as never
       return {} as never
     })
-    renderAt('/lessons/1', <LessonPage/>)
+    renderAt('/test', <TestRunner itemId="1"/>)
     await screen.findByText('Question?')
     fireEvent.click(screen.getByLabelText('Answer'))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить ответы' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('lessons/1/attempts/', 'POST', { answers: [{ question: 10, option: 20 }] }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/1/attempts/', 'POST', { answers: [{ question: 10, option: 20 }] }))
   })
 
   it('renders course cover in catalog when present', async () => {

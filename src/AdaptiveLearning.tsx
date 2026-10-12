@@ -39,7 +39,7 @@ export function PracticeRunner({ item }: { item: LearningItem }) {
     setBusy(true); setNotice('')
     try {
       await api(`items/${item.short_id}/practice/`, 'POST', { checks })
-      await Promise.all([qc.invalidateQueries({ queryKey: ['practice', item.short_id] }), qc.invalidateQueries({ queryKey: ['course-progress'] })])
+      await Promise.all([qc.invalidateQueries({ queryKey: ['practice', item.short_id] }), qc.invalidateQueries({ queryKey: ['course-progress'] }), qc.invalidateQueries({ queryKey: ['learning-summary'] })])
       setFailed(false); setNotice(t('Самопроверка сохранена'))
     } catch (error) { setFailed(true); setNotice(error instanceof Error ? error.message : t('Не удалось сохранить')) }
     finally { setBusy(false) }
@@ -48,6 +48,7 @@ export function PracticeRunner({ item }: { item: LearningItem }) {
   if (state.error) return <ErrorState error={state.error}/>
   if (!state.data?.criteria.length) return <div className="card form-card"><p>{t('Критерии практики ещё не настроены.')}</p></div>
   return <div className="card form-card"><h2>{t('Самопроверка практической работы')}</h2><p>{t('Выполните задание и отметьте соблюдённые критерии. Этот результат учитывается в готовности модуля.')}</p>
+    <p className="practice-self-assessment">{t('Это ваша самооценка. Система не проверяет выполненную работу автоматически.')}</p>
     <div className="practice-checks">{state.data.criteria.map((criterion, index) => <label key={index}><input type="checkbox" checked={checks[index] ?? false} onChange={event => { setChecks(current => current.map((value, offset) => offset === index ? event.target.checked : value)); setNotice('') }}/><span>{criterion}</span></label>)}</div>
     <Button disabled={busy || checks.length !== state.data.criteria.length} onClick={() => void save()}>{t('Сохранить самопроверку')}</Button><Notice text={notice} kind={failed ? 'error' : 'success'}/>
   </div>
