@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { api, apiAll, type Course, type LearningItem, type Module, type Track } from '../api'
 import { Confirm, ErrorState, Loading, Notice } from '../components/ui'
 import { CreateEntityDialog } from './CreateEntityDialog'
@@ -18,6 +18,7 @@ export function AdminCurriculum() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const tracksQuery = useQuery({ queryKey: ['admin', 'tracks'], queryFn: () => apiAll<Track>('tracks/') })
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses'], queryFn: () => apiAll<Course>('courses/') })
   const modulesQuery = useQuery({ queryKey: ['admin', 'modules'], queryFn: () => apiAll<Module>('modules/') })
@@ -63,6 +64,7 @@ export function AdminCurriculum() {
         : { title, module: parentId, type, status: 'DRAFT' }
     const result = await api<Entity>(`${kind}/`, 'POST', body)
     await refresh()
+    if (kind === 'items' && type === 'PRACTICE') { navigate(`/admin/curriculum/items/${result.short_id}/edit`); return }
     setExpanded(current => ({ ...current, ...(kind === 'modules' ? { [`course-${parentId}`]: true } : kind === 'items' ? { [`module-${parentId}`]: true } : {}) }))
     setFeedback({ text: `${t(({ courses: 'Курс', modules: 'Модуль', items: 'Элемент' } as const)[kind])} «${result.title}» ${t('создан. Нажмите на название, чтобы открыть настройки.')}`, kind: 'success' })
   }

@@ -51,13 +51,16 @@ describe('adaptive learning', () => {
   })
 
   it('saves actual practice checks rather than a client-supplied score', async () => {
-    mockedApi.mockResolvedValue({ criteria: ['Первый критерий', 'Второй критерий'], checks: null } as never)
+    const state = { version: { id: 1, practice_type: 'checklist_practice', plugin_version: '1.0.0', version_number: 1, title: 'Задание', description: '', config: { criteria: [
+      { title: 'Первый критерий', description: '', is_required: true }, { title: 'Второй критерий', description: '', is_required: true },
+    ] } }, submission: { id: 9, status: 'IN_PROGRESS', submission_data: {} }, result: null, progress_percent: 0, is_completed: false }
+    mockedApi.mockResolvedValue(state as never)
     mount(<PracticeRunner item={item}/>)
-    const first = await screen.findByRole('checkbox', { name: 'Первый критерий' })
-    await waitFor(() => expect((screen.getByRole('button', { name: 'Сохранить самопроверку' }) as HTMLButtonElement).disabled).toBe(false))
+    const first = await screen.findByRole('checkbox', { name: /Первый критерий/ })
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Завершить практическую работу' }) as HTMLButtonElement).disabled).toBe(false))
     fireEvent.click(first)
-    fireEvent.click(screen.getByRole('button', { name: 'Сохранить самопроверку' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/practice-1/practice/', 'POST', { checks: [true, false] }))
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить практическую работу' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/practice-1/practice/', 'POST', { submission_id: 9, submission_data: { checks: [true, false] } }))
     expect(await screen.findByText('Самопроверка сохранена')).toBeTruthy()
   })
 })

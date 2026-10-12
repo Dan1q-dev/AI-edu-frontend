@@ -1,0 +1,15 @@
+.practice-catalog { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 24px 0; }
+.practice-catalog-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; color: var(--color-text, #17223b); background: white; border: 1px solid #dbe3ec; border-radius: 14px; padding: 24px; }
+.practice-catalog-card:hover:enabled { border-color: #267fca; background: #f5faff; }
+.practice-catalog-card:disabled { opacity: .6; cursor: not-allowed; }
+.practice-catalog-card strong { font-size: 1.05rem; }
+.practice-catalog-card svg { color: #267fca; }
+.practice-config { border: 0; padding: 0; min-width: 0; display: grid; gap: 16px; }
+.practice-config legend { font-weight: 700; margin-bottom: 12px; }
+.practice-criterion-editor { display: grid; gap: 12px; border: 1px solid #e0e7ef; border-radius: 10px; padding: 16px; }
+.practice-description { white-space: pre-wrap; }
+.practice-score { border-radius: 12px; background: #edf6ff; padding: 16px; }
+.practice-score p { margin: 8px 0 0; }
+.practice-checks small { font-weight: 400; color: var(--color-muted, #67738a); }
+.practice-checks p { font-size: .85rem; margin: 6px 0 0; white-space: pre-wrap; }
+.practice-version-note { padding: 16px; border-radius: 10px; background: #f0f6fd; }
