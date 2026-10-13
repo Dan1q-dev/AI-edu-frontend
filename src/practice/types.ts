@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import type { LearningItem } from '../api'
 
 export type Criterion = { title: string; description: string; is_required: boolean }
 export type PracticeConfig = Record<string, unknown>
@@ -25,10 +26,12 @@ export type PracticeState = {
 export type ConfigEditorProps = { config: PracticeConfig; onChange: (config: PracticeConfig) => void; disabled: boolean }
 export type RuntimeProps = {
   state: PracticeState; busy: boolean
+  item?: LearningItem; ownerId?: number
   onStart: () => Promise<void>; onSubmit: (data: Record<string, unknown>) => Promise<void>
 }
 export type PracticePlugin = {
   type: string; version: string; initialConfig: () => PracticeConfig
+  layout?: 'workspace'
   ConfigEditor: ComponentType<ConfigEditorProps>; StudentRuntime: ComponentType<RuntimeProps>
   validateConfig: (config: PracticeConfig) => string | null
 }

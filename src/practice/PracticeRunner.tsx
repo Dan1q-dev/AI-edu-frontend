@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type LearningItem } from '../api'
 import { ErrorState, Loading, Notice } from '../components/ui'
@@ -7,7 +7,7 @@ import { getPracticePlugin } from './registry'
 import type { PracticeState } from './types'
 import './practice.css'
 
-export function PracticeRunner({ item }: { item: LearningItem }) {
+export function PracticeRunner({ item, ownerId, onWorkspaceChange }: { item: LearningItem; ownerId?: number; onWorkspaceChange?: (enabled: boolean) => void }) {
   const { t } = useI18n()
   const qc = useQueryClient()
   const key = ['practice', item.short_id]
@@ -16,6 +16,11 @@ export function PracticeRunner({ item }: { item: LearningItem }) {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [failed, setFailed] = useState(false)
+  const plugin = state.data?.version ? getPracticePlugin(state.data.version.practice_type, state.data.version.plugin_version) : undefined
+  useEffect(() => {
+    onWorkspaceChange?.(plugin?.layout === 'workspace')
+    return () => onWorkspaceChange?.(false)
+  }, [plugin, onWorkspaceChange])
   const perform = async (start: boolean, data?: Record<string, unknown>) => {
     setBusy(true); setNotice('')
     try {
@@ -29,8 +34,7 @@ export function PracticeRunner({ item }: { item: LearningItem }) {
   if (state.isLoading) return <Loading/>
   if (state.error) return <ErrorState error={state.error}/>
   if (!state.data?.version) return <div className="card"><p>{t('Критерии практики ещё не настроены.')}</p></div>
-  const plugin = getPracticePlugin(state.data.version.practice_type, state.data.version.plugin_version)
   if (!plugin) return <ErrorState error={new Error(t('Этот тип практики пока недоступен'))}/>
   const Runtime = plugin.StudentRuntime
-  return <><Runtime state={state.data} busy={busy} onStart={() => perform(true)} onSubmit={data => perform(false, data)}/><Notice text={notice} kind={failed ? 'error' : 'success'}/></>
+  return <><Runtime state={state.data} busy={busy} item={item} ownerId={ownerId} onStart={() => perform(true)} onSubmit={data => perform(false, data)}/><Notice text={notice} kind={failed ? 'error' : 'success'}/></>
 }

@@ -64,6 +64,7 @@ export function LessonPage() {
 export function LearningItemPage({ user }: { user?: User } = {}) {
   const { t } = useI18n()
   const { id = '' } = useParams()
+  const [workspace, setWorkspace] = useState(false)
   const item = useQuery({ queryKey: ['learning-item', id], queryFn: () => api<LearningItem>(`items/${id}/`) })
   const blocks = useQuery({ queryKey: ['item-blocks', item.data?.lesson_short_id], queryFn: () => api<Block[]>(`lessons/${item.data!.lesson_short_id}/blocks/`), enabled: item.data?.type === 'LECTURE' && Boolean(item.data.lesson_short_id) })
   const attachments = useQuery({ queryKey: ['item-attachments', item.data?.lesson_short_id], queryFn: () => api<LessonAttachment[]>(`lessons/${item.data!.lesson_short_id}/attachments/`), enabled: item.data?.type === 'LECTURE' && Boolean(item.data.lesson_short_id) })
@@ -97,11 +98,11 @@ export function LearningItemPage({ user }: { user?: User } = {}) {
   const entries = sections.flatMap(section => section.lessons)
   const index = entries.findIndex(entry => entry.short_id === id)
   const kind = item.data?.type === 'TEST' ? t('ТЕСТ') : item.data?.type === 'PRACTICE' ? t('ПРАКТИКА') : t('ЛЕКЦИЯ')
-  return <LearningLayout user={user} courseSlug={item.data?.course_short_id} courseTitle={item.data?.course_title} moduleTitle={item.data?.module_title} sections={sections} lessonId={id} lessonTitle={item.data?.title || t('Материал')} currentIndex={Math.max(index, 0)} totalLessons={entries.length || undefined} previous={index > 0 ? entries[index - 1] : undefined} next={index >= 0 ? entries[index + 1] : undefined} courseProgress={progress.data?.percent} itemProgress={progress.data?.items}>
+  return <LearningLayout workspace={workspace} user={user} courseSlug={item.data?.course_short_id} courseTitle={item.data?.course_title} moduleTitle={item.data?.module_title} sections={sections} lessonId={id} lessonTitle={item.data?.title || t('Материал')} currentIndex={Math.max(index, 0)} totalLessons={entries.length || undefined} previous={index > 0 ? entries[index - 1] : undefined} next={index >= 0 ? entries[index + 1] : undefined} courseProgress={progress.data?.percent} itemProgress={progress.data?.items}>
     <div className="lesson-heading"><span className="eyebrow">{kind}</span>{item.data?.type !== 'PRACTICE' && <><h1>{item.data?.title}</h1><p>{item.data?.description}</p></>}</div>
     {item.data?.type === 'LECTURE' && <LectureProgress key={id} itemId={id} courseId={item.data.course_short_id ?? ''} savedPercent={progress.data?.items[id]?.progress_percent ?? 0}><article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown" style={{ textAlign: block.config?.align === 'center' || block.config?.align === 'right' ? block.config.align : 'left' }}>{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={String(block.config?.alt || block.content || 'Изображение лекции')}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}<LessonAttachments attachments={attachments.data ?? []}/></article></LectureProgress>}
     {item.data?.type === 'TEST' && <TestRunner key={id} itemId={id}/>}
-    {item.data?.type === 'PRACTICE' && <PracticeRunner key={id} item={item.data}/>}
+    {item.data?.type === 'PRACTICE' && <PracticeRunner key={id} item={item.data} ownerId={user?.id} onWorkspaceChange={setWorkspace}/>}
   </LearningLayout>
 }
 

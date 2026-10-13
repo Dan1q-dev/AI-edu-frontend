@@ -18,8 +18,9 @@ function AITutorPlaceholder() {
   return <><div className="tutor-icon"><Sparkles size={18}/></div><h2>{t('AI Tutor')}</h2><p>{t('Персональный помощник появится здесь позже.')}</p></>
 }
 
-export function LearningLayout({ children, tutor, courseTitle, courseSlug, user, moduleTitle, sections, lessonId, lessonTitle, currentIndex, totalLessons, previous, next, courseProgress, itemProgress = {} }: {
+export function LearningLayout({ children, tutor, workspace = false, courseTitle, courseSlug, user, moduleTitle, sections, lessonId, lessonTitle, currentIndex, totalLessons, previous, next, courseProgress, itemProgress = {} }: {
   user?: User; courseSlug?: string
+  workspace?: boolean
   children: ReactNode; courseTitle?: string; moduleTitle?: string; sections?: CourseSection[]; lessonId: string; lessonTitle: string
   currentIndex?: number; totalLessons?: number; previous?: ContentEntry; next?: ContentEntry; tutor?: ReactNode
   courseProgress?: number; itemProgress?: Record<string, ItemProgress>
@@ -45,10 +46,10 @@ export function LearningLayout({ children, tutor, courseTitle, courseSlug, user,
       }
     }
     window.addEventListener('keydown', close)
-    const onResize = () => { if (window.innerWidth > 900) setOutlineOpen(false) }
+    const onResize = () => { if (!workspace && window.innerWidth > 900) setOutlineOpen(false) }
     window.addEventListener('resize', onResize)
     return () => { window.removeEventListener('keydown', close); window.removeEventListener('resize', onResize); document.body.style.overflow = previousOverflow; triggerRef.current?.focus() }
-  }, [outlineOpen])
+  }, [outlineOpen, workspace])
 
   const outline = <>
     <div className="outline-header"><div><span className="eyebrow">{t('СОДЕРЖАНИЕ КУРСА')}</span><h2>{courseTitle || t('Оглавление')}</h2></div><button className="icon-button outline-close" onClick={() => setOutlineOpen(false)} aria-label={t('Закрыть оглавление')}><X size={19}/></button></div>
@@ -65,14 +66,14 @@ export function LearningLayout({ children, tutor, courseTitle, courseSlug, user,
     </section>)}</div>
   </>
 
-  return <div className="learning-layout">
+  return <div className={`learning-layout ${workspace ? 'is-document-workspace' : ''}`}>
     <header className="learning-header" inert={outlineOpen}>
       <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'} className="learning-back" aria-label={t(courseSlug ? 'Вернуться к курсу' : 'Вернуться в каталог')}><ArrowLeft size={17}/><span>{t(courseSlug ? 'К курсу' : 'Каталог')}</span></Link>
       <nav className="learning-header-title learning-breadcrumbs" aria-label={t('Путь обучения')}>{courseTitle && <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'}>{courseTitle}</Link>}<span>{moduleTitle && <>{moduleTitle} <span aria-hidden="true">›</span> </>}<strong aria-current="page">{lessonTitle}</strong></span></nav>
       <div className="learning-header-tools"><LanguageSelect compact/><button ref={triggerRef} className="button secondary outline-button" onClick={() => setOutlineOpen(true)} aria-label={t('Содержание')} aria-expanded={outlineOpen} aria-controls="course-outline"><List size={17}/><span>{t('Содержание')}</span></button>{user && <div className="workspace-account"><AccountMenu user={user}/></div>}</div>
     </header>
     <div className="learning-workspace" inert={outlineOpen}>
-      <aside className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>
+      {!workspace && <aside className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>}
       <div className="learning-center"><main className="learning-main">{children}</main>
         <footer className="lesson-navigation">
           {previous ? <Link className="button secondary" to={entryHref(previous)} aria-label={`${t('Предыдущий элемент')}: ${previous.title}`}><ArrowLeft size={16}/><span><small>{t('Предыдущий')}</small>{previous.title}</span></Link> : <span/>}
@@ -80,7 +81,7 @@ export function LearningLayout({ children, tutor, courseTitle, courseSlug, user,
           {next ? entryLocked(next) ? <span className="course-end"><LockKeyhole size={16}/>{t('Сначала завершите текущий модуль')}</span> : <Link className="button secondary" to={entryHref(next)} aria-label={`${t('Следующий элемент')}: ${next.title}`}><span><small>{t('Следующий')}</small>{next.title}</span><ArrowLeft className="next-arrow" size={16}/></Link> : <span className="course-end"><Check size={16}/>{t('Последний элемент')}</span>}
         </footer>
       </div>
-      <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor ?? <AITutorPlaceholder/>}</aside>
+      {!workspace && <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor ?? <AITutorPlaceholder/>}</aside>}
     </div>
     {outlineOpen && <div className="outline-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOutlineOpen(false) }}><aside ref={drawerRef} role="dialog" aria-modal="true" id="course-outline" className="course-outline mobile-outline" aria-label={t('Содержание курса')}>{outline}</aside></div>}
   </div>
