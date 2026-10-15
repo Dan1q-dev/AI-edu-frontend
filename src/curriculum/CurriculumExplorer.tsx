@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { api, apiAll, type Course, type LearningItem, type Module, type Track } from '../api'
 import { Confirm, ErrorState, Loading, Notice } from '../components/ui'
 import { CreateEntityDialog } from './CreateEntityDialog'
 import { CurriculumHeader } from './CurriculumHeader'
 import { CourseSection, type CourseGroup } from './CurriculumTree'
-import { entityKey, sortByPosition, type Entity, type EntityKind, type EntitySelection } from './types'
+import { entityKey, sortByPosition, sortLearningItems, type Entity, type EntityKind, type EntitySelection } from './types'
 import { useI18n } from '../i18n'
 import '../admin-curriculum.css'
 
@@ -18,6 +18,7 @@ export function AdminCurriculum() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const tracksQuery = useQuery({ queryKey: ['admin', 'tracks'], queryFn: () => apiAll<Track>('tracks/') })
   const coursesQuery = useQuery({ queryKey: ['admin', 'courses'], queryFn: () => apiAll<Course>('courses/') })
   const modulesQuery = useQuery({ queryKey: ['admin', 'modules'], queryFn: () => apiAll<Module>('modules/') })
@@ -43,10 +44,10 @@ export function AdminCurriculum() {
       const allModules = sortByPosition(modules.filter(module => module.course === course.id))
       const courseMatch = course.title.toLocaleLowerCase().includes(needle)
       const groupedModules = allModules.map(module => {
-        const allItems = sortByPosition(items.filter(item => item.module === module.id))
+        const allItems = sortLearningItems(items.filter(item => item.module === module.id))
         const moduleMatch = module.title.toLocaleLowerCase().includes(needle)
         const visibleItems = !needle || courseMatch || moduleMatch ? allItems : allItems.filter(item => item.title.toLocaleLowerCase().includes(needle))
-        return { module, items: visibleItems, totalItems: allItems.length, matches: !needle || courseMatch || moduleMatch || visibleItems.length > 0 }
+        return { module, items: visibleItems, totalItems: allItems.length, hasTest: allItems.some(item => item.type === 'TEST'), matches: !needle || courseMatch || moduleMatch || visibleItems.length > 0 }
       }).filter(group => group.matches)
       return { course, modules: groupedModules, totalModules: allModules.length, matches: !needle || courseMatch || groupedModules.length > 0 }
     }).filter(group => group.matches)
@@ -63,6 +64,7 @@ export function AdminCurriculum() {
         : { title, module: parentId, type, status: 'DRAFT' }
     const result = await api<Entity>(`${kind}/`, 'POST', body)
     await refresh()
+    if (kind === 'items' && type === 'PRACTICE') { navigate(`/admin/curriculum/items/${result.short_id}/edit`); return }
     setExpanded(current => ({ ...current, ...(kind === 'modules' ? { [`course-${parentId}`]: true } : kind === 'items' ? { [`module-${parentId}`]: true } : {}) }))
     setFeedback({ text: `${t(({ courses: 'Курс', modules: 'Модуль', items: 'Элемент' } as const)[kind])} «${result.title}» ${t('создан. Нажмите на название, чтобы открыть настройки.')}`, kind: 'success' })
   }
@@ -84,10 +86,11 @@ export function AdminCurriculum() {
       ? sortByPosition(courses.filter(course => course.learning_track === (item as Course).learning_track))
       : kind === 'modules'
         ? sortByPosition(modules.filter(module => module.course === (item as Module).course))
-        : sortByPosition(items.filter(entry => entry.module === (item as LearningItem).module))
+        : sortLearningItems(items.filter(entry => entry.module === (item as LearningItem).module))
     const index = siblings.findIndex(sibling => sibling.id === item.id)
     const target = index + delta
     if (index < 0 || target < 0 || target >= siblings.length) return
+    if (kind === 'items' && ((item as LearningItem).type === 'TEST' || (siblings[target] as LearningItem).type === 'TEST')) return
     ;[siblings[index], siblings[target]] = [siblings[target]!, siblings[index]!]
     setBusy(true)
     try {

@@ -1,13 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { useParams } from 'react-router-dom'
 import { useI18n } from './i18n'
 import { api, apiAll, type LearningItem, type Module } from './api'
-import { Button, ErrorState, Input, Loading, Notice, Textarea } from './components/ui'
+import { ErrorState, Loading } from './components/ui'
 import { EditorPage } from './LessonEditorPage'
 import { TestEditor } from './AdminPages'
-import { useLeaveWarning } from './useLeaveWarning'
+import { PracticeEditorPage } from './practice/PracticeEditor'
 
 export function LearningItemEditorPage() {
   const { t } = useI18n()
@@ -19,37 +17,4 @@ export function LearningItemEditorPage() {
   if (item.data.type === 'LECTURE') return item.data.lesson_short_id ? <EditorPage lessonId={item.data.lesson_short_id} backLabel={module.data?.title}/> : <ErrorState error={new Error(t('Содержимое лекции не найдено'))}/>
   if (item.data.type === 'TEST') return <TestEditor itemId={item.data.short_id} backLabel={module.data?.title}/>
   return <PracticeEditorPage item={item.data} moduleTitle={module.data?.title}/>
-}
-
-function PracticeEditorPage({ item, moduleTitle }: { item: LearningItem; moduleTitle?: string }) {
-  const { t } = useI18n()
-  const qc = useQueryClient()
-  const [title, setTitle] = useState(item.title)
-  const [description, setDescription] = useState(item.description)
-  const [dirty, setDirty] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('')
-  useEffect(() => { if (!dirty) { setTitle(item.title); setDescription(item.description) } }, [item, dirty])
-  useLeaveWarning(dirty)
-  const save = async () => {
-    setBusy(true); setMessage('')
-    try {
-      await api(`items/${item.short_id}/`, 'PATCH', { title: title.trim(), description })
-      setDirty(false); setMessage(t('Черновик сохранён'))
-      await qc.invalidateQueries({ queryKey: ['admin', 'items'] })
-      await qc.invalidateQueries({ queryKey: ['admin-item', item.short_id] })
-    } catch (error) { setMessage(error instanceof Error ? error.message : t('Не удалось сохранить')) }
-    finally { setBusy(false) }
-  }
-  const publish = async () => {
-    setBusy(true); setMessage('')
-    try {
-      await api(`items/${item.short_id}/`, 'PATCH', { title: title.trim(), description, status: 'PUBLISHED' })
-      setDirty(false); setMessage(t('Практика опубликована'))
-      await qc.invalidateQueries({ queryKey: ['admin', 'items'] })
-      await qc.invalidateQueries({ queryKey: ['admin-item', item.short_id] })
-    } catch (error) { setMessage(error instanceof Error ? error.message : t('Не удалось опубликовать')) }
-    finally { setBusy(false) }
-  }
-  return <div className="practice-editor-page"><Link className="back" to="/admin/curriculum"><ArrowLeft size={16}/>{moduleTitle || t('Структура курса')}</Link><span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{title || t('Новая практика')}</h1><p>{t('Настройка интерактивных практических заданий появится здесь. Пока можно подготовить название и описание.')}</p><div className="card form-card"><label>{t('Название')}<Input value={title} maxLength={200} onChange={event => { setTitle(event.target.value); setDirty(true) }}/></label><label>{t('Описание')}<Textarea rows={5} value={description} onChange={event => { setDescription(event.target.value); setDirty(true) }}/></label><p className="coming-soon">{t(item.status === 'PUBLISHED' ? 'Опубликована' : 'Черновик')} · {t('выполнение практики пока недоступно')}</p><div className="row"><Button variant="secondary" disabled={busy || !dirty || !title.trim()} onClick={() => void save()}>{t('Сохранить')}</Button><Button disabled={busy || !title.trim()} onClick={() => void publish()}>{t(item.status === 'PUBLISHED' ? 'Обновить публикацию' : 'Опубликовать')}</Button></div><Notice text={message} kind={message === t('Черновик сохранён') || message === t('Практика опубликована') ? 'success' : 'error'}/></div></div>
 }

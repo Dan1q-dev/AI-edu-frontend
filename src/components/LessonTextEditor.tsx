@@ -108,14 +108,14 @@ const slashOptions: { id: SlashAction; label: string }[] = [
   { id: 'image', label: 'Изображение' },
 ]
 
-export function SlashCommandMenu({ query, activeIndex, position, onSelect }: { query: string; activeIndex: number; position: { top: number; left: number }; onSelect: (action: SlashAction) => void }) {
+export function SlashCommandMenu({ query, activeIndex, position, onSelect, allowImages = true }: { query: string; activeIndex: number; position: { top: number; left: number }; onSelect: (action: SlashAction) => void; allowImages?: boolean }) {
   const { t } = useI18n()
-  const options = slashOptions.filter(option => t(option.label).toLowerCase().includes(query.toLowerCase()))
+  const options = slashOptions.filter(option => (allowImages || option.id !== 'image') && t(option.label).toLowerCase().includes(query.toLowerCase()))
   if (!options.length) return null
   return <div className="slash-command-menu" role="menu" aria-label={t('Вставить в документ')} style={position}>{options.map((option, index) => <button key={option.id} className={index === activeIndex ? 'active' : ''} type="button" role="menuitem" onMouseDown={event => event.preventDefault()} onClick={() => onSelect(option.id)}>{t(option.label)}</button>)}</div>
 }
 
-export function LessonTextEditor({ value, onChange, disabled = false, formatRequest, onInsertImage, onDropImage }: { value: string; onChange: (value: string) => void; disabled?: boolean; formatRequest?: string; onInsertImage?: () => void; onDropImage?: (file: File) => void }) {
+export function LessonTextEditor({ value, onChange, disabled = false, lectureMode = false, formatRequest, onInsertImage, onDropImage }: { value: string; onChange: (value: string) => void; disabled?: boolean; lectureMode?: boolean; formatRequest?: string; onInsertImage?: () => void; onDropImage?: (file: File) => void }) {
   const { t } = useI18n()
   const [slashQuery, setSlashQuery] = useState<string | null>(null)
   const [activeSlashIndex, setActiveSlashIndex] = useState(0)
@@ -123,7 +123,7 @@ export function LessonTextEditor({ value, onChange, disabled = false, formatRequ
   const surfaceRef = useRef<HTMLDivElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const editor = useEditor({
-    extensions: [StarterKit.configure({ heading: { levels: [2, 3] } }), Link.configure({ openOnClick: false, protocols: ['mailto'] })],
+    extensions: [StarterKit.configure({ heading: { levels: [2, 3] }, ...(lectureMode ? { strike: false, underline: false, horizontalRule: false, link: false } : {}) }), Link.configure({ openOnClick: false, protocols: ['mailto'] })],
     content: parseLessonContent(value), editable: !disabled,
     onUpdate: ({ editor: instance }) => {
       onChange(JSON.stringify(instance.getJSON()))
@@ -173,7 +173,7 @@ export function LessonTextEditor({ value, onChange, disabled = false, formatRequ
       else onInsertImage?.()
     }
   }
-  const visibleSlashOptions = slashQuery === null ? [] : slashOptions.filter(option => t(option.label).toLowerCase().includes(slashQuery.toLowerCase()))
+  const visibleSlashOptions = slashQuery === null ? [] : slashOptions.filter(option => (!lectureMode || option.id !== 'image') && t(option.label).toLowerCase().includes(slashQuery.toLowerCase()))
   return <div className="lesson-rich-editor">
     <div className="rich-toolbar" role="toolbar" aria-label={t('Форматирование текста')}>
       {action(t('Жирный'), <Bold size={16}/>, editor.isActive('bold'), () => editor.chain().focus().toggleBold().run())}
@@ -190,6 +190,6 @@ export function LessonTextEditor({ value, onChange, disabled = false, formatRequ
       {action(t('Отменить'), <Undo2 size={16}/>, false, () => editor.chain().focus().undo().run())}
       {action(t('Повторить'), <Redo2 size={16}/>, false, () => editor.chain().focus().redo().run())}
     </div>
-    <div ref={surfaceRef} className="rich-editor-surface" onKeyDown={event => { if (slashQuery === null || !visibleSlashOptions.length) return; if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setActiveSlashIndex(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + visibleSlashOptions.length) % visibleSlashOptions.length) } else if (event.key === 'Enter') { event.preventDefault(); runSlash(visibleSlashOptions[activeSlashIndex % visibleSlashOptions.length]!.id) } else if (event.key === 'Escape') { event.preventDefault(); setSlashQuery(null) } }} onDragOver={event => { if (event.dataTransfer.types.includes('Files')) event.preventDefault() }} onDrop={event => { const file = Array.from(event.dataTransfer.files).find(candidate => candidate.type.startsWith('image/')); if (file && onDropImage) { event.preventDefault(); onDropImage(file) } }}><EditorContent editor={editor} className="rich-editor-content"/>{slashQuery !== null && <SlashCommandMenu query={slashQuery} activeIndex={activeSlashIndex} position={slashPosition} onSelect={runSlash}/>}<input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => { const file = event.target.files?.[0]; if (file) onDropImage?.(file); event.currentTarget.value = '' }}/></div>
+    <div ref={surfaceRef} className="rich-editor-surface" onKeyDown={event => { if (slashQuery === null || !visibleSlashOptions.length) return; if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setActiveSlashIndex(index => (index + (event.key === 'ArrowDown' ? 1 : -1) + visibleSlashOptions.length) % visibleSlashOptions.length) } else if (event.key === 'Enter') { event.preventDefault(); runSlash(visibleSlashOptions[activeSlashIndex % visibleSlashOptions.length]!.id) } else if (event.key === 'Escape') { event.preventDefault(); setSlashQuery(null) } }} onDragOver={event => { if (event.dataTransfer.types.includes('Files')) event.preventDefault() }} onDrop={event => { const file = Array.from(event.dataTransfer.files).find(candidate => candidate.type.startsWith('image/')); if (file && onDropImage) { event.preventDefault(); onDropImage(file) } }}><EditorContent editor={editor} className="rich-editor-content"/>{slashQuery !== null && <SlashCommandMenu query={slashQuery} activeIndex={activeSlashIndex} position={slashPosition} allowImages={!lectureMode} onSelect={runSlash}/>}<input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={event => { const file = event.target.files?.[0]; if (file) onDropImage?.(file); event.currentTarget.value = '' }}/></div>
   </div>
 }

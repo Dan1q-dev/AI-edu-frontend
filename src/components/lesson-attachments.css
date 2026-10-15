@@ -1,0 +1,16 @@
+.lesson-attachments{margin-top:38px;padding-top:22px;border-top:1px solid #e6ebf1}
+.lesson-attachments-heading{display:flex;align-items:center;gap:9px;margin-bottom:13px;color:#526982}
+.lesson-attachments-heading h2{margin:0;color:#263d58;font-size:16px;letter-spacing:-.01em}
+.lesson-attachments-heading>span{margin-left:auto;color:#9aa6b5;font-size:12px}
+.lesson-attachment-list{display:grid;gap:8px}
+.lesson-attachment{display:flex;align-items:center;gap:12px;min-width:0;padding:12px 14px;border:1px solid #e2eaf2;border-radius:10px;background:#fff;transition:border-color .15s,background .15s}
+.lesson-attachment:hover{border-color:#bbd7ea;background:#fcfeff}
+.lesson-attachment-icon{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:8px;background:#eaf4fb;color:#2b7faf}
+.lesson-attachment-details{display:grid;gap:3px;flex:1;min-width:0}
+.lesson-attachment-details strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#2b3d53;font-size:13px;font-weight:650}
+.lesson-attachment-details small{color:#8997a8;font-size:11px}
+.lesson-attachment-download,.lesson-attachment-remove{display:inline-flex;align-items:center;justify-content:center;gap:7px;flex:none;padding:7px 9px;border:0;border-radius:7px;background:transparent;color:#2b7faf;font-size:12px;font-weight:650;cursor:pointer}
+.lesson-attachment-download:hover,.lesson-attachment-remove:hover{background:#eaf4fb}
+.lesson-attachment-remove{color:#9a6670}
+.lesson-attachment-remove:hover{background:#fff0f1;color:#b34f55}
+@media(max-width:560px){.lesson-attachment-download span{display:none}.lesson-attachment{padding:10px}.lesson-attachment-details strong{font-size:12px}}

@@ -68,14 +68,14 @@ describe('MainLayout', () => {
     expect(details.open).toBe(false)
   })
 
-  it('closes dropdown when clicking a link inside it', () => {
+  it('keeps Profile in the main navigation and closes the dropdown on navigation', () => {
     renderLayout()
     const details = document.querySelector('details.user-menu') as HTMLDetailsElement
     details.open = true
     expect(details.open).toBe(true)
 
-    const profileLink = details.querySelector('.user-menu-panel a') as HTMLAnchorElement
-    expect(profileLink).toBeTruthy()
+    expect(details.querySelector('.user-menu-panel a')).toBeNull()
+    const profileLink = screen.getByRole('link', { name: 'Профиль' })
     fireEvent.click(profileLink)
     expect(details.open).toBe(false)
   })
