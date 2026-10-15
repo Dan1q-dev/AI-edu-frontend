@@ -40,7 +40,7 @@ export function RichLessonContent({ value }: { value: string }) {
       case 'bulletList': return <ul key={key}>{children}</ul>
       case 'orderedList': return <ol key={key}>{children}</ol>
       case 'listItem': return <li key={key}>{children}</li>
-      case 'blockquote': return <blockquote key={key}>{children}</blockquote>
+      case 'blockquote': return <blockquote key={key} className="lecture-quote">{children}</blockquote>
       case 'codeBlock': return <pre key={key}><code>{children}</code></pre>
       case 'hardBreak': return <br key={key}/>
       case 'horizontalRule': return <hr key={key}/>

@@ -17,7 +17,7 @@ export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutlin
     undo: instance.can().undo(), redo: instance.can().redo(), bold: instance.isActive('bold'), italic: instance.isActive('italic'),
     underline: instance.isActive('underline'), bullet: instance.isActive('bulletList'), ordered: instance.isActive('orderedList'),
     alignment: instance.getAttributes('paragraph').textAlign ?? instance.getAttributes('heading').textAlign ?? 'left',
-    style: instance.isActive('heading', { level: 2 }) ? 'h2' : instance.isActive('heading', { level: 3 }) ? 'h3' : instance.isActive('blockquote') ? 'quote' : instance.isActive('codeBlock') ? 'code' : 'paragraph',
+    style: instance.isActive('blockquote') ? 'quote' : instance.isActive('codeBlock') ? 'code' : instance.isActive('heading', { level: 2 }) ? 'h2' : instance.isActive('heading', { level: 3 }) ? 'h3' : 'paragraph',
   }) })
   useEffect(() => {
     if (!menu) return
@@ -53,10 +53,11 @@ export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutlin
         <div className="ribbon-group">{button('Отменить', <Undo2 size={17}/>, () => editor.chain().focus().undo().run(), undefined, !state.undo)}{button('Повторить', <Redo2 size={17}/>, () => editor.chain().focus().redo().run(), undefined, !state.redo)}</div>
         <div className="ribbon-group"><select aria-label={t('Стиль текста')} disabled={disabled} value={state.style} onChange={event => {
           const value = event.target.value, chain = editor.chain().focus()
+          if (editor.isActive('blockquote')) chain.lift('blockquote')
           if (value === 'h2' || value === 'h3') chain.setHeading({ level: value === 'h2' ? 2 : 3 }).run()
-          else if (value === 'quote') chain.toggleBlockquote().run()
-          else if (value === 'code') chain.toggleCodeBlock().run()
-          else { if (editor.isActive('blockquote')) chain.lift('blockquote'); chain.setParagraph().run() }
+          else if (value === 'quote') chain.setParagraph().wrapIn('blockquote').run()
+          else if (value === 'code') chain.setCodeBlock().run()
+          else chain.setParagraph().run()
         }}><option value="paragraph">{t('Обычный текст')}</option><option value="h2">{t('Заголовок раздела')}</option><option value="h3">{t('Подзаголовок')}</option><option value="quote">{t('Цитата')}</option><option value="code">{t('Блок кода')}</option></select></div>
         <div className="ribbon-group">{button('Жирный', <Bold size={17}/>, () => editor.chain().focus().toggleBold().run(), state.bold)}{button('Курсив', <Italic size={17}/>, () => editor.chain().focus().toggleItalic().run(), state.italic)}{button('Подчёркнутый', <Underline size={17}/>, () => editor.chain().focus().toggleUnderline().run(), state.underline)}{button('Ссылка', <Link2 size={17}/>, onLink)}</div>
         <div className="ribbon-group">{button('Маркированный список', <List size={18}/>, () => editor.chain().focus().toggleBulletList().run(), state.bullet)}{button('Нумерованный список', <ListOrdered size={18}/>, () => editor.chain().focus().toggleOrderedList().run(), state.ordered)}</div>

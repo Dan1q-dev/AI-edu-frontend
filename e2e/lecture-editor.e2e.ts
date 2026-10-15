@@ -9,7 +9,7 @@ const initial = () => ({ title: 'Основы физики', description: 'Уч�
 ] })
 
 async function openEditor(page: Page, settings: { slowSave?: boolean; failSave?: boolean; slowUpload?: boolean } = {}) {
-  let draft = initial(), published = false
+  let draft = initial(), published = false, student = false, publishedDraft = initial()
   const saves: typeof draft[] = []
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -17,7 +17,7 @@ async function openEditor(page: Page, settings: { slowSave?: boolean; failSave?:
   await page.route('**/api/v1/**', async route => {
     const request = route.request(), path = new URL(request.url()).pathname.replace('/api/v1/', '')
     const json = (value: unknown, status = 200) => route.fulfill({ status, json: value })
-    if (path === 'auth/me/') return json({ id: 1, email: 'admin@example.test', first_name: 'Автор', last_name: '', role: 'ADMIN', learning_track: null })
+    if (path === 'auth/me/') return json({ id: student ? 2 : 1, email: student ? 'student@example.test' : 'admin@example.test', first_name: student ? 'Студент' : 'Автор', last_name: '', role: student ? 'STUDENT' : 'ADMIN', learning_track: null })
     if (path === 'csrf/') return route.fulfill({ json: {}, headers: { 'set-cookie': 'csrftoken=test; Path=/' } })
     if (path === 'lessons/lecture-1/') return json({ id: 1, short_id: 'lecture-1', title: draft.title, status: published ? 'PUBLISHED' : 'DRAFT', module: 1 })
     if (path === 'lessons/lecture-1/draft/') {
@@ -26,9 +26,16 @@ async function openEditor(page: Page, settings: { slowSave?: boolean; failSave?:
         if (settings.failSave) return json({ detail: 'Сохранение недоступно' }, 503)
         draft = request.postDataJSON(); saves.push(draft)
       }
-      if (request.method() === 'POST') published = true
+      if (request.method() === 'POST') { published = true; publishedDraft = structuredClone(draft) }
       return json(draft)
     }
+    const item = { id: 1, short_id: 'lecture-item', title: publishedDraft.title, description: publishedDraft.description, status: 'PUBLISHED', type: 'LECTURE', module: 1, module_title: 'Основы', course_id: 1, course_short_id: 'course-1', course_title: 'Физика', lesson_short_id: 'lecture-1', position: 0 }
+    if (path === 'items/lecture-item/') return json(item)
+    if (path === 'items/') return json({ count: 1, results: [item], next: null, previous: null })
+    if (path === 'courses/course-1/progress/') return json({ percent: 0, items: {} })
+    if (path === 'items/lecture-item/progress/') return json({ progress_percent: 100 })
+    if (path === 'lessons/lecture-1/blocks/') return json(publishedDraft.blocks.map((block, index) => ({ ...block, id: index + 1 })))
+    if (path === 'lessons/lecture-1/attachments/') return json(publishedDraft.attachments)
     if (path === 'media/' && request.method() === 'POST') {
       if (settings.slowUpload) await new Promise(resolve => setTimeout(resolve, 1800))
       return json({ id: 8, url: '/api/v1/media/8/' })
@@ -38,7 +45,12 @@ async function openEditor(page: Page, settings: { slowSave?: boolean; failSave?:
   })
   await page.goto('/#/admin/curriculum/lessons/lecture-1/edit')
   await expect(page.getByRole('textbox', { name: 'Текст лекции' })).toBeVisible()
-  return { saves, errors, get published() { return published } }
+  return { saves, errors, get published() { return published }, viewAsStudent: async () => {
+    student = true
+    await page.goto('/#/items/lecture-item')
+    await page.reload()
+    await expect(page.locator('.lesson-article')).toBeVisible()
+  } }
 }
 
 async function insertAtEnd(page: Page, label: string) {
@@ -232,5 +244,51 @@ test('familiar toolbar formats text without a hidden menu and saves with Ctrl+S'
   await page.keyboard.press('Control+s')
   await expect(page.getByRole('status').filter({ hasText: 'Черновик сохранён' })).toBeVisible()
   expect(result.saves.at(-1)?.blocks[0]?.content).toContain('underline')
+  expect(result.errors).toEqual([])
+})
+
+test('quote formatting survives saving, preview and the student view', async ({ page }) => {
+  const result = await openEditor(page)
+  const editor = page.getByRole('textbox', { name: 'Текст лекции' })
+  await editor.locator('p').filter({ hasText: 'Первый абзац' }).click()
+  await page.getByRole('combobox', { name: 'Стиль текста' }).selectOption('quote')
+  await expect(editor.locator('blockquote')).toHaveText('Первый абзац')
+  await expect(page.getByRole('combobox', { name: 'Стиль текста' })).toHaveValue('quote')
+  await page.keyboard.press('Control+s')
+  await expect(page.getByRole('status').filter({ hasText: 'Черновик сохранён' })).toBeVisible()
+  expect(JSON.parse(result.saves.at(-1)!.blocks[0]!.content).content.some((node: { type: string }) => node.type === 'blockquote')).toBe(true)
+  await page.getByRole('button', { name: 'Предпросмотр', exact: true }).click()
+  const previewQuote = page.locator('.lesson-preview blockquote')
+  await expect(previewQuote).toHaveText('Первый абзац')
+  await expect(previewQuote).toHaveCSS('border-left-width', '3px')
+  await expect(previewQuote).toHaveCSS('border-left-style', 'solid')
+  await expect(previewQuote).toHaveCSS('padding-left', '18px')
+  await page.getByRole('button', { name: 'Опубликовать', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Лекция опубликована' })).toBeVisible()
+  await result.viewAsStudent()
+  const studentQuote = page.locator('.lesson-article blockquote')
+  await expect(studentQuote).toHaveText('Первый абзац')
+  await expect(studentQuote).toHaveCSS('border-left-width', '3px')
+  await expect(studentQuote).toHaveCSS('border-left-style', 'solid')
+  await expect(studentQuote).toHaveCSS('padding-left', '18px')
+  expect(result.errors).toEqual([])
+})
+
+test('quote style replaces headings and switches back to normal text', async ({ page }) => {
+  const result = await openEditor(page)
+  const editor = page.getByRole('textbox', { name: 'Текст лекции' })
+  const style = page.getByRole('combobox', { name: 'Стиль текста' })
+  await editor.getByRole('heading', { name: 'Введение' }).click()
+  await style.selectOption('quote')
+  await expect(style).toHaveValue('quote')
+  await expect(editor.locator('blockquote p')).toHaveText('Введение')
+  await expect(editor.locator('blockquote h2')).toHaveCount(0)
+  await style.selectOption('h3')
+  await expect(editor.locator('blockquote')).toHaveCount(0)
+  await expect(editor.getByRole('heading', { name: 'Введение', level: 3 })).toBeVisible()
+  await style.selectOption('quote')
+  await style.selectOption('paragraph')
+  await expect(editor.locator('blockquote')).toHaveCount(0)
+  await expect(editor.locator('p').filter({ hasText: 'Введение' })).toBeVisible()
   expect(result.errors).toEqual([])
 })
