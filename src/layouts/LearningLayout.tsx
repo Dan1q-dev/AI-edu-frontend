@@ -89,7 +89,7 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
     </header>}
     <div className="learning-workspace" inert={drawerOpen || tutorOpen}>
       {showOutline && <aside id="course-outline" className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>}
-      <div className="learning-center"><main className="learning-main">{children}{!hideNext && <NextItemAction next={next} courseSlug={courseSlug}/>}</main></div>
+      <div className="learning-center"><main className="learning-main">{children}</main>{!hideNext && <div className="learning-next-bar"><NextItemAction next={next} courseSlug={courseSlug}/></div>}</div>
       {tutor && !assessment && !tutorOpen && <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor}</aside>}
     </div>
     {drawerOpen && compact && <div className="outline-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setDrawerOpen(false) }}><aside ref={drawerRef} role="dialog" aria-modal="true" id="course-outline" className="course-outline mobile-outline" aria-label={t('Содержание курса')}>{outline}</aside></div>}

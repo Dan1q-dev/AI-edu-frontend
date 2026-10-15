@@ -53,19 +53,32 @@ async function openMaterial(page: Page, id: string, workspace = false, failSubmi
 }
 
 for (const width of [1440, 1100, 390]) {
-  test(`lecture has one next action and no fixed navigation at ${width}px`, async ({ page }) => {
+  test(`next action stays visible without covering the last paragraph at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 })
     const state = await openMaterial(page, 'lecture')
     await expect(page.locator('.lesson-navigation')).toHaveCount(0)
     await expect(page.getByRole('link', { name: /Предыдущий элемент/ })).toHaveCount(0)
     const next = page.getByRole('link', { name: 'Перейти к следующему материалу' })
     await expect(next).toHaveCount(1)
-    await next.scrollIntoViewIfNeeded()
-    await expect(next).toBeVisible()
+    await expect(next).toBeInViewport({ ratio: 1 })
+    const initial = await next.boundingBox()
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2))
+    await expect(next).toBeInViewport({ ratio: 1 })
+    expect((await next.boundingBox())!.y).toBeCloseTo(initial!.y, 0)
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await expect(next).toBeInViewport({ ratio: 1 })
+    const lastParagraph = await page.locator('.lesson-article p').last().boundingBox()
+    const bar = await page.locator('.learning-next-bar').boundingBox()
+    const center = await page.locator('.learning-center').boundingBox()
+    expect(lastParagraph!.y + lastParagraph!.height).toBeLessThanOrEqual(bar!.y)
+    expect(bar!.x).toBeCloseTo(center!.x, 0)
+    expect(bar!.width).toBeCloseTo(center!.width, 0)
+    await page.screenshot({ path: `test-results/next-item-${width}.png` })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await next.click()
     await expect(page).toHaveURL(/#\/items\/practice$/)
     await expect(page.locator('.learning-tutor')).toHaveCount(0)
+    await expect(next).toBeInViewport({ ratio: 1 })
     expect(state.errors).toEqual([])
   })
 }
