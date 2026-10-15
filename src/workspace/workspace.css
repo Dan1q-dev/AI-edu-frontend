@@ -1,4 +1,4 @@
-.is-document-workspace .learning-workspace { display: block; max-width: 1680px; }
+.is-document-workspace .learning-workspace { max-width: 1920px; }
 .is-document-workspace .learning-main { width: 100%; max-width: none; padding: 24px; }
 .is-document-workspace .learning-center .lesson-navigation { width: calc(100% - 48px); max-width: none; }
 .is-document-workspace .outline-button { display: inline-flex; }

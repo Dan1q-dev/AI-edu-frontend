@@ -39,9 +39,7 @@ export function LectureProgress({ itemId, courseId, savedPercent, children }: {
       const element = contentRef.current
       if (!element || disposed) return
       const rect = element.getBoundingClientRect()
-      const layout = element.closest('.learning-layout')
-      const navigationHeight = layout ? parseFloat(getComputedStyle(layout).getPropertyValue('--lesson-navigation-height')) || 0 : 0
-      const viewed = Math.max(0, Math.min(100, Math.round(100 * (window.innerHeight - navigationHeight - rect.top) / Math.max(rect.height, 1))))
+      const viewed = Math.max(0, Math.min(100, Math.round(100 * (window.innerHeight - rect.top) / Math.max(rect.height, 1))))
       maximum = Math.max(maximum, viewed)
       if (maximum - lastSent >= 5 || maximum === 100 && lastSent < 100) {
         if (timer) clearTimeout(timer)

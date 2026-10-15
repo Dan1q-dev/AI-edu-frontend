@@ -12,7 +12,8 @@ const test: LearningItem = { ...base, id: 3, short_id: 'test-3', type: 'TEST', t
 describe('learning item navigation', () => {
   it('moves from a lecture to a practice and then a test', () => {
     render(<MemoryRouter><LearningLayout courseTitle="Курс" lessonId={base.short_id} lessonTitle={base.title} sections={[{ module, lessons: [base, practice, test] }]} currentIndex={0} totalLessons={3} next={practice}><p>Содержание</p></LearningLayout></MemoryRouter>)
-    expect(screen.getByRole('link', { name: /Следующий элемент.*Практика/ }).getAttribute('href')).toBe('/items/practice-2')
-    expect(screen.getByText('1 из 3')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Перейти к следующему материалу' }).getAttribute('href')).toBe('/items/practice-2')
+    expect(screen.queryByText('1 из 3')).toBeNull()
+    expect(screen.queryByRole('link', { name: /Предыдущий элемент/ })).toBeNull()
   })
 })

@@ -22,7 +22,7 @@ function mount(element: React.ReactNode, path = '/') {
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><Routes><Route path={path.startsWith('/courses') ? '/courses/:slug' : path.startsWith('/lessons') ? '/lessons/:id' : '/'} element={element}/><Route path="/items/:id" element={<p>Current item page</p>}/></Routes></MemoryRouter></QueryClientProvider>)
 }
 beforeEach(() => { vi.mocked(api).mockReset(); vi.mocked(apiAll).mockReset().mockResolvedValue([]) })
-afterEach(async () => { cleanup(); await Promise.all(clients.map(client => client.cancelQueries())); clients.splice(0).forEach(client => client.clear()); localStorage.clear(); sessionStorage.clear() })
+afterEach(async () => { cleanup(); await Promise.all(clients.map(client => client.cancelQueries())); clients.splice(0).forEach(client => client.clear()); localStorage.clear(); sessionStorage.clear(); vi.unstubAllGlobals() })
 
 describe('student learning journey', () => {
   it('shows the active course and directs resume to its saved item', async () => {
@@ -92,7 +92,8 @@ describe('student learning journey', () => {
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Не удалось загрузить тест')
     vi.mocked(api).mockImplementation(async path => path.endsWith('/test/') ? quiz as never : { count: 0, results: [], next: null, previous: null } as never)
     fireEvent.click(screen.getByRole('button', { name: 'Повторить' }))
-    expect(await screen.findByText('Question?')).toBeTruthy()
+    expect(await screen.findByRole('button', { name: 'Начать тестирование' })).toBeTruthy()
+    expect(screen.queryByText('Question?')).toBeNull()
   })
 
   it('shows a missing test state', async () => {
@@ -104,8 +105,9 @@ describe('student learning journey', () => {
   it('keeps the test available when attempt history fails', async () => {
     vi.mocked(api).mockImplementation(async path => { if (path.endsWith('/test/')) return quiz as never; throw new ApiError('History unavailable', 503) })
     mount(<TestRunner itemId="quiz"/>)
-    expect(await screen.findByLabelText('Yes')).toBeTruthy()
     expect(await screen.findByText(/Не удалось загрузить историю попыток/)).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать тестирование' }))
+    expect(await screen.findByLabelText('Yes')).toBeTruthy()
   })
 
   it('allows a retry and disables further attempts when the backend limit is reached', async () => {
@@ -117,16 +119,19 @@ describe('student learning journey', () => {
     })
     mount(<TestRunner itemId="quiz"/>)
     await screen.findByText('Использовано попыток: 0')
+    fireEvent.click(screen.getByRole('button', { name: 'Начать тестирование' }))
     fireEvent.click(screen.getByLabelText('Yes'))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить ответы' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить тестирование' }))
     const retry = await screen.findByRole('button', { name: 'Пройти ещё раз' })
     await waitFor(() => expect((retry as HTMLButtonElement).disabled).toBe(false))
     fireEvent.click(retry)
     fireEvent.click(screen.getByLabelText('Yes'))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить ответы' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить тестирование' }))
     await screen.findByText('Лимит попыток исчерпан')
     expect(screen.queryByRole('button', { name: 'Пройти ещё раз' })).toBeNull()
-    expect(screen.getByText('Осталось попыток: 0')).toBeTruthy()
+    expect(await screen.findByText('Осталось попыток: 0')).toBeTruthy()
     expect(count).toBe(2)
   })
 
@@ -145,17 +150,20 @@ describe('student learning journey', () => {
     })
     mount(<TestRunner itemId="quiz"/>)
     await screen.findByText('Использовано попыток: 0')
+    fireEvent.click(screen.getByRole('button', { name: 'Начать тестирование' }))
     fireEvent.click(screen.getByLabelText('Yes'))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить ответы' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить тестирование' }))
     const repeat = await screen.findByRole('link', { name: 'Повторить модуль' })
     expect(repeat.getAttribute('href')).toBe('/items/lecture')
     expect(screen.queryByRole('button', { name: 'Пройти ещё раз' })).toBeNull()
   })
 
   it('provides account controls, course return and keyboard focus in the drawer', () => {
+    vi.stubGlobal('innerWidth', 390)
     const item: LearningItem = { id: 1, short_id: 'lecture', title: 'Lecture', module: 1, description: '', type: 'LECTURE', position: 0, status: 'PUBLISHED', lesson: null, lesson_short_id: null, test: null, practice: null }
     mount(<LearningLayout user={user} courseSlug="course" courseTitle="AI basics" moduleTitle="Module" lessonId="lecture" lessonTitle="Lecture" sections={[{ module: { id: 1, short_id: 'module', title: 'Module', course: 1, description: '', position: 0, is_published: true }, lessons: [item] }]}><p>Material</p></LearningLayout>)
-    expect(screen.getByRole('link', { name: 'Вернуться к курсу' }).getAttribute('href')).toBe('/courses/course')
+    expect(screen.getAllByRole('link', { name: 'Вернуться к курсу' })[0].getAttribute('href')).toBe('/courses/course')
     fireEvent.click(screen.getByLabelText('Меню пользователя'))
     expect(screen.getByRole('link', { name: 'Профиль' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Выйти' })).toBeTruthy()

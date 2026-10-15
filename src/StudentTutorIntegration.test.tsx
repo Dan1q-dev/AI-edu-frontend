@@ -38,7 +38,7 @@ it('keeps the lecture tutor alongside course navigation, account menu and attach
   })
   mount(lecture)
   expect(await screen.findByLabelText('Вопрос тьютору')).toBeTruthy()
-  expect(screen.getByRole('link', { name: 'Вернуться к курсу' }).getAttribute('href')).toBe('/courses/course')
+  expect(screen.getAllByRole('link', { name: 'Вернуться к курсу' })[0].getAttribute('href')).toBe('/courses/course')
   expect(screen.getByLabelText('Меню пользователя')).toBeTruthy()
   expect(screen.getByRole('link', { name: /Lecture notes.pdf/ })).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Открыть тьютора' }))

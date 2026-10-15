@@ -56,9 +56,12 @@ describe('main flows', () => {
       return {} as never
     })
     renderAt('/test', <TestRunner itemId="1"/>)
+    await screen.findByText('Использовано попыток: 0')
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать тестирование' }))
     await screen.findByText('Question?')
     fireEvent.click(screen.getByLabelText('Answer'))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить ответы' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Завершить тестирование' }))
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/1/attempts/', 'POST', { answers: [{ question: 10, option: 20 }] }))
   })
 

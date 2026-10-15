@@ -41,8 +41,10 @@ describe('real lecture editor', () => {
   it('keeps course navigation available in the two-panel layout', () => {
     render(<MemoryRouter><LearningLayout workspace lessonId="workshop" lessonTitle="Мастерская"><p>Workspace</p></LearningLayout></MemoryRouter>)
     expect(screen.queryByRole('complementary', { name: 'AI Tutor' })).toBeNull()
+    expect(screen.getByRole('complementary', { name: 'Содержание курса' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Содержание' }))
     expect(screen.queryByRole('complementary', { name: 'Содержание курса' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Содержание' }))
-    expect(screen.getByRole('dialog', { name: 'Содержание курса' })).toBeTruthy()
+    expect(screen.getByRole('complementary', { name: 'Содержание курса' })).toBeTruthy()
   })
 })
