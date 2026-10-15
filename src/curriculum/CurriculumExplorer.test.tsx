@@ -49,6 +49,17 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('curriculum explorer', () => {
+  it('opens a newly created lecture immediately in its editor', async () => {
+    mockedApi.mockResolvedValue({ ...item, short_id: 'new-lecture', title: 'Новая лекция' } as never)
+    renderExplorer()
+    await screen.findByRole('link', { name: 'Первая лекция' })
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить элемент' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Лекция' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Название' }), { target: { value: 'Новая лекция' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Создать' }))
+    expect(await screen.findByText('Редактор элемента')).toBeTruthy()
+    expect(mockedApi).toHaveBeenCalledWith('items/', 'POST', expect.objectContaining({ type: 'LECTURE', title: 'Новая лекция', module: 3 }))
+  })
   it('switches the visible course list with the selected track', async () => {
     const secondTrack = { ...track, id: 8, short_id: 'track-8', title: 'Дизайн' }
     const secondCourse = { ...course, id: 9, short_id: 'course-9', slug: 'design', learning_track: 8, title: 'Основы дизайна' }

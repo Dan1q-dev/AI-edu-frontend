@@ -64,7 +64,10 @@ export function AdminCurriculum() {
         : { title, module: parentId, type, status: 'DRAFT' }
     const result = await api<Entity>(`${kind}/`, 'POST', body)
     await refresh()
-    if (kind === 'items' && type === 'PRACTICE') { navigate(`/admin/curriculum/items/${result.short_id}/edit`); return }
+    if (kind === 'items' && (type === 'PRACTICE' || type === 'LECTURE')) {
+      navigate(`/admin/curriculum/items/${result.short_id}/edit?track=${encodeURIComponent(trackKey)}`)
+      return
+    }
     setExpanded(current => ({ ...current, ...(kind === 'modules' ? { [`course-${parentId}`]: true } : kind === 'items' ? { [`module-${parentId}`]: true } : {}) }))
     setFeedback({ text: `${t(({ courses: 'Курс', modules: 'Модуль', items: 'Элемент' } as const)[kind])} «${result.title}» ${t('создан. Нажмите на название, чтобы открыть настройки.')}`, kind: 'success' })
   }
