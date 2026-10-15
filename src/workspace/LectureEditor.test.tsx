@@ -42,7 +42,7 @@ describe('real lecture editor', () => {
     render(<MemoryRouter><LearningLayout workspace lessonId="workshop" lessonTitle="Мастерская"><p>Workspace</p></LearningLayout></MemoryRouter>)
     expect(screen.queryByRole('complementary', { name: 'AI Tutor' })).toBeNull()
     expect(screen.getByRole('complementary', { name: 'Содержание курса' })).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Содержание' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Закрыть оглавление' }))
     expect(screen.queryByRole('complementary', { name: 'Содержание курса' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Содержание' }))
     expect(screen.getByRole('complementary', { name: 'Содержание курса' })).toBeTruthy()

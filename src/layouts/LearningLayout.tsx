@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, BookOpen, ChevronDown, Circle, CircleCheck, CircleDot, Code2, List, LockKeyhole, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronDown, Circle, CircleCheck, CircleDot, Code2, Flag, List, LockKeyhole, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { LearningItem, Lesson, Module, User } from '../api'
 import { LanguageSelect, useI18n } from '../i18n'
@@ -31,6 +31,19 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
   const activeModule = sections?.find(section => section.lessons.some(item => item.short_id === lessonId))?.module.id
   const drawerRef = useRef<HTMLElement>(null), tutorRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const focusOutlineTrigger = useRef(false)
+  const focusOutlinePanel = useRef(false)
+  const outlineRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (focusOutlineTrigger.current && !desktopOpen) {
+      focusOutlineTrigger.current = false
+      triggerRef.current?.focus()
+    }
+    if (focusOutlinePanel.current && desktopOpen) {
+      focusOutlinePanel.current = false
+      outlineRef.current?.querySelector<HTMLButtonElement>('.outline-close')?.focus()
+    }
+  }, [desktopOpen])
   useEffect(() => {
     const resize = () => { setCompact(window.innerWidth <= 900); if (window.innerWidth > 900) setDrawerOpen(false) }
     window.addEventListener('resize', resize)
@@ -61,7 +74,7 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
     return () => { document.body.style.overflow = overflow; window.removeEventListener('keydown', keyboard); if (drawerOpen) triggerRef.current?.focus(); else if (returnFocus?.isConnected) returnFocus.focus() }
   }, [drawerOpen, tutorOpen])
 
-  const closeOutline = () => { if (compact) setDrawerOpen(false); else { setOutlineVisible(false); triggerRef.current?.focus() } }
+  const closeOutline = () => { if (compact) setDrawerOpen(false); else { focusOutlineTrigger.current = true; setOutlineVisible(false) } }
   const outline = <>
     <div className="outline-header"><div><span className="eyebrow">{t('СОДЕРЖАНИЕ КУРСА')}</span><h2>{courseTitle || t('Оглавление')}</h2></div><button className="icon-button outline-close" onClick={closeOutline} aria-label={t('Закрыть оглавление')}><X size={20}/></button></div>
     {totalLessons ? <div className="outline-progress"><div><span>{t('Ваш прогресс')}</span><strong>{courseProgress ?? 0}%</strong></div><div className="progress-track" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={courseProgress ?? 0}><span style={{ width: `${courseProgress ?? 0}%` }}/></div></div> : null}
@@ -81,14 +94,20 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
   </>
 
   const showOutline = !assessment && !compact && desktopOpen
-  return <div className={`learning-layout ${workspace ? 'is-document-workspace' : ''} ${assessment ? 'is-assessment' : ''} ${showOutline ? 'has-course-outline' : ''} ${tutor && !assessment ? 'has-lecture-tutor' : ''}`}>
+  const showRail = !assessment && !showOutline
+  const percent = Math.min(100, Math.max(0, courseProgress ?? 0))
+  return <div className={`learning-layout ${workspace ? 'is-document-workspace' : ''} ${assessment ? 'is-assessment' : ''} ${showOutline ? 'has-course-outline' : showRail ? 'has-course-rail' : ''} ${tutor && !assessment ? 'has-lecture-tutor' : ''}`}>
     {!assessment && <header className="learning-header" inert={drawerOpen || tutorOpen}>
       <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'} className="learning-back" aria-label={t(courseSlug ? 'Вернуться к курсу' : 'Вернуться в каталог')}><ArrowLeft size={17}/><span>{t(courseSlug ? 'К курсу' : 'Каталог')}</span></Link>
       <nav className="learning-header-title learning-breadcrumbs" aria-label={t('Путь обучения')}>{courseTitle && <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'}>{courseTitle}</Link>}<span>{moduleTitle && <>{moduleTitle} <span aria-hidden="true">›</span> </>}<strong aria-current="page">{lessonTitle}</strong></span></nav>
-      <div className="learning-header-tools"><LanguageSelect compact/>{tutor && <button className="button secondary tutor-toggle" title={t('Открыть тьютора')} aria-label={t('Открыть тьютора')} aria-expanded={tutorOpen} onClick={() => setTutorOpen(true)}><Sparkles size={17}/><span>{t('Тьютор')}</span></button>}<button ref={triggerRef} className="button secondary outline-button" onClick={() => compact ? setDrawerOpen(value => !value) : setOutlineVisible(!desktopOpen)} aria-label={t('Содержание')} aria-expanded={compact ? drawerOpen : desktopOpen} aria-controls="course-outline"><List size={17}/><span>{t('Содержание')}</span></button>{user && <div className="workspace-account"><AccountMenu user={user}/></div>}</div>
+      <div className="learning-header-tools"><LanguageSelect compact/>{tutor && <button className="button secondary tutor-toggle" title={t('Открыть тьютора')} aria-label={t('Открыть тьютора')} aria-expanded={tutorOpen} onClick={() => setTutorOpen(true)}><Sparkles size={17}/><span>{t('Тьютор')}</span></button>}{user && <div className="workspace-account"><AccountMenu user={user}/></div>}</div>
     </header>}
     <div className="learning-workspace" inert={drawerOpen || tutorOpen}>
-      {showOutline && <aside id="course-outline" className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>}
+      {showOutline && <aside ref={outlineRef} id="course-outline" className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>}
+      {showRail && <aside className="course-outline-rail" aria-label={t('Панель курса')}><div className="course-outline-rail-inner">
+        <button ref={triggerRef} type="button" className="outline-rail-trigger" onClick={() => { if (compact) setDrawerOpen(true); else { focusOutlinePanel.current = true; setOutlineVisible(true) } }} aria-label={t('Содержание')} title={t('Содержание')} aria-expanded={compact ? drawerOpen : false} aria-haspopup={compact ? 'dialog' : undefined}><List size={21}/></button>
+        {courseProgress !== undefined && <div className="outline-rail-progress" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} title={`${t('Ваш прогресс')}: ${percent}%`}><Flag size={18}/><strong>{percent}%</strong></div>}
+      </div></aside>}
       <div className="learning-center"><main className="learning-main">{children}</main>{!hideNext && <div className="learning-next-bar"><NextItemAction next={next} courseSlug={courseSlug}/></div>}</div>
       {tutor && !assessment && !tutorOpen && <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor}</aside>}
     </div>

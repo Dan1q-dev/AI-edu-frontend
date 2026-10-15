@@ -20,7 +20,7 @@ describe('learning workspace', () => {
     expect(screen.getByRole('link', { name: 'Перейти к следующему материалу' }).getAttribute('href')).toBe('/items/test-1')
   })
 
-  it('opens a course drawer from the compact header', () => {
+  it('opens a course drawer from the left rail', () => {
     vi.stubGlobal('innerWidth', 390)
     render(<MemoryRouter><LearningLayout lessonId={lecture.short_id} lessonTitle={lecture.title} sections={[{ module, lessons: [lecture] }]}><p>Материал</p></LearningLayout></MemoryRouter>)
     fireEvent.click(screen.getByRole('button', { name: 'Содержание' }))

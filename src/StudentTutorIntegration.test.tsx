@@ -63,5 +63,5 @@ it('still opens a lecture workshop as a document workspace without the lecture t
   expect(document.querySelector('.is-document-workspace')).toBeTruthy()
   expect(screen.queryByLabelText('Вопрос тьютору')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Открыть тьютора' })).toBeNull()
-  expect(screen.getByRole('button', { name: 'Содержание' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Закрыть оглавление' })).toBeTruthy()
 })

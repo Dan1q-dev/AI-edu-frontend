@@ -2,7 +2,15 @@
 .learning-layout.has-course-outline .learning-workspace{grid-template-columns:300px minmax(0,1fr)}
 .learning-layout.has-lecture-tutor .learning-workspace{grid-template-columns:minmax(0,1fr) 300px}
 .learning-layout.has-course-outline.has-lecture-tutor .learning-workspace{grid-template-columns:300px minmax(0,1fr) 300px}
-.learning-layout .learning-header .outline-button{display:inline-flex}
+.learning-layout.has-course-rail .learning-workspace{grid-template-columns:80px minmax(0,1fr)}
+.learning-layout.has-course-rail.has-lecture-tutor .learning-workspace{grid-template-columns:80px minmax(0,1fr) 300px}
+.course-outline-rail{position:sticky;top:62px;height:calc(100dvh - 62px);padding:14px 10px;min-width:0}
+.course-outline-rail-inner{display:flex;flex-direction:column;align-items:center;gap:22px;height:100%;padding:10px 0;background:#fff;border:1px solid #edf0f6;border-radius:24px}
+.outline-rail-trigger{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex:none;border:0;border-radius:14px;background:transparent;color:var(--color-ink);cursor:pointer}
+.outline-rail-trigger:hover{background:#edf3fe;color:var(--color-primary)}
+.outline-rail-trigger:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px;background:#edf3fe}
+.outline-rail-progress{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--color-ink);font-size:12px;line-height:1.4}
+.outline-rail-progress>svg{color:#c64cb6;fill:#c64cb61a}.outline-rail-progress strong{font-weight:650;font-variant-numeric:tabular-nums}
 .learning-layout .learning-workspace .desktop-outline .outline-close{display:inline-flex;flex-shrink:0}
 .learning-layout .learning-workspace .outline-header{padding:22px 18px 18px}
 .learning-layout .learning-workspace .outline-header h2{font-size:17px;line-height:1.45}
@@ -27,5 +35,7 @@
 .learning-layout .mobile-outline{display:flex;box-shadow:14px 0 36px rgb(20 31 56 / 13%)}.learning-layout .outline-backdrop{justify-content:flex-start}
 .learning-layout .mobile-outline .outline-scroll{padding:0 8px 24px}.learning-layout .mobile-outline .outline-module-toggle{padding:18px 12px}.learning-layout .mobile-outline .outline-section{padding:0}
 @media(max-width:1250px){.learning-layout.has-lecture-tutor .learning-workspace{grid-template-columns:minmax(0,1fr)}.learning-layout.has-course-outline.has-lecture-tutor .learning-workspace{grid-template-columns:264px minmax(0,1fr)}.learning-layout.has-course-outline .learning-workspace{grid-template-columns:264px minmax(0,1fr)}}
+@media(max-width:1250px){.learning-layout.has-course-rail.has-lecture-tutor .learning-workspace{grid-template-columns:80px minmax(0,1fr)}}
 @media(max-width:900px){.learning-layout .learning-workspace,.learning-layout.has-course-outline .learning-workspace,.learning-layout.has-lecture-tutor .learning-workspace,.learning-layout.has-course-outline.has-lecture-tutor .learning-workspace{display:block}.learning-layout .learning-center{min-height:calc(100dvh - 62px)}.learning-next-bar{padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}.learning-next-bar .next-item-action{width:min(100% - 36px,820px)}.learning-next-bar .button{width:100%;max-width:100%;min-height:44px}}
+@media(max-width:900px){.learning-layout.has-course-rail .learning-workspace,.learning-layout.has-course-rail.has-lecture-tutor .learning-workspace{display:grid;grid-template-columns:56px minmax(0,1fr)}.course-outline-rail{padding:12px 4px}.course-outline-rail-inner{padding:6px 0;border-radius:20px;gap:18px}.outline-rail-progress{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.learning-layout .outline-module-toggle>svg{transition:none}}
