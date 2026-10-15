@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, BookOpen, Check, CheckCircle2, Code2, List, LockKeyhole, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { LearningItem, Lesson, Module, User } from '../api'
 import { LanguageSelect, useI18n } from '../i18n'
 import { AccountMenu } from './AccountMenu'
 import { LearningStatus } from '../components/LearningStatus'
+import './learning-navigation.css'
 
 type ContentEntry = Lesson | LearningItem
 export type ItemProgress = { progress_percent: number; is_completed: boolean; is_started?: boolean }
@@ -30,7 +31,27 @@ export function LearningLayout({ children, tutor, workspace = false, courseTitle
   const tutorDialog = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const drawerRef = useRef<HTMLElement>(null)
+  const layoutRef = useRef<HTMLDivElement>(null)
+  const centerRef = useRef<HTMLDivElement>(null)
+  const navigationRef = useRef<HTMLElement>(null)
   const { t } = useI18n()
+  useLayoutEffect(() => {
+    const layout = layoutRef.current, center = centerRef.current, navigation = navigationRef.current
+    if (!layout || !center || !navigation) return
+    const measure = () => {
+      const bounds = center.getBoundingClientRect()
+      if (bounds.width > 0) {
+        layout.style.setProperty('--lesson-navigation-left', `${bounds.left}px`)
+        layout.style.setProperty('--lesson-navigation-width', `${bounds.width}px`)
+      }
+      if (navigation.offsetHeight > 0) layout.style.setProperty('--lesson-navigation-height', `${navigation.offsetHeight}px`)
+    }
+    measure()
+    const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(measure)
+    observer?.observe(center); observer?.observe(navigation)
+    window.addEventListener('resize', measure)
+    return () => { observer?.disconnect(); window.removeEventListener('resize', measure) }
+  }, [workspace])
   useEffect(() => { setOutlineOpen(false); setTutorOpen(false) }, [lessonId])
   useEffect(() => {
     if (!tutorOpen) return
@@ -84,7 +105,7 @@ export function LearningLayout({ children, tutor, workspace = false, courseTitle
     </section>)}</div>
   </>
 
-  return <div className={`learning-layout ${workspace ? 'is-document-workspace' : ''}`}>
+  return <div ref={layoutRef} className={`learning-layout ${workspace ? 'is-document-workspace' : ''}`}>
     <header className="learning-header" inert={outlineOpen || tutorOpen}>
       <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'} className="learning-back" aria-label={t(courseSlug ? 'Вернуться к курсу' : 'Вернуться в каталог')}><ArrowLeft size={17}/><span>{t(courseSlug ? 'К курсу' : 'Каталог')}</span></Link>
       <nav className="learning-header-title learning-breadcrumbs" aria-label={t('Путь обучения')}>{courseTitle && <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'}>{courseTitle}</Link>}<span>{moduleTitle && <>{moduleTitle} <span aria-hidden="true">›</span> </>}<strong aria-current="page">{lessonTitle}</strong></span></nav>
@@ -92,11 +113,13 @@ export function LearningLayout({ children, tutor, workspace = false, courseTitle
     </header>
     <div className="learning-workspace" inert={outlineOpen || tutorOpen}>
       {!workspace && <aside className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>}
-      <div className="learning-center"><main className="learning-main">{children}</main>
-        <footer className="lesson-navigation">
-          {previous ? <Link className="button secondary" to={entryHref(previous)} aria-label={`${t('Предыдущий элемент')}: ${previous.title}`}><ArrowLeft size={16}/><span><small>{t('Предыдущий')}</small>{previous.title}</span></Link> : <span/>}
+      <div ref={centerRef} className="learning-center"><main className="learning-main">{children}</main>
+        <footer ref={navigationRef} className="lesson-navigation">
+          <nav className="lesson-navigation-inner" aria-label={t('Навигация по материалам')}>
+          {previous ? <Link className="button secondary" to={entryHref(previous)} aria-label={`${t('Предыдущий элемент')}: ${previous.title}`}><ArrowLeft size={18}/><span><small>{t('Предыдущий')}</small><strong title={previous.title}>{previous.title}</strong></span></Link> : <span aria-hidden="true"/>}
           <span className="lesson-counter">{totalLessons ? `${(currentIndex || 0) + 1} ${t('из')} ${totalLessons}` : t('Элемент')}</span>
-          {next ? entryLocked(next) ? <span className="course-end"><LockKeyhole size={16}/>{t('Сначала завершите текущий модуль')}</span> : <Link className="button secondary" to={entryHref(next)} aria-label={`${t('Следующий элемент')}: ${next.title}`}><span><small>{t('Следующий')}</small>{next.title}</span><ArrowLeft className="next-arrow" size={16}/></Link> : <span className="course-end"><Check size={16}/>{t('Последний элемент')}</span>}
+          {next ? entryLocked(next) ? <span className="course-end"><LockKeyhole size={16}/><span>{t('Сначала завершите текущий модуль')}</span></span> : <Link className="button secondary" to={entryHref(next)} aria-label={`${t('Следующий элемент')}: ${next.title}`}><span><small>{t('Следующий')}</small><strong title={next.title}>{next.title}</strong></span><ArrowLeft className="next-arrow" size={18}/></Link> : <span className="course-end"><Check size={16}/><span>{t('Последний элемент')}</span></span>}
+          </nav>
         </footer>
       </div>
       {!workspace && !tutorOpen && <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor ?? <AITutorPlaceholder/>}</aside>}

@@ -625,8 +625,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 /* Student learning workspace */
 .learning-layout { background: #f8fafc; }
-.learning-header { grid-template-columns: 170px minmax(0, 1fr) auto; min-height: 62px; padding: 8px 24px; }
-.learning-header-title { text-align: left; }
+.learning-header { grid-template-columns: minmax(max-content, 1fr) minmax(0, auto) minmax(max-content, 1fr); min-height: 62px; padding: 8px 24px; }
+.learning-header-title { text-align: center; justify-self: center; justify-items: center; }
 .learning-header-title strong { font-size: .88rem; }
 .learning-header .outline-button { display: none; }
 .learning-header-tools { display: flex; align-items: center; justify-self: end; gap: 9px; }
@@ -733,8 +733,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .learning-status.started { color: var(--color-primary); }
 .learning-status.locked { color: var(--color-subtle); }
 .workspace-account .user-menu-name, .workspace-account summary > svg { display: none; }
-.learning-breadcrumbs a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .76rem; color: var(--color-muted); }
-.learning-breadcrumbs > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.learning-breadcrumbs a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .76rem; color: var(--color-muted); text-align: center; }
+.learning-breadcrumbs > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 .learning-breadcrumbs strong { display: inline; }
 .outline-lesson .learning-status { font-size: .6rem; }
 .attempt-count { display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: .82rem; }
