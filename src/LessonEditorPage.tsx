@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
-import { Eye, Paperclip } from 'lucide-react'
+import { Eye, MoreHorizontal, Paperclip, Save } from 'lucide-react'
 import { api, type Block, type Lesson, type LessonAttachment } from './api'
 import { Button, ErrorState, Loading, Notice } from './components/ui'
 import { RichLessonContent } from './components/RichLessonContent'
@@ -12,6 +12,7 @@ import { LectureDocumentEditor } from './lecture/LectureDocumentEditor'
 import { useLeaveWarning } from './useLeaveWarning'
 import { useI18n } from './i18n'
 import './lesson-editor.css'
+import './lecture/lecture-authoring.css'
 
 type Draft = { title: string; description: string; blocks: Block[]; attachments: LessonAttachment[] }
 
@@ -30,6 +31,7 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
   const [notice, setNotice] = useState(''), [noticeKind, setNoticeKind] = useState<'success' | 'error'>('success')
   const [busy, setBusy] = useState(false), [uploads, setUploads] = useState(0)
   const [preview, setPreview] = useState(false)
+  const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null)
   const requestRef = useRef<Promise<boolean> | null>(null), mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   useEffect(() => {
@@ -80,6 +82,14 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
     } catch (cause) { error(cause instanceof Error ? cause.message : t('Не удалось сохранить черновик')) }
     finally { setBusy(false) }
   }
+  const saveRef = useRef(save); saveRef.current = save
+  useEffect(() => {
+    const shortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); void saveRef.current() }
+    }
+    document.addEventListener('keydown', shortcut)
+    return () => document.removeEventListener('keydown', shortcut)
+  }, [])
   const uploadAttachments = async (files: FileList) => {
     setUploads(count => count + 1); setNotice('')
     try {
@@ -99,19 +109,22 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
   const status = lessonQuery.data?.status ?? 'DRAFT'
   const actions = <>
     <Button variant="secondary" onClick={() => setPreview(value => !value)} disabled={busy || uploads > 0}><Eye size={16}/>{t(preview ? 'Редактор' : 'Предпросмотр')}</Button>
-    <Button variant="secondary" disabled={!dirty || busy || uploads > 0} onClick={() => void save()}>{t('Сохранить сейчас')}</Button>
     <Button disabled={busy || uploads > 0 || !draft.title.trim()} onClick={() => void save(true)}>{t(status === 'PUBLISHED' ? 'Опубликовать изменения' : 'Опубликовать')}</Button>
+    <details className="editor-more-menu"><summary className="editor-icon-action" aria-label={t('Дополнительные действия')}><MoreHorizontal size={19}/></summary><div><button disabled={!dirty || busy || uploads > 0} onClick={() => void save()}><Save size={15}/>{t('Сохранить сейчас')}</button></div></details>
   </>
-  return <EditorLayout title={draft.title || t('Новая лекция')} status={status} saveState={uploads ? 'saving' : saveState} actions={actions} backLabel={backLabel}>
+  return <EditorLayout className="lecture-authoring-layout" title={t('Редактор лекции')} status={status} saveState={uploads ? 'saving' : saveState} actions={actions} backLabel={backLabel}>
     <div className="lesson-editor-shell">
       {notice && <Notice text={notice} kind={noticeKind}/>}
-      {preview && <article className="lesson-document lesson-preview"><h1>{draft.title}</h1>{draft.description && <p className="lesson-summary">{draft.description}</p>}{draft.blocks.map((block, index) => <BlockPreview key={index} block={block}/>)}<LessonAttachments attachments={draft.attachments}/></article>}
-      <div hidden={preview}>
+      {preview && <article className="lesson-document lesson-preview lecture-paper"><h1>{draft.title}</h1>{draft.description && <p className="lesson-summary">{draft.description}</p>}{draft.blocks.map((block, index) => <BlockPreview key={index} block={block}/>)}<LessonAttachments attachments={draft.attachments}/></article>}
+      <div hidden={preview} className="lecture-editing-view">
+        <div className="lecture-ribbon-host" ref={setToolbarTarget}/>
+        <div className="lecture-paper">
         <div className="lesson-document-heading"><input disabled={busy} aria-label={t('Название лекции')} value={draft.title} placeholder={t('Название лекции')} maxLength={200} onChange={event => update({ title: event.target.value })}/><textarea disabled={busy} aria-label={t('Описание лекции')} value={draft.description} placeholder={t('Краткое описание…')} rows={2} onChange={event => update({ description: event.target.value })}/></div>
         <section className="lesson-document" aria-label={t('Содержание лекции')}>
-          <LectureDocumentEditor blocks={draft.blocks} disabled={busy || preview} onChange={blocks => update({ blocks })} onUpload={delta => { if (mounted.current) setUploads(count => count + delta) }} onError={error}/>
+          <LectureDocumentEditor toolbarTarget={toolbarTarget} blocks={draft.blocks} disabled={busy || preview} onChange={blocks => update({ blocks })} onUpload={delta => { if (mounted.current) setUploads(count => count + delta) }} onError={error}/>
         </section>
-        <div className="lesson-document lesson-editor-attachments"><LessonAttachments attachments={draft.attachments} onRemove={busy ? undefined : media => update({ attachments: draftRef.current!.attachments.filter(file => file.media !== media) })}/><label className="lesson-attachment-upload"><Paperclip size={18}/><span>{t(uploads ? 'Загрузка файлов…' : 'Добавить файлы')}</span><input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip" disabled={busy || uploads > 0 || draft.attachments.length >= 20} onChange={event => { if (event.target.files?.length) void uploadAttachments(event.target.files); event.currentTarget.value = '' }}/></label><p>{t('PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 20 МБ на файл. Ученики увидят файлы после публикации.')}</p></div>
+        <details className="lesson-document lesson-editor-attachments lecture-resources"><summary><Paperclip size={17}/>{t('Материалы для скачивания')}<span>{draft.attachments.length || ''}</span></summary><div><LessonAttachments attachments={draft.attachments} onRemove={busy ? undefined : media => update({ attachments: draftRef.current!.attachments.filter(file => file.media !== media) })}/><label className="lesson-attachment-upload"><Paperclip size={18}/><span>{t(uploads ? 'Загрузка файлов…' : 'Добавить файлы')}</span><input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip" disabled={busy || uploads > 0 || draft.attachments.length >= 20} onChange={event => { if (event.target.files?.length) void uploadAttachments(event.target.files); event.currentTarget.value = '' }}/></label><p>{t('PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 20 МБ на файл. Ученики увидят файлы после публикации.')}</p></div></details>
+        </div>
       </div>
     </div>
   </EditorLayout>

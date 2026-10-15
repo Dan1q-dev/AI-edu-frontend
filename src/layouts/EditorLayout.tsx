@@ -9,7 +9,7 @@ const saveLabelKey: Record<SaveState, string> = {
   saved: 'Сохранено', dirty: 'Есть изменения', saving: 'Сохранение…', error: 'Ошибка сохранения',
 }
 
-export function EditorLayout({ children, title, status, saveState, actions, backLabel, statusLabel, backHref }: {
+export function EditorLayout({ children, title, status, saveState, actions, backLabel, statusLabel, backHref, className = '' }: {
   children: ReactNode
   title: string
   status: string
@@ -18,6 +18,7 @@ export function EditorLayout({ children, title, status, saveState, actions, back
   backLabel?: string
   statusLabel?: string
   backHref?: string
+  className?: string
 }) {
   const [params] = useSearchParams()
   const { t } = useI18n()
@@ -33,7 +34,7 @@ export function EditorLayout({ children, title, status, saveState, actions, back
   }, [])
   const track = params.get('track')
   const defaultBackHref = `/admin/curriculum${track ? `?track=${encodeURIComponent(track)}` : ''}`
-  return <div className="editor-layout" ref={layoutRef}>
+  return <div className={`editor-layout ${className}`} ref={layoutRef}>
     <header className="editor-header" ref={headerRef}>
       <Link to={backHref || defaultBackHref} className="editor-back"><ArrowLeft size={17}/><span>{backLabel || t('Структура курса')}</span></Link>
       <div className="editor-header-title"><strong>{title}</strong><span className={`save-state ${saveState}`}><i/> {t(saveLabelKey[saveState])}</span></div>

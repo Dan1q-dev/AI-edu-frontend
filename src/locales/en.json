@@ -681,5 +681,21 @@
   "Удалить столбец": "Delete column",
   "Удалить таблицу": "Delete table",
   "Тип врезки": "Callout type",
-  "Убрать врезку": "Remove callout"
+  "Убрать врезку": "Remove callout",
+  "Главная": "Home",
+  "Вставка": "Insert",
+  "Вставка содержимого": "Insert content",
+  "Стиль текста": "Text style",
+  "Обычный текст": "Normal text",
+  "Заголовок раздела": "Section heading",
+  "Подзаголовок": "Subheading",
+  "Подчёркнутый": "Underline",
+  "Врезка": "Callout",
+  "Начните писать текст лекции…": "Start writing your lecture…",
+  "Материалы для скачивания": "Downloadable resources",
+  "Дополнительные инструменты": "More tools",
+  "Упорядочить элементы": "Arrange content",
+  "Перетаскивайте элементы за ручку слева.": "Drag content using the handle on the left.",
+  "Готово": "Done",
+  "Слов": "Words"
 }

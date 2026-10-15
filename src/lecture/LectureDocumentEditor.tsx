@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react'
-import { BubbleMenu } from '@tiptap/react/menus'
 import DragHandle from '@tiptap/extension-drag-handle-react'
 import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
 import Mathematics from '@tiptap/extension-mathematics'
 import TextAlign from '@tiptap/extension-text-align'
-import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, Bold, Copy, GripVertical, Italic, Link2, List, Plus, Redo2, Trash2, Undo2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Copy, GripVertical, Plus, Trash2, X } from 'lucide-react'
 import { api, type Block } from '../api'
 import { prepareImageForUpload } from '../utils/image'
 import { useI18n } from '../i18n'
 import { blocksToDocument, documentToBlocks } from './document'
 import { videoSource } from './video'
 import { Callout, LectureImage, LectureRoot, LectureVideo } from './nodes'
+import { LectureRibbon } from './LectureRibbon'
 import './lecture-document.css'
 
 const options = [
@@ -35,8 +36,8 @@ export function lectureExtensions(onMathClick?: (node: { attrs: Record<string, u
   ]
 }
 
-export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, onError }: {
-  blocks: Block[]; disabled: boolean; onChange: (blocks: Block[]) => void; onUpload: (delta: number) => void; onError: (message: string) => void
+export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, onError, toolbarTarget }: {
+  blocks: Block[]; disabled: boolean; onChange: (blocks: Block[]) => void; onUpload: (delta: number) => void; onError: (message: string) => void; toolbarTarget?: HTMLElement | null
 }) {
   const { t } = useI18n()
   const [menu, setMenu] = useState<Menu | null>(null)
@@ -46,6 +47,7 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [dialogError, setDialogError] = useState('')
   const [outlineOpen, setOutlineOpen] = useState(false)
+  const [reorder, setReorder] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const hoverPos = useRef(-1)
   const [initial] = useState(() => blocksToDocument(blocks))
@@ -67,7 +69,7 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
     extensions,
     content: initial, editable: !disabled,
     editorProps: {
-      attributes: { role: 'textbox', 'aria-label': t('Текст лекции'), 'aria-multiline': 'true', 'data-placeholder': t('Начните писать или введите / для вставки') },
+      attributes: { role: 'textbox', 'aria-label': t('Текст лекции'), 'aria-multiline': 'true', 'data-placeholder': t('Начните писать текст лекции…') },
       handleKeyDown: (_, event) => {
         const current = menuRef.current
         if (!current) return false
@@ -119,7 +121,9 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
   const state = useEditorState({ editor, selector: ({ editor: instance }) => {
     const headings: { pos: number; title: string; level: number }[] = []
     instance?.state.doc.descendants((node, pos) => { if (node.type.name === 'heading') headings.push({ pos, title: node.textContent, level: node.attrs.level }) })
-    return { headings, undo: instance?.can().undo(), redo: instance?.can().redo(), table: instance?.isActive('table'), bold: instance?.isActive('bold'), italic: instance?.isActive('italic'), callout: instance?.isActive('callout') }
+    const doc = instance?.state.doc
+    const text = doc?.textBetween(0, doc.content.size, ' ').trim() ?? ''
+    return { headings, words: text ? text.split(/\s+/u).length : 0, table: instance?.isActive('table'), callout: instance?.isActive('callout') }
   } })
 
   uploadRef.current = async (file, instance, replacePos) => {
@@ -217,26 +221,12 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
     setDialog(null)
   }
   const visible = menu ? options.filter(([, label]) => t(label).toLowerCase().includes(menu.query.toLowerCase())) : []
-  const formatButtons = <>
-    <button type="button" aria-label={t('Жирный')} aria-pressed={state?.bold} onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={16}/></button>
-    <button type="button" aria-label={t('Курсив')} aria-pressed={state?.italic} onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={16}/></button>
-    <button type="button" aria-label={t('Ссылка')} onMouseDown={event => event.preventDefault()} onClick={() => openDialog('link')}><Link2 size={16}/></button>
-    <button type="button" aria-label={t('Слева')} onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('left').run()}><AlignLeft size={16}/></button>
-    <button type="button" aria-label={t('По центру')} onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('center').run()}><AlignCenter size={16}/></button>
-    <button type="button" aria-label={t('Справа')} onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().setTextAlign('right').run()}><AlignRight size={16}/></button>
-  </>
+  const ribbon = <LectureRibbon editor={editor} disabled={disabled} outlineOpen={outlineOpen} reorder={reorder} onOutline={() => setOutlineOpen(value => !value)} onReorder={() => setReorder(value => !value)} onInsert={run} onLink={() => openDialog('link')}/>
 
   return <div className={`lecture-composer${disabled ? ' is-disabled' : ''}`}>
-    <div className="lecture-document-toolbar" role="toolbar" aria-label={t('Инструменты лекции')}>
-      <button type="button" className="lecture-insert-trigger" disabled={disabled} onMouseDown={event => event.preventDefault()} onClick={event => openMenu(event.currentTarget)}><Plus size={16}/>{t('Добавить')}</button>
-      <button type="button" aria-label={t('Отменить')} disabled={disabled || !state?.undo} onClick={() => editor.chain().focus().undo().run()}><Undo2 size={16}/></button>
-      <button type="button" aria-label={t('Повторить')} disabled={disabled || !state?.redo} onClick={() => editor.chain().focus().redo().run()}><Redo2 size={16}/></button>
-      <span className="lecture-toolbar-hint">{t('Введите / для вставки')}</span>
-      <button type="button" aria-expanded={outlineOpen} onClick={() => setOutlineOpen(value => !value)}><List size={16}/>{t('Оглавление')}</button>
-    </div>
+    {toolbarTarget ? createPortal(ribbon, toolbarTarget) : ribbon}
     {outlineOpen && <nav className="lecture-outline" aria-label={t('Оглавление лекции')}><strong>{t('Оглавление')}</strong>{state?.headings.length ? state.headings.map(heading => <button type="button" key={heading.pos} className={heading.level === 3 ? 'outline-nested' : ''} onClick={() => { editor.chain().focus().setTextSelection(heading.pos + 1).scrollIntoView().run(); (editor.view.nodeDOM(heading.pos) as HTMLElement | null)?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }) }}>{heading.title || t('Без названия')}</button>) : <p>{t('Добавьте заголовки, чтобы видеть структуру лекции.')}</p>}</nav>}
-    {!disabled && <BubbleMenu editor={editor} options={{ placement: 'top', offset: 8 }}><div className="lecture-bubble" role="toolbar" aria-label={t('Форматирование выделения')}>{formatButtons}<button type="button" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</button><button type="button" onMouseDown={event => event.preventDefault()} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</button></div></BubbleMenu>}
-    {!disabled && <DragHandle editor={editor} onNodeChange={({ pos }) => { hoverPos.current = pos }}><div className="lecture-block-handle">
+    {reorder && !disabled && <DragHandle editor={editor} onNodeChange={({ pos }) => { hoverPos.current = pos }}><div className="lecture-block-handle">
       <button type="button" className="lecture-insert-trigger" aria-label={t('Добавить после блока')} onMouseDown={event => event.preventDefault()} onClick={event => { const node = editor.state.doc.nodeAt(hoverPos.current); if (node) openMenu(event.currentTarget, hoverPos.current + node.nodeSize) }}><Plus size={16}/></button>
       <button type="button" className="lecture-grip" aria-label={t('Перетащить блок')} title={t('Перетащить блок')} onClick={() => { if (hoverPos.current >= 0) editor.chain().focus().setNodeSelection(hoverPos.current).run() }}><GripVertical size={18}/></button>
       <div className="lecture-block-actions">
@@ -255,7 +245,7 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
     </div>}
     {state?.callout && !disabled && <div className="lecture-table-tools"><select aria-label={t('Тип врезки')} value={editor.getAttributes('callout').tone} onChange={event => editor.chain().focus().updateAttributes('callout', { tone: event.target.value }).run()}><option value="important">{t('Важно')}</option><option value="note">{t('Примечание')}</option><option value="tip">{t('Совет')}</option></select><button type="button" onClick={() => editor.chain().focus().lift('callout').run()}>{t('Убрать врезку')}</button></div>}
     <EditorContent editor={editor} className="lecture-document-content"/>
-    {!disabled && <button type="button" className="lecture-add-bottom lecture-insert-trigger" onMouseDown={event => event.preventDefault()} onClick={event => openMenu(event.currentTarget, editor.state.doc.content.size)}><Plus size={18}/>{t('Добавить содержимое')}</button>}
+    <div className="lecture-word-count">{t('Слов')}: {state?.words ?? 0}</div>
     {menu && !disabled && <div className="lecture-insert-menu" role="menu" aria-label={t('Добавить содержимое')} style={{ top: Math.min(menu.top, Math.max(8, window.innerHeight - 355)), left: menu.left }}>
       <input autoFocus={!menu.slash} aria-label={t('Поиск типа содержимого')} placeholder={t('Найти…')} value={menu.query} onChange={event => { setMenu({ ...menu, query: event.target.value }); setMenuIndex(0) }} onKeyDown={event => {
         if (event.key === 'Escape') { setMenu(null); editor.commands.focus() }
