@@ -61,6 +61,8 @@ npm run dev
 Vite использует `API_PROXY_TARGET` из `.env`: в Docker — `http://backend:8000`, вне Docker — `http://localhost:8000`. Без этой переменной Vite обращается к `https://aiedu.com.kz`.
 
 Проверки: `npm run test`, `npm run build`.
+
+В редакторе лекции доступна кнопка **«Импорт из файла»** для PDF, DOCX и PPTX. Материал распознаётся на backend, затем автор сравнивает исходник с результатом и добавляет его в конец или заменяет содержимое черновика. Вставка сохраняет историю отмены редактора. Закрытое окно можно открыть снова: задания продолжают обрабатываться. Для работы нужен `import-worker`; установка OCR, параметры и ограничения описаны в разделе «Импорт лекции из файла» README backend. На frontend отдельные AI-ключи не нужны. Проверка интерфейса: `npm run test:editor`.
 ### Student learning links
 
 The student flow uses `/items/:id`. Existing `/lessons/:id` bookmarks resolve the

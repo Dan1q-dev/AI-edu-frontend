@@ -14,7 +14,7 @@ import { useI18n } from './i18n'
 import './lesson-editor.css'
 import './lecture/lecture-authoring.css'
 
-type Draft = { title: string; description: string; blocks: Block[]; attachments: LessonAttachment[] }
+type Draft = { title: string; description: string; blocks: Block[]; attachments: LessonAttachment[]; revision?: number }
 
 export function EditorPage({ lessonId, backLabel }: { lessonId?: string; backLabel?: string } = {}) {
   const { id: routeId = '' } = useParams()
@@ -33,11 +33,13 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
   const [preview, setPreview] = useState(false)
   const [toolbarTarget, setToolbarTarget] = useState<HTMLDivElement | null>(null)
   const requestRef = useRef<Promise<boolean> | null>(null), mounted = useRef(true)
+  const revisionRef = useRef<number | undefined>(undefined)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   useEffect(() => {
     if (!draftQuery.data || draftRef.current) return
     const next = { ...draftQuery.data, blocks: draftQuery.data.blocks ?? [], attachments: draftQuery.data.attachments ?? [] }
     draftRef.current = next; setDraft(next)
+    revisionRef.current = next.revision
   }, [draftQuery.data])
   useLeaveWarning(dirty || uploads > 0)
   const update = (patch: Partial<Draft>) => {
@@ -52,7 +54,8 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
     if (!dirtyRef.current || !draftRef.current) return true
     const snapshot = draftRef.current
     setSaveState('saving')
-    const task = api<Draft>(`lessons/${id}/draft/`, 'PUT', snapshot).then(saved => {
+    const task = api<Draft>(`lessons/${id}/draft/`, 'PUT', { ...snapshot, revision: revisionRef.current }).then(saved => {
+      revisionRef.current = saved.revision
       qc.setQueryData(['admin-draft', id], saved)
       if (mounted.current && draftRef.current === snapshot) { dirtyRef.current = false; setDirty(false); setSaveState('saved') }
       return true
@@ -75,7 +78,7 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
     try {
       do { if (!await persistRef.current()) return } while (dirtyRef.current)
       if (publish) {
-        await api(`lessons/${id}/draft/`, 'POST')
+        await api(`lessons/${id}/draft/`, 'POST', { revision: revisionRef.current })
         await Promise.all([qc.invalidateQueries({ queryKey: ['admin-lesson', id] }), qc.invalidateQueries({ queryKey: ['admin', 'items'] }), qc.invalidateQueries({ queryKey: ['admin-draft', id] })])
       }
       setNoticeKind('success'); setNotice(t(publish ? 'Лекция опубликована' : 'Черновик сохранён'))
@@ -121,7 +124,7 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
         <div className="lecture-paper">
         <div className="lesson-document-heading"><input disabled={busy} aria-label={t('Название лекции')} value={draft.title} placeholder={t('Название лекции')} maxLength={200} onChange={event => update({ title: event.target.value })}/><textarea disabled={busy} aria-label={t('Описание лекции')} value={draft.description} placeholder={t('Краткое описание…')} rows={2} onChange={event => update({ description: event.target.value })}/></div>
         <section className="lesson-document" aria-label={t('Содержание лекции')}>
-          <LectureDocumentEditor toolbarTarget={toolbarTarget} blocks={draft.blocks} disabled={busy || preview} onChange={blocks => update({ blocks })} onUpload={delta => { if (mounted.current) setUploads(count => count + delta) }} onError={error}/>
+          <LectureDocumentEditor lessonId={id} toolbarTarget={toolbarTarget} blocks={draft.blocks} disabled={busy || preview} onChange={blocks => update({ blocks })} onUpload={delta => { if (mounted.current) setUploads(count => count + delta) }} onError={error}/>
         </section>
         <details className="lesson-document lesson-editor-attachments lecture-resources"><summary><Paperclip size={17}/>{t('Материалы для скачивания')}<span>{draft.attachments.length || ''}</span></summary><div><LessonAttachments attachments={draft.attachments} onRemove={busy ? undefined : media => update({ attachments: draftRef.current!.attachments.filter(file => file.media !== media) })}/><label className="lesson-attachment-upload"><Paperclip size={18}/><span>{t(uploads ? 'Загрузка файлов…' : 'Добавить файлы')}</span><input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip" disabled={busy || uploads > 0 || draft.attachments.length >= 20} onChange={event => { if (event.target.files?.length) void uploadAttachments(event.target.files); event.currentTarget.value = '' }}/></label><p>{t('PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 20 МБ на файл. Ученики увидят файлы после публикации.')}</p></div></details>
         </div>

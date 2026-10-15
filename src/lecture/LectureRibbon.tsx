@@ -5,9 +5,10 @@ import { useI18n } from '../i18n'
 
 type InsertAction = 'image' | 'table' | 'video' | 'math' | 'rule' | 'important' | 'note' | 'tip'
 
-export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutline, onReorder, onInsert, onLink }: {
+export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutline, onReorder, onInsert, onLink, onImport }: {
   editor: Editor; disabled: boolean; outlineOpen: boolean; reorder: boolean
   onOutline: () => void; onReorder: () => void; onInsert: (action: InsertAction) => void; onLink: () => void
+  onImport?: () => void
 }) {
   const { t } = useI18n()
   const [tab, setTab] = useState<'home' | 'insert'>('home')
@@ -41,6 +42,7 @@ export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutlin
         <button type="button" role="tab" id="lecture-tab-insert" aria-selected={tab === 'insert'} aria-controls="lecture-ribbon-panel" tabIndex={tab === 'insert' ? 0 : -1} onClick={() => { setTab('insert'); setMenu(null) }}>{t('Вставка')}</button>
       </div>
       <div className="ribbon-view-actions">
+        {onImport && <button type="button" className="ribbon-outline-toggle" disabled={disabled} onClick={onImport}>{t('Импорт из файла')}</button>}
         <button type="button" className="ribbon-outline-toggle" aria-label={t('Оглавление')} aria-expanded={outlineOpen} onClick={onOutline}><PanelLeft size={16}/><span>{t('Оглавление')}</span></button>
         <div className="ribbon-dropdown">
           <button type="button" className="ribbon-icon" aria-label={t('Дополнительные инструменты')} title={t('Дополнительные инструменты')} aria-expanded={menu === 'more'} aria-haspopup="menu" onClick={() => setMenu(menu === 'more' ? null : 'more')}><MoreHorizontal size={19}/></button>

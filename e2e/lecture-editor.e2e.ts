@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZ1sAAAAASUVORK5CYII=', 'base64')
 const diagram = '<svg xmlns="http://www.w3.org/2000/svg" width="900" height="180" viewBox="0 0 900 180"><rect width="900" height="180" rx="8" fill="#f5f7fb"/><path d="M100 122H800" stroke="#b6c4d9" stroke-width="2"/><path d="M160 90H640l-12-6m12 6-12 6" fill="none" stroke="#6085d8" stroke-width="3"/><circle cx="160" cy="90" r="15" fill="#6085d8"/><text x="400" y="68" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="16">v = s / t</text><text x="160" y="151" text-anchor="middle" fill="#8d9aab" font-family="Arial" font-size="12">A</text><text x="640" y="151" text-anchor="middle" fill="#8d9aab" font-family="Arial" font-size="12">B</text></svg>'
-const initial = () => ({ title: 'Основы физики', description: 'Учебная лекция', attachments: [], blocks: [
+const initial = () => ({ title: 'Основы физики', description: 'Учебная лекция', revision: 0, attachments: [], blocks: [
   { type: 'TEXT', position: 0, content: '## Введение\n\nПервый абзац', media: null, config: {} },
   { type: 'TEXT', position: 1, content: 'Второй абзац', media: null, config: {} },
   { type: 'IMAGE', position: 2, content: 'Схема', media: 7, media_url: '/api/v1/media/7/', config: { alt: 'Схема движения' } },
@@ -10,6 +10,7 @@ const initial = () => ({ title: 'Основы физики', description: 'Уч�
 
 async function openEditor(page: Page, settings: { slowSave?: boolean; failSave?: boolean; slowUpload?: boolean } = {}) {
   let draft = initial(), published = false, student = false, publishedDraft = initial()
+  let revision = 0
   const saves: typeof draft[] = []
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -24,7 +25,9 @@ async function openEditor(page: Page, settings: { slowSave?: boolean; failSave?:
       if (request.method() === 'PUT') {
         if (settings.slowSave) await new Promise(resolve => setTimeout(resolve, 1200))
         if (settings.failSave) return json({ detail: 'Сохранение недоступно' }, 503)
-        draft = request.postDataJSON(); saves.push(draft)
+        const incoming = request.postDataJSON()
+        if (incoming.revision !== revision) return json({ detail: 'Черновик изменён в другом окне', code: 'draft_conflict' }, 409)
+        draft = { ...incoming, revision: ++revision }; saves.push(draft)
       }
       if (request.method() === 'POST') { published = true; publishedDraft = structuredClone(draft) }
       return json(draft)
@@ -67,6 +70,100 @@ async function enableReordering(page: Page) {
   await page.getByRole('button', { name: 'Дополнительные инструменты' }).click()
   await page.getByRole('menuitemcheckbox', { name: 'Упорядочить элементы' }).click()
 }
+
+async function mockImport(page: Page, fail = false) {
+  let created = false, polls = 0
+  const blocks = [{ type: 'TEXT', position: 0, media: null, config: {}, content: JSON.stringify({ type: 'doc', content: [
+    { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Импортированный раздел' }] },
+    { type: 'blockquote', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Точная цитата из файла: 42' }] }] },
+    { type: 'codeBlock', content: [{ type: 'text', text: 'print(42)' }] },
+    { type: 'table', content: [{ type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Ячейка из файла' }] }] }] }] },
+  ] }) }]
+  const job = (status: string) => ({ id: 'import-1', name: 'lecture.docx', size: 1024, status, stage: status === 'PENDING' ? 'queued' : status === 'RUNNING' ? 'structuring' : 'ready', source_url: '/source.docx', error: status === 'FAILED' ? 'Не удалось прочитать документ' : '', result: status === 'SUCCEEDED' ? { blocks, pages: [], elements: [{ source_id: 'e1', kind: 'paragraph', text: 'Исходный текст', page: null }], warnings: ['office_layout'], stats: { elements: 4, images: 0 } } : null })
+  await page.route('**/api/v1/lessons/lecture-1/imports/**', async route => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postData()).toContain('lecture.docx')
+      created = true; return route.fulfill({ status: 202, json: job('PENDING') })
+    }
+    if (route.request().url().endsWith('/imports/')) return route.fulfill({ json: { jobs: created ? [job(polls > 1 ? fail ? 'FAILED' : 'SUCCEEDED' : 'PENDING')] : [], ai_available: true } })
+    polls++
+    return route.fulfill({ json: job(polls > 1 ? fail ? 'FAILED' : 'SUCCEEDED' : 'RUNNING') })
+  })
+}
+
+async function uploadLecture(page: Page) {
+  await page.getByRole('button', { name: 'Импорт из файла', exact: true }).click()
+  await page.getByLabel('Файл лекции', { exact: true }).setInputFiles({ name: 'lecture.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('mock upload; real parser tested on backend') })
+  await page.getByRole('button', { name: 'Распознать файл', exact: true }).click()
+}
+
+test('import is reviewed before append, can be undone, then previewed and published', async ({ page }) => {
+  const state = await openEditor(page)
+  await mockImport(page)
+  await uploadLecture(page)
+  const dialog = page.getByRole('dialog', { name: 'Импорт лекции из файла' })
+  await expect(dialog.getByRole('region', { name: 'Результат импорта' }).locator('blockquote')).toContainText('Точная цитата')
+  expect(state.saves).toHaveLength(0)
+  expect(state.published).toBe(false)
+  await page.screenshot({ path: 'test-results/lecture-import-review.png', fullPage: true })
+  await dialog.getByRole('button', { name: 'Перенести в черновик' }).click()
+  const editor = page.getByRole('textbox', { name: 'Текст лекции' })
+  await expect(dialog).toHaveCount(0)
+  await expect(editor).toContainText('Первый абзац')
+  await expect(editor.locator('blockquote')).toContainText('Точная цитата')
+  await expect(editor.locator('table')).toContainText('Ячейка из файла')
+  await page.getByRole('button', { name: 'Отменить', exact: true }).click()
+  await expect(editor).not.toContainText('Импортированный раздел')
+  await expect(editor).toContainText('Первый абзац')
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click()
+  await expect(editor).toContainText('Импортированный раздел')
+  await page.getByRole('button', { name: 'Предпросмотр', exact: true }).click()
+  await expect(page.locator('.lesson-preview blockquote')).toContainText('Точная цитата')
+  await expect(page.locator('.lesson-preview pre')).toContainText('print(42)')
+  await page.getByRole('button', { name: 'Опубликовать', exact: true }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Лекция опубликована' })).toBeVisible()
+  await state.viewAsStudent()
+  await expect(page.locator('.lesson-article blockquote')).toContainText('Точная цитата')
+  await expect(page.locator('.lesson-article table')).toContainText('Ячейка из файла')
+  expect(state.errors).toEqual([])
+})
+
+test('phone import resumes after closing and replaces only the content', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const state = await openEditor(page)
+  await mockImport(page)
+  await uploadLecture(page)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Импорт из файла', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('button', { name: 'Перенести в черновик' })).toBeEnabled()
+  await dialog.getByRole('radio', { name: 'Заменить содержимое' }).check()
+  const bounds = await dialog.boundingBox()
+  expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.width).toBeLessThanOrEqual(390)
+  await page.screenshot({ path: 'test-results/lecture-import-phone.png', fullPage: true })
+  await dialog.getByRole('button', { name: 'Перенести в черновик' }).click()
+  await expect(page.getByRole('textbox', { name: 'Текст лекции' })).not.toContainText('Первый абзац')
+  await expect(page.getByRole('textbox', { name: 'Текст лекции' })).toContainText('Импортированный раздел')
+  await expect(page.getByRole('textbox', { name: 'Название лекции', exact: true })).toHaveValue('Основы физики')
+  await page.getByRole('button', { name: 'Отменить', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'Текст лекции' })).toContainText('Первый абзац')
+  expect(state.errors).toEqual([])
+})
+
+test('failed import preserves the editor and cannot be applied', async ({ page }) => {
+  const state = await openEditor(page)
+  await mockImport(page, true)
+  await uploadLecture(page)
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('Не удалось прочитать документ')
+  await expect(page.getByRole('button', { name: 'Перенести в черновик' })).toBeDisabled()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('textbox', { name: 'Текст лекции' })).toContainText('Первый абзац')
+  expect(state.saves).toHaveLength(0)
+  expect(state.published).toBe(false)
+  expect(state.errors).toEqual([])
+})
 
 test('continuous selection, global undo and history retained through preview', async ({ page }) => {
   const result = await openEditor(page)

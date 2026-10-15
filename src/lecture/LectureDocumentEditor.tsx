@@ -14,6 +14,8 @@ import { blocksToDocument, documentToBlocks } from './document'
 import { videoSource } from './video'
 import { Callout, LectureImage, LectureRoot, LectureVideo } from './nodes'
 import { LectureRibbon } from './LectureRibbon'
+import { LectureImportDialog } from './LectureImportDialog'
+import { closeHistory } from '@tiptap/pm/history'
 import './lecture-document.css'
 
 const options = [
@@ -36,8 +38,9 @@ export function lectureExtensions(onMathClick?: (node: { attrs: Record<string, u
   ]
 }
 
-export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, onError, toolbarTarget }: {
+export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, onError, toolbarTarget, lessonId }: {
   blocks: Block[]; disabled: boolean; onChange: (blocks: Block[]) => void; onUpload: (delta: number) => void; onError: (message: string) => void; toolbarTarget?: HTMLElement | null
+  lessonId?: string
 }) {
   const { t } = useI18n()
   const [menu, setMenu] = useState<Menu | null>(null)
@@ -48,6 +51,7 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
   const [dialogError, setDialogError] = useState('')
   const [outlineOpen, setOutlineOpen] = useState(false)
   const [reorder, setReorder] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const hoverPos = useRef(-1)
   const [initial] = useState(() => blocksToDocument(blocks))
@@ -98,7 +102,7 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
     onUpdate: ({ editor: instance }) => { onChange(documentToBlocks(instance.getJSON())); refreshSlash(instance) },
     onSelectionUpdate: ({ editor: instance }) => refreshSlash(instance),
   })
-  useEffect(() => { editor?.setEditable(!disabled, false) }, [editor, disabled])
+  useEffect(() => { editor?.setEditable(!disabled && !importOpen, false) }, [editor, disabled, importOpen])
   useEffect(() => {
     if (!editor) return
     editor.storage.lectureImage.replace = (pos, file) => uploadRef.current(file, editor, pos)
@@ -221,9 +225,19 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
     setDialog(null)
   }
   const visible = menu ? options.filter(([, label]) => t(label).toLowerCase().includes(menu.query.toLowerCase())) : []
-  const ribbon = <LectureRibbon editor={editor} disabled={disabled} outlineOpen={outlineOpen} reorder={reorder} onOutline={() => setOutlineOpen(value => !value)} onReorder={() => setReorder(value => !value)} onInsert={run} onLink={() => openDialog('link')}/>
+  const ribbon = <LectureRibbon editor={editor} disabled={disabled} outlineOpen={outlineOpen} reorder={reorder} onOutline={() => setOutlineOpen(value => !value)} onReorder={() => setReorder(value => !value)} onInsert={run} onLink={() => openDialog('link')} onImport={lessonId ? () => setImportOpen(true) : undefined}/>
 
   return <div className={`lecture-composer${disabled ? ' is-disabled' : ''}`}>
+    {importOpen && lessonId && <LectureImportDialog lessonId={lessonId} onClose={() => setImportOpen(false)} onApply={(imported, mode) => {
+      if (disabled) throw new Error(t('Дождитесь сохранения лекции.'))
+      const incoming = blocksToDocument(imported).content ?? []
+      const combined = { type: 'doc', content: mode === 'append' ? [...(editor.getJSON().content ?? []), ...incoming] : incoming }
+      const converted = documentToBlocks(combined)
+      if (converted.length > 100 || converted.some(block => block.content.length > 50000)) throw new Error(t('Содержимое слишком большое. Импортируйте документ частями.'))
+      const end = editor.state.doc.content.size
+      editor.chain().command(({ tr }) => { closeHistory(tr); return true }).insertContentAt(mode === 'replace' ? { from: 0, to: end } : end, incoming).run()
+      setImportOpen(false)
+    }}/>}
     {toolbarTarget ? createPortal(ribbon, toolbarTarget) : ribbon}
     {outlineOpen && <nav className="lecture-outline" aria-label={t('Оглавление лекции')}><strong>{t('Оглавление')}</strong>{state?.headings.length ? state.headings.map(heading => <button type="button" key={heading.pos} className={heading.level === 3 ? 'outline-nested' : ''} onClick={() => { editor.chain().focus().setTextSelection(heading.pos + 1).scrollIntoView().run(); (editor.view.nodeDOM(heading.pos) as HTMLElement | null)?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }) }}>{heading.title || t('Без названия')}</button>) : <p>{t('Добавьте заголовки, чтобы видеть структуру лекции.')}</p>}</nav>}
     {reorder && !disabled && <DragHandle editor={editor} onNodeChange={({ pos }) => { hoverPos.current = pos }}><div className="lecture-block-handle">
