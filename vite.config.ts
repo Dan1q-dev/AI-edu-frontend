@@ -7,7 +7,7 @@ import { voiceAssets } from './voiceAssets'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const proxyTarget = env.API_PROXY_TARGET || process.env.API_PROXY_TARGET || 'https://test.aiedu.com.kz'
+  const proxyTarget = env.API_PROXY_TARGET || process.env.API_PROXY_TARGET || 'https://aiedu.com.kz'
 
   const Agent = proxyTarget.startsWith('https:') ? https.Agent : http.Agent
   const agent = new Agent({

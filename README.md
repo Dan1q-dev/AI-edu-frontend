@@ -31,7 +31,9 @@ docker compose up --build -d
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ```
 
-Production frontend собирается и раздаётся Nginx на порту 80. Nginx обращается к backend в общей сети и использует общий volume `aiedu-static`. Перед публичным запуском настройте внешний TLS reverse proxy и HTTPS-origin в backend `.env`.
+Production frontend собирается и раздаётся Node-сервером на порту 3000 контейнера, доступном на хосте как `127.0.0.1:8080`. Внешний Nginx обслуживает `https://aiedu.com.kz`: `/api/` направляет на backend `127.0.0.1:4000`, остальные запросы — на frontend `127.0.0.1:8080`. Сохраните существующий маршрут Django static files. Пример маршрутов и значения backend `.env` приведены в README backend.
+
+Браузер использует относительный адрес `/api/v1/`, поэтому домен API в frontend `.env` для production задавать не нужно. `API_PROXY_TARGET=http://backend:8000` в `.env.example` предназначен для Docker-разработки; standalone production Compose передаёт API внешнему Nginx и не загружает этот `.env` в Node-процесс.
 
 ## Локальная разработка без Docker
 
@@ -40,7 +42,7 @@ npm ci
 npm run dev
 ```
 
-Vite использует `API_PROXY_TARGET` из `.env`; значение по умолчанию — `http://backend:8000`. Для запуска Vite вне Docker укажите `API_PROXY_TARGET=http://localhost:8000`.
+Vite использует `API_PROXY_TARGET` из `.env`: в Docker — `http://backend:8000`, вне Docker — `http://localhost:8000`. Без этой переменной Vite обращается к `https://aiedu.com.kz`.
 
 Проверки: `npm run test`, `npm run build`.
 ### Student learning links

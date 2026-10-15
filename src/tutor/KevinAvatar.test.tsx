@@ -23,7 +23,7 @@ test('accepts ready messages only from the configured local iframe', async () =>
 
 test('does not expose the trial avatar on a public hostname even with the build flag', async () => {
   vi.stubEnv('VITE_LOCAL_AVATAR', '1')
-  vi.stubGlobal('location', { hostname: 'test.aiedu.com.kz', origin: 'https://test.aiedu.com.kz' })
+  vi.stubGlobal('location', { hostname: 'aiedu.com.kz', origin: 'https://aiedu.com.kz' })
   vi.resetModules()
   const { localAvatarEnabled } = await import('./KevinAvatar')
   expect(localAvatarEnabled).toBe(false)
