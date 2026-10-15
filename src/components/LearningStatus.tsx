@@ -12,8 +12,14 @@ export function LearningStatus({ completed, percent = 0, locked, started }: { co
   </span>
 }
 
-export function CourseProgressIndicator({ percent, completed, total, bar = true }: { percent: number; completed: number; total: number; bar?: boolean }) {
+export function CourseProgressIndicator({ percent, completed, total, bar = true, label }: { percent: number; completed: number; total: number; bar?: boolean; label?: string }) {
   const { t } = useI18n()
+  if (label != null) {
+    return <div className="course-progress-summary">
+      <div className="course-progress-label"><span>{t(label)}</span><strong>{percent}%</strong></div>
+      <div className="progress-track" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><span style={{ width: `${percent}%` }}/></div>
+    </div>
+  }
   return <div className="course-progress-summary"><div className="course-progress-label"><strong>{percent}%</strong><span>{completed} / {total} {t('элементов завершено')}</span></div>
     {bar && <div className="progress-track" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}><span style={{ width: `${percent}%` }}/></div>}
   </div>

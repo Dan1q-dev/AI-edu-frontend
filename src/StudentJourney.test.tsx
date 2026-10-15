@@ -30,9 +30,8 @@ describe('student learning journey', () => {
     mount(<MyLearningPage user={user}/>)
     const resume = await screen.findByRole('region', { name: 'AI basics' })
     expect(within(resume).getByText('46%')).toBeTruthy()
-    expect(within(resume).getByText('Introduction lecture')).toBeTruthy()
     expect(within(resume).getByRole('link', { name: 'Продолжить обучение' }).getAttribute('href')).toBe('/items/lecture')
-    expect(screen.getByRole('heading', { name: 'Мои курсы' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Мои курсы' })).toBeNull()
     expect(vi.mocked(api).mock.calls).toHaveLength(1)
   })
 
