@@ -3,6 +3,7 @@ import { ArrowLeft, BookOpen, ChevronDown, ChevronRight, Circle, CircleCheck, Ci
 import { Link } from 'react-router-dom'
 import type { LearningItem, Lesson, Module, User } from '../api'
 import { LanguageSelect, useI18n } from '../i18n'
+import { LearningStatus } from '../components/LearningStatus'
 import { AccountMenu } from './AccountMenu'
 import { NextItemAction } from './NextItemAction'
 import './learning-navigation.css'
@@ -84,9 +85,7 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
         <button type="button" className="outline-module-toggle" aria-expanded={open} aria-controls={`outline-module-${section.module.id}`} onClick={() => setExpanded(current => ({ ...current, [section.module.id]: !open }))}><span><small>{t('Модуль')} {sectionIndex + 1}</small><strong>{section.module.title}</strong></span><ChevronDown size={18} className={open ? 'is-expanded' : ''}/></button>
         <div id={`outline-module-${section.module.id}`} hidden={!open}>{section.lessons.map(item => {
           const state = itemProgress[item.short_id], locked = section.module.is_locked || item.is_locked
-          const label = locked ? 'Заблокирован' : state?.is_completed ? 'Завершён' : state?.is_started || state?.progress_percent ? 'В процессе' : 'Не начат'
-          const icon = <span className={`outline-state ${locked ? 'is-locked' : state?.is_completed ? 'is-complete' : state?.is_started || state?.progress_percent ? 'is-started' : ''}`} role="img" aria-label={t(label)} title={t(label)}>{locked ? <LockKeyhole size={19}/> : state?.is_completed ? <CircleCheck size={21}/> : state?.is_started || state?.progress_percent ? <CircleDot size={21}/> : <Circle size={21}/>}</span>
-          const content = <>{icon}<span className="outline-entry-copy"><span className="outline-lesson-title">{item.title}</span><small>{'type' in item && item.type === 'PRACTICE' ? <Code2 size={12}/> : 'type' in item && item.type === 'TEST' ? <CircleCheck size={12}/> : <BookOpen size={12}/>} {t(typeLabel(item))}</small></span></>
+          const content = <><LearningStatus locked={locked} completed={state?.is_completed} percent={state?.progress_percent} started={state?.is_started} iconOnly size={21}/><span className="outline-entry-copy"><span className="outline-lesson-title">{item.title}</span><small>{'type' in item && item.type === 'PRACTICE' ? <Code2 size={12}/> : 'type' in item && item.type === 'TEST' ? <CircleCheck size={12}/> : <BookOpen size={12}/>} {t(typeLabel(item))}</small></span></>
           return locked ? <div key={item.short_id} className="outline-lesson is-locked" aria-disabled="true" title={t('Сначала завершите предыдущий модуль')}>{content}</div> : <Link key={item.short_id} to={entryHref(item)} onClick={() => setDrawerOpen(false)} className={`outline-lesson ${item.short_id === lessonId ? 'active' : ''}`} aria-current={item.short_id === lessonId ? 'page' : undefined}>{content}</Link>
         })}</div>
       </section>

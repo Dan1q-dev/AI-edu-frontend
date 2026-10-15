@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { LockKeyhole } from 'lucide-react'
 import { type AdaptiveResult, type LearningItem } from './api'
 import { useI18n } from './i18n'
 
 export function LearningItemLink({ item, locked = item.is_locked, children }: { item: LearningItem; locked?: boolean; children: ReactNode }) {
   const { t } = useI18n()
-  return locked ? <div className="locked-learning-item" aria-disabled="true" title={t('Сначала завершите предыдущий модуль')}>{children}<LockKeyhole size={16}/></div> : <Link to={`/items/${item.short_id}`}>{children}</Link>
+  return locked ? <div className="locked-learning-item" aria-disabled="true" title={t('Сначала завершите предыдущий модуль')}>{children}</div> : <Link to={`/items/${item.short_id}`}>{children}</Link>
 }
 
 export function AdaptiveResultCard({ result, showNext = true }: { result: AdaptiveResult; showNext?: boolean }) {
