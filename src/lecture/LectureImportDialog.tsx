@@ -39,6 +39,7 @@ export function LectureImportDialog({ lessonId, onClose, onApply }: { lessonId: 
   const job = query.data ?? history.data?.jobs.find(item => item.id === jobId)
   const active = !!job && ['PENDING', 'RUNNING'].includes(job.status)
   const result = !file ? job?.result : null
+  const visibleWarnings = (result?.warnings ?? []).filter(code => code !== 'office_layout')
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null
     panel.current?.focus()
@@ -84,7 +85,7 @@ export function LectureImportDialog({ lessonId, onClose, onApply }: { lessonId: 
       {(error || history.error || query.error || (!file && job?.error)) && <p className="lecture-import-error" role="alert">{error || (history.error || query.error)?.message || job?.error}</p>}
       {(uploading || active) && <div className="lecture-import-progress" role="status"><LoaderCircle size={23} className="lecture-import-spinner"/><div><strong>{t(uploading ? 'Загрузка файла' : job?.stage === 'ocr' ? 'Распознаём текст на изображениях' : job?.stage === 'structuring' ? 'Восстанавливаем структуру' : job?.stage === 'validating' ? 'Проверяем результат' : job?.status === 'PENDING' ? 'Файл в очереди' : 'Извлекаем текст и изображения')}</strong><p>{t('Можно закрыть окно. Результат останется в последних импортах.')}</p></div></div>}
       {result && <>
-        {result.warnings.length > 0 && <details className="lecture-import-warnings"><summary>{t('Что проверить после переноса')}</summary><ul>{result.warnings.map(code => <li key={code}>{t(warnings[code] ?? 'Проверьте результат по исходному файлу.')}</li>)}</ul></details>}
+        {visibleWarnings.length > 0 && <details className="lecture-import-warnings"><summary>{t('Что проверить после переноса')}</summary><ul>{visibleWarnings.map(code => <li key={code}>{t(warnings[code] ?? 'Проверьте результат по исходному файлу.')}</li>)}</ul></details>}
         <div className="lecture-import-review">
           <section aria-label={t('Результат импорта')}><h3>{t('Результат импорта')}</h3><article className="lecture-import-result markdown">{result.blocks.map((block, index) => block.type === 'IMAGE' ? <figure key={index}><img src={block.media_url ?? `/api/v1/media/${block.media}/`} alt={block.content}/>{block.content && <figcaption>{block.content}</figcaption>}</figure> : <RichLessonContent key={index} value={block.content}/>)}</article></section>
         </div>
