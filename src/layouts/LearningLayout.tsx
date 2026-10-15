@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, BookOpen, ChevronDown, Circle, CircleCheck, CircleDot, Code2, Flag, List, LockKeyhole, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronDown, ChevronRight, Circle, CircleCheck, CircleDot, Code2, LockKeyhole, PanelLeftOpen, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { LearningItem, Lesson, Module, User } from '../api'
 import { LanguageSelect, useI18n } from '../i18n'
@@ -105,8 +105,8 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
     <div className="learning-workspace" inert={drawerOpen || tutorOpen}>
       {showOutline && <aside ref={outlineRef} id="course-outline" className="course-outline desktop-outline" aria-label={t('Содержание курса')}>{outline}</aside>}
       {showRail && <aside className="course-outline-rail" aria-label={t('Панель курса')}><div className="course-outline-rail-inner">
-        <button ref={triggerRef} type="button" className="outline-rail-trigger" onClick={() => { if (compact) setDrawerOpen(true); else { focusOutlinePanel.current = true; setOutlineVisible(true) } }} aria-label={t('Содержание')} title={t('Содержание')} aria-expanded={compact ? drawerOpen : false} aria-haspopup={compact ? 'dialog' : undefined}><List size={21}/></button>
-        {courseProgress !== undefined && <div className="outline-rail-progress" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} title={`${t('Ваш прогресс')}: ${percent}%`}><Flag size={18}/><strong>{percent}%</strong></div>}
+        <button ref={triggerRef} type="button" className="outline-rail-trigger" onClick={() => { if (compact) setDrawerOpen(true); else { focusOutlinePanel.current = true; setOutlineVisible(true) } }} aria-label={t('Содержание')} title={t('Содержание')} aria-expanded={compact ? drawerOpen : false} aria-haspopup={compact ? 'dialog' : undefined}><PanelLeftOpen size={19}/><span>{t('Содержание')}</span><ChevronRight size={16}/></button>
+        {courseProgress !== undefined && <div className="outline-rail-progress" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} title={`${t('Ваш прогресс')}: ${percent}%`}><strong>{percent}%</strong><span className="outline-rail-progress-track" aria-hidden="true"><span style={{ width: `${percent}%` }}/></span></div>}
       </div></aside>}
       <div className="learning-center"><main className="learning-main">{children}</main>{!hideNext && <div className="learning-next-bar"><NextItemAction next={next} courseSlug={courseSlug}/></div>}</div>
       {tutor && !assessment && !tutorOpen && <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor}</aside>}
