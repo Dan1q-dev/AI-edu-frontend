@@ -772,5 +772,12 @@
   "Перетаскивайте элементы за ручку слева.": "Drag content using the handle on the left.",
   "Готово": "Done",
   "Слов": "Words",
-  "Навигация по материалам": "Learning material navigation"
+  "Навигация по материалам": "Learning material navigation",
+  "Цвет текста": "Text color",
+  "Цвет выделения": "Highlight color",
+  "Другой цвет": "Custom color",
+  "Другой цвет текста": "Custom text color",
+  "Другой цвет выделения": "Custom highlight color",
+  "Убрать выделение": "Remove highlight",
+  "Автоматический цвет": "Automatic color"
 }

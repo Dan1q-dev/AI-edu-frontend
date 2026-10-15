@@ -6,6 +6,8 @@ import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
 import Mathematics from '@tiptap/extension-mathematics'
 import TextAlign from '@tiptap/extension-text-align'
+import { Color, TextStyle } from '@tiptap/extension-text-style'
+import Highlight from '@tiptap/extension-highlight'
 import { ArrowDown, ArrowUp, Copy, GripVertical, Plus, Trash2, X } from 'lucide-react'
 import { api, type Block } from '../api'
 import { prepareImageForUpload } from '../utils/image'
@@ -31,6 +33,7 @@ export function lectureExtensions(onMathClick?: (node: { attrs: Record<string, u
   return [
     StarterKit.configure({ document: false, heading: { levels: [2, 3] }, link: { openOnClick: false, protocols: ['https', 'http', 'mailto'] } }), LectureRoot,
     TextAlign.configure({ types: ['heading', 'paragraph'] }), TableKit.configure({ table: { resizable: false } }),
+    TextStyle, Color, Highlight.configure({ multicolor: true }),
     Callout, LectureImage, LectureVideo,
     Mathematics.configure({ katexOptions: { throwOnError: false, trust: false, strict: 'ignore' },
       blockOptions: { onClick: (node, pos) => onMathClick?.(node, pos, false) },

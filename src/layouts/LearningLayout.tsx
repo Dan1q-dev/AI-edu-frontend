@@ -62,11 +62,9 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
   }, [drawerOpen, tutorOpen])
 
   const closeOutline = () => { if (compact) setDrawerOpen(false); else { setOutlineVisible(false); triggerRef.current?.focus() } }
-  const allExpanded = Boolean(sections?.length && sections.every(section => expanded[section.module.id] ?? section.module.id === activeModule))
   const outline = <>
     <div className="outline-header"><div><span className="eyebrow">{t('СОДЕРЖАНИЕ КУРСА')}</span><h2>{courseTitle || t('Оглавление')}</h2></div><button className="icon-button outline-close" onClick={closeOutline} aria-label={t('Закрыть оглавление')}><X size={20}/></button></div>
     {totalLessons ? <div className="outline-progress"><div><span>{t('Ваш прогресс')}</span><strong>{courseProgress ?? 0}%</strong></div><div className="progress-track" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={courseProgress ?? 0}><span style={{ width: `${courseProgress ?? 0}%` }}/></div></div> : null}
-    <div className="outline-controls"><button type="button" onClick={() => setExpanded(Object.fromEntries((sections ?? []).map(section => [section.module.id, !allExpanded])))}>{t(allExpanded ? 'Свернуть все модули' : 'Раскрыть все модули')}</button></div>
     <nav className="outline-scroll" aria-label={t('Материалы курса')}>{sections?.map((section, sectionIndex) => {
       const open = expanded[section.module.id] ?? section.module.id === activeModule
       return <section className="outline-section" key={section.module.id}>

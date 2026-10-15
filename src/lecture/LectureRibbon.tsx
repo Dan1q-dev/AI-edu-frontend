@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, GripVertical, ImagePlus, Italic, Link2, List, ListOrdered, Minus, MoreHorizontal, PanelLeft, Redo2, Sigma, StickyNote, Table2, Underline, Undo2, Video } from 'lucide-react'
 import { useI18n } from '../i18n'
+import { LectureColorPicker } from './LectureColorPicker'
 
 type InsertAction = 'image' | 'table' | 'video' | 'math' | 'rule' | 'important' | 'note' | 'tip'
 
@@ -17,6 +18,7 @@ export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutlin
   const state = useEditorState({ editor, selector: ({ editor: instance }) => ({
     undo: instance.can().undo(), redo: instance.can().redo(), bold: instance.isActive('bold'), italic: instance.isActive('italic'),
     underline: instance.isActive('underline'), bullet: instance.isActive('bulletList'), ordered: instance.isActive('orderedList'),
+    color: instance.getAttributes('textStyle').color as string | undefined, highlight: instance.getAttributes('highlight').color as string | undefined,
     alignment: instance.getAttributes('paragraph').textAlign ?? instance.getAttributes('heading').textAlign ?? 'left',
     style: instance.isActive('blockquote') ? 'quote' : instance.isActive('codeBlock') ? 'code' : instance.isActive('heading', { level: 2 }) ? 'h2' : instance.isActive('heading', { level: 3 }) ? 'h3' : 'paragraph',
   }) })
@@ -62,6 +64,7 @@ export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutlin
           else chain.setParagraph().run()
         }}><option value="paragraph">{t('Обычный текст')}</option><option value="h2">{t('Заголовок раздела')}</option><option value="h3">{t('Подзаголовок')}</option><option value="quote">{t('Цитата')}</option><option value="code">{t('Блок кода')}</option></select></div>
         <div className="ribbon-group">{button('Жирный', <Bold size={17}/>, () => editor.chain().focus().toggleBold().run(), state.bold)}{button('Курсив', <Italic size={17}/>, () => editor.chain().focus().toggleItalic().run(), state.italic)}{button('Подчёркнутый', <Underline size={17}/>, () => editor.chain().focus().toggleUnderline().run(), state.underline)}{button('Ссылка', <Link2 size={17}/>, onLink)}</div>
+        <div className="ribbon-group"><LectureColorPicker editor={editor} disabled={disabled} value={state.color}/><LectureColorPicker editor={editor} disabled={disabled} highlight value={state.highlight}/></div>
         <div className="ribbon-group">{button('Маркированный список', <List size={18}/>, () => editor.chain().focus().toggleBulletList().run(), state.bullet)}{button('Нумерованный список', <ListOrdered size={18}/>, () => editor.chain().focus().toggleOrderedList().run(), state.ordered)}</div>
         <div className="ribbon-group">{button('Слева', <AlignLeft size={17}/>, () => editor.chain().focus().setTextAlign('left').run(), state.alignment === 'left')}{button('По центру', <AlignCenter size={17}/>, () => editor.chain().focus().setTextAlign('center').run(), state.alignment === 'center')}{button('Справа', <AlignRight size={17}/>, () => editor.chain().focus().setTextAlign('right').run(), state.alignment === 'right')}</div>
       </div> : <div className="ribbon-insert" role="toolbar" aria-label={t('Вставка содержимого')}>

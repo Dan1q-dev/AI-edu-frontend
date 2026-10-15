@@ -16,6 +16,28 @@ let editor: Editor | undefined
 afterEach(() => { editor?.destroy(); editor = undefined; cleanup() })
 
 describe('unified lecture document', () => {
+  it('retains imported colors, highlights, nested lists and starting numbers through the editor and reader', () => {
+    const item = (text: string) => ({ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] })
+    editor = new Editor({ extensions: lectureExtensions(), content: { type: 'doc', content: [
+      { type: 'paragraph', content: [{ type: 'text', text: 'Colored source', marks: [{ type: 'bold' }, { type: 'textStyle', attrs: { color: '#dc2626' } }, { type: 'highlight', attrs: { color: '#fef08a' } }] }] },
+      { type: 'orderedList', attrs: { start: 4 }, content: [{ ...item('Step four'), content: [...item('Step four').content, { type: 'bulletList', content: [item('Nested bullet')] }] }, item('Step five')] },
+    ] } })
+    const saved = documentToBlocks(editor.getJSON())
+    expect(blocksToDocument(saved)).toEqual(editor.getJSON())
+    const { container } = render(<RichLessonContent value={saved[0]!.content}/>)
+    expect(container.querySelector('span')?.style.color).toBe('rgb(220, 38, 38)')
+    expect(container.querySelector('mark')?.style.backgroundColor).toBe('rgb(254, 240, 138)')
+    expect(container.querySelector('strong')?.textContent).toBe('Colored source')
+    expect(container.querySelector('ol')?.start).toBe(4)
+    expect(container.querySelector('ol > li > ul > li')?.textContent).toBe('Nested bullet')
+  })
+
+  it('ignores CSS expressions in imported colors', () => {
+    const { container } = render(<RichLessonContent value={JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Safe text', marks: [{ type: 'textStyle', attrs: { color: 'var(--untrusted)' } }, { type: 'highlight', attrs: { color: 'url(https://example.test)' } }] }] }] })}/>)
+    expect(container.querySelector('span')?.getAttribute('style')).toBeNull()
+    expect(container.querySelector('mark')?.style.backgroundColor).toBe('rgb(255, 255, 0)')
+  })
+
   it('round-trips legacy text, formatting, image references and order through the existing API format', () => {
     editor = new Editor({ extensions: lectureExtensions(), content: blocksToDocument(blocks) })
     const saved = documentToBlocks(editor.getJSON())

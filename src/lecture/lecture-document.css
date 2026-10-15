@@ -24,6 +24,15 @@
 .lecture-image-replace{grid-column:1/-1;cursor:pointer;color:#287db5!important}.lecture-image-replace input{font-size:12px}
 .lecture-composer.is-disabled .lecture-image-settings{pointer-events:none;opacity:.5}
 .lecture-quote,.markdown blockquote{margin:18px 0;padding:3px 18px;border-left:3px solid #91bfe0;color:#62738a}
+
+/* Tailwind's reset removes markers; restore them in both writing and reading views. */
+.lecture-document-content .tiptap ul,.markdown ul{list-style-type:disc;list-style-position:outside;padding-left:26px;margin:12px 0}
+.lecture-document-content .tiptap ol,.markdown ol{list-style-type:decimal;list-style-position:outside;padding-left:26px;margin:12px 0}
+.lecture-document-content .tiptap ul ul,.markdown ul ul{list-style-type:circle}
+.lecture-document-content .tiptap ul ul ul,.markdown ul ul ul{list-style-type:square}
+.lecture-document-content .tiptap li,.markdown li{display:list-item;padding-left:3px;margin:4px 0}
+.lecture-document-content .tiptap li>p,.markdown li>p{margin:0}
+.lecture-document-content .tiptap mark,.markdown mark{color:inherit;box-decoration-break:clone;-webkit-box-decoration-break:clone}
 .lecture-document-content .tiptap blockquote>:first-child,.lecture-quote>:first-child,.markdown blockquote>:first-child{margin-top:0}
 .lecture-document-content .tiptap blockquote>:last-child,.lecture-quote>:last-child,.markdown blockquote>:last-child{margin-bottom:0}
 @media(max-width:560px){.editor-header-actions{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 28px)}.editor-header-actions .button{padding:7px 8px;font-size:11px}.editor-header-title{gap:8px}.save-state{white-space:nowrap;font-size:11px}.lecture-bubble{max-width:calc(100vw - 20px);flex-wrap:wrap}}

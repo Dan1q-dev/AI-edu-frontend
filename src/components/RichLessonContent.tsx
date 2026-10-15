@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 import { videoSource } from '../lecture/video'
+import { safeTextColor } from '../lecture/colors'
 import '../lecture/lecture-document.css'
 
 type Node = { type?: string; text?: string; attrs?: Record<string, unknown>; marks?: { type: string; attrs?: Record<string, unknown> }[]; content?: Node[] }
@@ -26,6 +27,8 @@ export function RichLessonContent({ value }: { value: string }) {
         else if (mark.type === 'code') element = <code key={key}>{element}</code>
         else if (mark.type === 'strike') element = <s key={key}>{element}</s>
         else if (mark.type === 'underline') element = <u key={key}>{element}</u>
+        else if (mark.type === 'textStyle') element = <span key={key} style={{ color: safeTextColor(mark.attrs?.color) }}>{element}</span>
+        else if (mark.type === 'highlight') element = <mark key={key} style={{ backgroundColor: safeTextColor(mark.attrs?.color) ?? '#ffff00', color: 'inherit' }}>{element}</mark>
         else if (mark.type === 'link') {
           const href = safeHref(String(mark.attrs?.href ?? ''))
           element = href ? <a key={key} href={href} rel="noreferrer">{element}</a> : <>{element}</>
@@ -38,7 +41,7 @@ export function RichLessonContent({ value }: { value: string }) {
       case 'paragraph': return <p key={key} style={{ textAlign }}>{children}</p>
       case 'heading': return Number(node.attrs?.level) === 3 ? <h3 key={key} style={{ textAlign }}>{children}</h3> : <h2 key={key} style={{ textAlign }}>{children}</h2>
       case 'bulletList': return <ul key={key}>{children}</ul>
-      case 'orderedList': return <ol key={key}>{children}</ol>
+      case 'orderedList': return <ol key={key} start={Math.max(1, Math.min(1000000, Math.trunc(Number(node.attrs?.start) || 1)))}>{children}</ol>
       case 'listItem': return <li key={key}>{children}</li>
       case 'blockquote': return <blockquote key={key} className="lecture-quote">{children}</blockquote>
       case 'codeBlock': return <pre key={key}><code>{children}</code></pre>

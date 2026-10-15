@@ -41,6 +41,16 @@
 .ribbon-insert > button,.ribbon-insert > .ribbon-dropdown > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 11px; min-height: 36px; border: 0; border-radius: 6px; font: inherit; font-size: 12px; background: transparent; color: #4d5c70; cursor: pointer; }
 .ribbon-insert button:hover { background: #eef3fc; color: #3c62c6; }
 .ribbon-dropdown { position: relative; }
+.ribbon-color-trigger { position: relative; padding-bottom: 4px; }
+.ribbon-color-trigger > span { position: absolute; bottom: 3px; left: 7px; right: 7px; height: 3px; border-radius: 2px; }
+.ribbon-color-menu { position: absolute; z-index: 60; top: calc(100% + 7px); right: 0; width: 224px; max-width: calc(100vw - 32px); padding: 14px; background: #fff; border: 1px solid #e0e5ed; border-radius: 9px; box-shadow: 0 8px 28px #26394e21; color: #45546a; font-size: 12px; }
+.ribbon-color-menu strong { display: block; margin-bottom: 12px; }
+.ribbon-color-swatches { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+.ribbon-color-swatches button { height: 28px; border: 1px solid #0002; border-radius: 4px; cursor: pointer; }
+.ribbon-color-swatches button[aria-pressed=true] { outline: 2px solid #3c62c6; outline-offset: 2px; }
+.ribbon-custom-color { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; cursor: pointer; }
+.ribbon-custom-color input { width: 36px; height: 28px; padding: 0; border: 1px solid #dce2eb; cursor: pointer; }
+.ribbon-color-reset { padding: 8px; width: 100%; border: 0; border-radius: 5px; color: #3c62c6; background: #eef3fc; cursor: pointer; font: inherit; }
 .ribbon-menu { position: absolute; z-index: 60; left: 0; top: calc(100% + 7px); min-width: 190px; padding: 5px; border: 1px solid #e0e5ed; border-radius: 8px; background: white; box-shadow: 0 8px 28px #26394e21; }
 .ribbon-menu-right { right: 0; left: auto; min-width: 240px; }
 .ribbon-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; padding: 10px; background: transparent; border-radius: 5px; color: #4c5b70; text-align: left; font: inherit; font-size: 12px; cursor: pointer; }
