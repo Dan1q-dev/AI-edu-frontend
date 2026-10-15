@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, BookOpen, ChevronDown, ChevronRight, Circle, CircleCheck, CircleDot, Code2, LockKeyhole, PanelLeftOpen, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, BookOpen, ChevronDown, ChevronRight, CircleCheck, Code2, PanelLeftOpen, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { LearningItem, Lesson, Module, User } from '../api'
 import { LanguageSelect, useI18n } from '../i18n'

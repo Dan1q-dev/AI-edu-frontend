@@ -6,7 +6,7 @@ import { AdaptiveResultCard, LearningItemLink, PracticeRunner } from './Adaptive
 import { LearningLayout } from './layouts/LearningLayout'
 import { api, type AdaptiveResult, type LearningItem, type Module } from './api'
 
-vi.mock('./api', () => ({ api: vi.fn() }))
+vi.mock('./api', async importOriginal => ({ ...await importOriginal<typeof import('./api')>(), api: vi.fn(), apiAll: vi.fn() }))
 const mockedApi = vi.mocked(api)
 const item: LearningItem = { id: 1, short_id: 'practice-1', module: 1, title: 'Практическое задание', description: '',
   type: 'PRACTICE', position: 0, status: 'PUBLISHED', lesson: null, lesson_short_id: null, test: null, practice: null }
@@ -50,17 +50,15 @@ describe('adaptive learning', () => {
     expect(screen.getByText('Сначала завершите текущий модуль')).toBeTruthy()
   })
 
-  it('saves actual practice checks rather than a client-supplied score', async () => {
+  it('completes a legacy practice without displaying self-assessment criteria', async () => {
     const state = { version: { id: 1, practice_type: 'checklist_practice', plugin_version: '1.0.0', version_number: 1, title: 'Задание', description: '', config: { criteria: [
       { title: 'Первый критерий', description: '', is_required: true }, { title: 'Второй критерий', description: '', is_required: true },
     ] } }, submission: { id: 9, status: 'IN_PROGRESS', submission_data: {} }, result: null, progress_percent: 0, is_completed: false }
     mockedApi.mockResolvedValue(state as never)
     mount(<PracticeRunner item={item}/>)
-    const first = await screen.findByRole('checkbox', { name: /Первый критерий/ })
-    await waitFor(() => expect((screen.getByRole('button', { name: 'Завершить практическую работу' }) as HTMLButtonElement).disabled).toBe(false))
-    fireEvent.click(first)
-    fireEvent.click(screen.getByRole('button', { name: 'Завершить практическую работу' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/practice-1/practice/', 'POST', { submission_id: 9, submission_data: { checks: [true, false] } }))
-    expect(await screen.findByText('Самопроверка сохранена')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'Сделано' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/practice-1/practice/', 'POST', { submission_id: 9, submission_data: { completed: true } }))
+    expect(await screen.findByText('Практическая работа завершена')).toBeTruthy()
+    expect(screen.queryByRole('checkbox')).toBeNull()
   })
 })

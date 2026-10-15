@@ -48,7 +48,7 @@ it('keeps the lecture tutor alongside course navigation, account menu and attach
   expect(screen.getByLabelText('Вопрос тьютору')).toBeTruthy()
 })
 
-it('still opens a lecture workshop as a document workspace without the lecture tutor', async () => {
+it('opens the lecture chat with course navigation and without the lecture tutor', async () => {
   vi.mocked(api).mockImplementation(async path => {
     if (path === 'items/workshop/') return practice as never
     if (path.endsWith('/progress/')) return { percent: 0, items: {} } as never
@@ -59,7 +59,8 @@ it('still opens a lecture workshop as a document workspace without the lecture t
     return [] as never
   })
   mount(practice)
-  expect(await screen.findByRole('button', { name: 'Начать практическую работу' })).toBeTruthy()
+  expect(await screen.findByRole('button', { name: 'Сделано' })).toBeTruthy()
+  expect(screen.getByRole('textbox', { name: 'Ваш запрос' })).toBeTruthy()
   expect(document.querySelector('.is-document-workspace')).toBeTruthy()
   expect(screen.queryByLabelText('Вопрос тьютору')).toBeNull()
   expect(screen.queryByRole('button', { name: 'Открыть тьютора' })).toBeNull()

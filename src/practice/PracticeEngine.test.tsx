@@ -1,77 +1,69 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { api, type LearningItem } from '../api'
 import { PracticeRunner } from './PracticeRunner'
 import { PracticeEditorPage } from './PracticeEditor'
-import type { PracticeManifest, PracticeState, PracticeVersion } from './types'
+import type { PracticeState, PracticeVersion } from './types'
 
-vi.mock('../api', () => ({ api: vi.fn() }))
+vi.mock('../api', async importOriginal => ({ ...await importOriginal<typeof import('../api')>(), api: vi.fn(), apiAll: vi.fn() }))
 const mockedApi = vi.mocked(api)
 const item: LearningItem = { id: 1, short_id: 'p1', module: 1, title: 'Current title', description: '', type: 'PRACTICE', position: 0, status: 'PUBLISHED', lesson: null, lesson_short_id: null, test: null, practice: 1 }
-const version: PracticeVersion = { id: 7, practice_definition: 1, practice_type: 'checklist_practice', plugin_version: '1.0.0', version_number: 1, title: 'Pinned task', description: 'Original instructions', config: { criteria: [{ title: 'Criterion', description: 'Details', is_required: true }] }, status: 'PUBLISHED', published_at: null }
-const state: PracticeState = { version, current_version_id: 8, submission: null, result: null, progress_percent: 0, is_completed: false }
-const manifest: PracticeManifest = { type: 'checklist_practice', version: '1.0.0', name: 'Практика с самооценкой', description: 'Критерии выполнения и Ψ', grading: 'self_assessment', icon: 'list-checks', capabilities: ['criteria'], available: true, config_schema: {}, frontend_editor: 'checklist_practice', student_runtime: 'checklist_practice' }
+const version: PracticeVersion = { id: 7, practice_definition: 1, practice_type: 'lecture_workshop', plugin_version: '1.0.0', version_number: 1, title: 'Pinned task', description: 'Original instructions', config: {}, status: 'PUBLISHED', published_at: null }
+const state: PracticeState = { version, current_version_id: 7, submission: null, result: null, progress_percent: 0, is_completed: false }
+const submission = { id: 2, status: 'IN_PROGRESS', practice_version: 7, submission_data: {}, criteria_snapshot: [], started_at: '', submitted_at: null, completed_at: null }
+let clients: QueryClient[] = []
 function mount(element: React.ReactNode) {
-  return render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{element}</MemoryRouter></QueryClientProvider>)
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client)
+  return render(<QueryClientProvider client={client}><MemoryRouter>{element}</MemoryRouter></QueryClientProvider>)
 }
-beforeEach(() => mockedApi.mockReset())
-afterEach(cleanup)
+beforeEach(() => { mockedApi.mockReset(); localStorage.clear() })
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients = [] })
 
-describe('Practice Engine', () => {
-  it('starts an attempt before enabling the checklist', async () => {
-    mockedApi.mockResolvedValueOnce(state as never).mockResolvedValueOnce({ ...state, submission: { id: 2, status: 'IN_PROGRESS', submission_data: {} } } as never)
+describe('Practice Engine completion', () => {
+  it('starts and completes a practice with one Done click and no generated document', async () => {
+    mockedApi.mockImplementation(async (path, method = 'GET') => {
+      if (path.endsWith('/start/')) return { ...state, submission } as never
+      if (method === 'POST') return { ...state, submission: { ...submission, status: 'SUBMITTED' }, is_completed: true, progress_percent: 100 } as never
+      return state as never
+    })
     mount(<PracticeRunner item={item}/>)
-    expect(await screen.findByText('Original instructions')).toBeTruthy()
-    expect((screen.getByRole('checkbox', { name: /Criterion/ }) as HTMLInputElement).disabled).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: 'Начать практическую работу' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/start/', 'POST', undefined))
-    await waitFor(() => expect((screen.getByRole('checkbox', { name: /Criterion/ }) as HTMLInputElement).disabled).toBe(false))
+    fireEvent.click(await screen.findByRole('button', { name: 'Сделано' }))
+    await screen.findByRole('button', { name: 'Выполнено' })
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/', 'POST', { submission_id: 2, submission_data: { completed: true } })
+    expect(screen.queryByRole('checkbox')).toBeNull()
   })
-
-  it('shows the server score and a retry action for a submitted attempt', async () => {
-    mockedApi.mockResolvedValue({ ...state, submission: { id: 2, status: 'SUBMITTED', submission_data: { checks: [true] } }, result: { psi_value: .75, psi_source: 'SELF_ASSESSMENT' }, progress_percent: 75 } as never)
+  it('leaves the practice open after a failed completion request', async () => {
+    mockedApi.mockImplementation(async (_path, method = 'GET') => {
+      if (method === 'POST') throw new Error('offline')
+      return { ...state, submission } as never
+    })
     mount(<PracticeRunner item={item}/>)
-    expect(await screen.findByText('Самооценка: Ψ = 0.75')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Новая попытка' })).toBeTruthy()
-    expect((screen.getByRole('checkbox', { name: /Criterion/ }) as HTMLInputElement).disabled).toBe(true)
-    expect(screen.getByText('Это ваша самооценка. Система не проверяет выполненную работу автоматически.')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'Сделано' }))
+    await screen.findByText('offline')
+    expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(false)
   })
-
   it('displays unsupported plugins safely', async () => {
     mockedApi.mockResolvedValue({ ...state, version: { ...version, practice_type: 'unknown' } } as never)
     mount(<PracticeRunner item={item}/>)
     expect(await screen.findByRole('alert')).toBeTruthy()
-    expect(screen.queryByRole('checkbox')).toBeNull()
   })
-
-  it('builds catalog cards from manifests and publishes through the version API', async () => {
-    mockedApi.mockImplementation(async (path, method) => {
-      if (path === 'practice-types/') return [manifest, { ...manifest, type: 'python_ide', name: 'Python IDE', available: false }] as never
-      if (method === 'PUT') return version as never
-      if (method === 'POST') return version as never
-      return { draft: null, published: null, versions: [] } as never
-    })
+  it('publishes the workshop directly without type selection or criteria', async () => {
+    mockedApi.mockImplementation(async (_path, method) => method === 'PUT' || method === 'POST' ? version as never : { draft: null, published: null, versions: [] } as never)
     mount(<PracticeEditorPage item={item}/>)
-    expect(await screen.findByRole('heading', { name: 'Выберите тип практической работы' })).toBeTruthy()
-    expect((screen.getByRole('button', { name: /Python IDE/ }) as HTMLButtonElement).disabled).toBe(true)
-    fireEvent.click(screen.getByRole('button', { name: /Практика с самооценкой/ }))
-    fireEvent.change(screen.getByLabelText('Критерий 1'), { target: { value: 'My criterion' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Опубликовать' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', {
-      practice_type: 'checklist_practice', plugin_version: '1.0.0', title: 'Current title', description: '', config: { criteria: [{ title: 'My criterion', description: '', is_required: true }] },
-    }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'POST'))
-    expect(await screen.findByText('Практика опубликована')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: 'Опубликовать' }))
+    await screen.findByText('Практика опубликована')
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', { practice_type: 'lecture_workshop', plugin_version: '1.0.0', title: 'Current title', description: '', config: {} })
+    expect(screen.queryByText('Выберите тип практической работы')).toBeNull()
+    expect(screen.queryByText('Критерии самопроверки')).toBeNull()
+    expect(mockedApi.mock.calls.some(([path]) => path === 'practice-types/')).toBe(false)
   })
-
-  it('keeps invalid configuration in the editor without sending it', async () => {
-    mockedApi.mockImplementation(async path => path === 'practice-types/' ? [manifest] as never : { draft: null, published: null, versions: [] } as never)
+  it('upgrades old checklist configuration when saving', async () => {
+    mockedApi.mockImplementation(async (_path, method) => method === 'PUT' || method === 'POST' ? version as never : { draft: null, published: { ...version, practice_type: 'checklist_practice', config: { criteria: [] } }, versions: [] } as never)
     mount(<PracticeEditorPage item={item}/>)
-    fireEvent.click(await screen.findByRole('button', { name: /Практика с самооценкой/ }))
-    fireEvent.click(screen.getByRole('button', { name: 'Опубликовать' }))
-    expect(await screen.findByRole('alert')).toBeTruthy()
-    expect(mockedApi.mock.calls.some(([, method]) => method === 'PUT')).toBe(false)
+    fireEvent.click(await screen.findByRole('button', { name: 'Обновить публикацию' }))
+    await screen.findByText('Практика опубликована')
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', expect.objectContaining({ practice_type: 'lecture_workshop', config: {} }))
   })
 })

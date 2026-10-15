@@ -24,16 +24,18 @@ export function PracticeRunner({ item, ownerId, onWorkspaceChange }: { item: Lea
   const perform = async (start: boolean, data?: Record<string, unknown>) => {
     setBusy(true); setNotice('')
     try {
-      const next = await api<PracticeState>(start ? `${path}start/` : path, 'POST', start ? undefined : { submission_id: state.data!.submission!.id, submission_data: data })
+      let current = state.data!
+      if (!start && !current.submission) current = await api<PracticeState>(`${path}start/`, 'POST')
+      const next = await api<PracticeState>(start ? `${path}start/` : path, 'POST', start ? undefined : { submission_id: current.submission!.id, submission_data: data })
       qc.setQueryData(key, next)
       await Promise.all([qc.invalidateQueries({ queryKey: ['course-progress'] }), qc.invalidateQueries({ queryKey: ['learning-summary'] })])
-      setFailed(false); if (!start) setNotice(t('Самопроверка сохранена'))
+      setFailed(false); if (!start) setNotice(t('Практическая работа завершена'))
     } catch (error) { setFailed(true); setNotice(error instanceof Error ? error.message : t('Не удалось сохранить')) }
     finally { setBusy(false) }
   }
   if (state.isLoading) return <Loading/>
   if (state.error) return <ErrorState error={state.error}/>
-  if (!state.data?.version) return <div className="card"><p>{t('Критерии практики ещё не настроены.')}</p></div>
+  if (!state.data?.version) return <div className="card"><p>{t('Практическая работа ещё не настроена.')}</p></div>
   if (!plugin) return <ErrorState error={new Error(t('Этот тип практики пока недоступен'))}/>
   const Runtime = plugin.StudentRuntime
   return <><Runtime state={state.data} busy={busy} item={item} ownerId={ownerId} onStart={() => perform(true)} onSubmit={data => perform(false, data)}/><Notice text={notice} kind={failed ? 'error' : 'success'}/></>

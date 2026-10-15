@@ -11,7 +11,7 @@ export type WorkspaceDocument = {
   id: number; submission: number; document_type: string; schema_version: number
   parameters: LectureParameters; content: Lecture | Record<string, never>; revision: number; created_at: string; updated_at: string
 }
-export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; created_at: string }
+export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; content?: Lecture | null; created_at: string }
 export type OperationInput = { request_id: string; revision: number; kind: 'generate' | 'improve_prompt'; prompt: string }
 export type WorkspaceOperation = {
   id: number; document: number; request_id: string; kind: OperationInput['kind']; status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'

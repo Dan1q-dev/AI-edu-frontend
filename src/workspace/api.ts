@@ -7,7 +7,7 @@ function checkedDocument(document: WorkspaceDocument): WorkspaceDocument {
   return document
 }
 export const workspaceApi = {
-  create: (item: string, parameters: LectureParameters) => api<WorkspaceDocument>(`items/${item}/practice/workspace/`, 'POST', { parameters }).then(checkedDocument),
+  create: (item: string, language: LectureParameters['language']) => api<WorkspaceDocument>(`items/${item}/practice/workspace/`, 'POST', { language }).then(checkedDocument),
   document: (id: number) => api<WorkspaceDocument>(`workspace/documents/${id}/`).then(checkedDocument),
   save: (id: number, data: { revision: number; parameters: LectureParameters; content?: Lecture }) =>
     api<WorkspaceDocument>(`workspace/documents/${id}/`, 'PATCH', data).then(checkedDocument),

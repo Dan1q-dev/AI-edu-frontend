@@ -19,7 +19,7 @@ export type PracticeResult = {
 }
 export type PracticeState = {
   version: PracticeVersion | null; current_version_id: number | null
-  submission: { id: number; status: string; practice_version: number; submission_data: Record<string, unknown>
+  submission: { id: number; document_id?: number | null; status: string; practice_version: number; submission_data: Record<string, unknown>
     criteria_snapshot: (Criterion & { id: number; position: number; checked: boolean })[]; started_at: string; submitted_at: string | null; completed_at: string | null } | null
   result: PracticeResult | null; progress_percent: number; is_completed: boolean
 }
