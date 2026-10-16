@@ -1,4 +1,4 @@
-.practice-catalog { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 24px 0; }
+.practice-catalog { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; margin: 24px 0; }
 .practice-catalog-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; color: var(--color-text, #17223b); background: white; border: 1px solid #dbe3ec; border-radius: 14px; padding: 24px; }
 .practice-catalog-card:hover:enabled { border-color: #267fca; background: #f5faff; }
 .practice-catalog-card:disabled { opacity: .6; cursor: not-allowed; }
@@ -13,3 +13,11 @@
 .practice-checks small { font-weight: 400; color: var(--color-muted, #67738a); }
 .practice-checks p { font-size: .85rem; margin: 6px 0 0; white-space: pre-wrap; }
 .practice-version-note { padding: 16px; border-radius: 10px; background: #f0f6fd; }
+.practice-editor-page > .back { display: flex; align-items: center; gap: 8px; width: fit-content; margin-bottom: 18px; }
+.practice-editor-page > .eyebrow { display: block; }
+.practice-selection-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.practice-selection-heading h2 { flex: 1 1 240px; margin: 0; overflow-wrap: anywhere; }
+.practice-selection-heading .button { flex-shrink: 0; }
+.practice-catalog-card.is-selected { opacity: 1; border-color: #267fca; background: #edf6ff; cursor: default; }
+.practice-catalog-card span, .practice-catalog-card strong { overflow-wrap: anywhere; }
+.practice-catalog-card:focus-visible { outline: 2px solid #267fca; outline-offset: 3px; }
