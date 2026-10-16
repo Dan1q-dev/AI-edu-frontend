@@ -20,6 +20,7 @@ export function UsersPage({ user }: { user: User }) {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [changing, setChanging] = useState<AdminUser | null>(null)
+  const [deleting, setDeleting] = useState<AdminUser | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [failed, setFailed] = useState(false)
@@ -41,6 +42,17 @@ export function UsersPage({ user }: { user: User }) {
     } catch (cause) { setFailed(true); setNotice(cause instanceof Error ? cause.message : t('Не удалось сохранить')) }
     finally { setBusy(false); setChanging(null) }
   }
+  const deleteUser = async () => {
+    if (!deleting || busy) return
+    setBusy(true); setNotice('')
+    try {
+      await api(`admin/users/${deleting.id}/`, 'DELETE')
+      qc.removeQueries({ queryKey: ['admin-user', String(deleting.id)] })
+      await qc.invalidateQueries({ queryKey: ['admin-users'] })
+      setFailed(false); setNotice(t('Пользователь удалён. История обучения сохранена.'))
+    } catch (cause) { setFailed(true); setNotice(cause instanceof Error ? cause.message : t('Не удалось сохранить')) }
+    finally { setBusy(false); setDeleting(null) }
+  }
   const page = Math.max(1, Number(params.get('page')) || 1)
   const dateLocale = locale === 'kz' ? 'kk-KZ' : locale === 'en' ? 'en-US' : 'ru-RU'
   return <div className="admin-users-page">
@@ -56,11 +68,12 @@ export function UsersPage({ user }: { user: User }) {
     {tracks.error && <ErrorState error={tracks.error}/>} {courses.error && <ErrorState error={courses.error}/>}<Notice text={notice} kind={failed ? 'error' : 'success'}/>
     {users.isLoading ? <Loading/> : users.error ? <ErrorState error={users.error}/> : <>
       <div className="management-table-wrap" aria-busy={users.isFetching}><table className="management-table"><thead><tr><th className="user-name-cell">{t('Пользователь')}</th><th className="user-email-cell">Email</th><th>{t('Роль')}</th><th>{t('Траектория')}</th><th>{t('Доступ к курсам')}</th><th>{t('Статус')}</th><th className="user-last-login">{t('Последний вход')}</th><th className="user-actions-cell"><span className="sr-only">{t('Действия')}</span></th></tr></thead><tbody>
-        {users.data?.results.map(row => <tr key={row.id}><td className="user-name-cell"><Link className="user-name" to={`/admin/users/${row.id}`}><span className="avatar">{initials(row)}</span><span><strong>{userName(row)}</strong><small>{row.email}</small></span></Link></td><td className="user-email-cell">{row.email}</td><td data-label={t('Роль')}>{t(row.role === 'ADMIN' ? 'Администратор' : 'Студент')}</td><td data-label={t('Траектория')}>{row.learning_track_title ?? '—'}</td><td data-label={t('Доступ к курсам')}>{row.role === 'ADMIN' ? '—' : row.course_access_mode === 'TRACK_DEFAULT' ? t('Все курсы траектории') : `${t('Выбрано курсов')}: ${row.accessible_course_count}`}</td><td data-label={t('Статус')}><UserStatus active={row.is_active}/></td><td className="user-last-login">{row.last_login ? new Date(row.last_login).toLocaleString(dateLocale, { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td><td className="user-actions-cell"><UserRowActions user={row} actorId={user.id} onStatusChange={setChanging}/></td></tr>)}
+        {users.data?.results.map(row => <tr key={row.id}><td className="user-name-cell"><Link className="user-name" to={`/admin/users/${row.id}`}><span className="avatar">{initials(row)}</span><span><strong>{userName(row)}</strong><small>{row.email}</small></span></Link></td><td className="user-email-cell">{row.email}</td><td data-label={t('Роль')}>{t(row.role === 'ADMIN' ? 'Администратор' : 'Студент')}</td><td data-label={t('Траектория')}>{row.learning_track_title ?? '—'}</td><td data-label={t('Доступ к курсам')}>{row.role === 'ADMIN' ? '—' : row.course_access_mode === 'TRACK_DEFAULT' ? t('Все курсы траектории') : `${t('Выбрано курсов')}: ${row.accessible_course_count}`}</td><td data-label={t('Статус')}><UserStatus active={row.is_active}/></td><td className="user-last-login">{row.last_login ? new Date(row.last_login).toLocaleString(dateLocale, { dateStyle: 'short', timeStyle: 'short' }) : '—'}</td><td className="user-actions-cell"><UserRowActions user={row} actorId={user.id} onStatusChange={setChanging} onDelete={setDeleting}/></td></tr>)}
       </tbody></table>{!users.data?.results.length && <div className="management-empty">{t('Пользователи не найдены')}</div>}</div>
       <Pagination data={users.data} page={page} busy={users.isFetching || serialized !== debounced} onPage={next => setFilter('page', String(next))}/>
     </>}
     {creating && <UserCreateDialog onClose={() => setCreating(false)} onCreated={created => { setCreating(false); void qc.invalidateQueries({ queryKey: ['admin-users'] }); navigate(`/admin/users/${created.id}`) }}/>}
     {changing && <Confirm title={`${t(changing.is_active ? 'Деактивировать пользователя' : 'Активировать пользователя')} «${userName(changing)}»? ${t('История обучения сохранится.')}`} onCancel={() => { if (!busy) setChanging(null) }} onConfirm={() => void changeStatus()}/>}
+    {deleting && <Confirm title={`${t('Удалить пользователя')} «${userName(deleting)}»? ${t('История обучения сохранится.')}`} onCancel={() => { if (!busy) setDeleting(null) }} onConfirm={() => void deleteUser()}/>}
   </div>
 }

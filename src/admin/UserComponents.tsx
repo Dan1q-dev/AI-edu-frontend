@@ -17,7 +17,7 @@ export function UserStatus({ active }: { active: boolean }) {
   return <span className={`user-status ${active ? 'is-active' : ''}`}>{t(active ? 'Активен' : 'Неактивен')}</span>
 }
 
-export function UserRowActions({ user, actorId, onStatusChange }: { user: AdminUser; actorId: number; onStatusChange: (user: AdminUser) => void }) {
+export function UserRowActions({ user, actorId, onStatusChange, onDelete }: { user: AdminUser; actorId: number; onStatusChange: (user: AdminUser) => void; onDelete: (user: AdminUser) => void }) {
   const { t } = useI18n()
   const ref = useRef<HTMLDetailsElement>(null)
   const [open, setOpen] = useState(false)
@@ -33,6 +33,7 @@ export function UserRowActions({ user, actorId, onStatusChange }: { user: AdminU
     <summary aria-label={`${t('Действия')}: ${userName(user)}`}><MoreHorizontal size={18}/></summary>
     <div className="user-actions-menu"><Link to={`/admin/users/${user.id}`} onClick={close}>{t('Открыть')}</Link>{!user.is_protected && <><Link to={`/admin/users/${user.id}?tab=general`} onClick={close}>{t('Редактировать')}</Link>{user.role === 'STUDENT' && <Link to={`/admin/users/${user.id}?tab=access`} onClick={close}>{t('Изменить доступ')}</Link>}</>}
       <button type="button" className={user.is_active ? 'danger' : ''} disabled={user.is_protected || user.id === actorId} onClick={() => { close(); onStatusChange(user) }}>{t(user.is_active ? 'Деактивировать пользователя' : 'Активировать пользователя')}</button>
+      <button type="button" className="danger" disabled={user.is_protected || user.id === actorId} onClick={() => { close(); onDelete(user) }}>{t('Удалить пользователя')}</button>
     </div>
   </details>
 }

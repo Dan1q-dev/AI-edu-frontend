@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { api, type AdminLearningProgress, type AdminUser, type Page, type User } from '../api'
 import { Button, Confirm, ErrorState, Input, Loading, Notice, Select } from '../components/ui'
@@ -75,6 +75,8 @@ export function UserDetailPage({ actor }: { actor: User }) {
   const query = useQuery({ queryKey: ['admin-user', id], queryFn: () => api<AdminUser>(`admin/users/${id}/`) })
   const [notice, setNotice] = useState(''), [error, setError] = useState(''), [confirm, setConfirm] = useState(false), [busy, setBusy] = useState(false)
   const [revision, setRevision] = useState(0)
+  const [deleting, setDeleting] = useState(false)
+  const navigate = useNavigate()
   const [dirty, setDirty] = useState(false)
   const saved = (user: AdminUser) => {
     qc.setQueryData(['admin-user', id], user); void qc.invalidateQueries({ queryKey: ['admin-users'] })
@@ -87,13 +89,26 @@ export function UserDetailPage({ actor }: { actor: User }) {
     try { saved(await api<AdminUser>(`admin/users/${id}/`, 'PATCH', { is_active: !query.data.is_active })); setConfirm(false) }
     catch (cause) { setError((cause as Error).message); setConfirm(false) } finally { setBusy(false) }
   }
+  const deleteUser = async () => {
+    if (busy) return
+    setBusy(true); setError('')
+    try {
+      await api(`admin/users/${id}/`, 'DELETE')
+      setDirty(false)
+      navigate('/admin/users', { replace: true })
+      qc.removeQueries({ queryKey: ['admin-user', id] })
+      void qc.invalidateQueries({ queryKey: ['admin-users'] })
+    } catch (cause) { setError((cause as Error).message); setDeleting(false) }
+    finally { setBusy(false) }
+  }
   if (query.isLoading) return <Loading/>
   if (query.error || !query.data) return <ErrorState error={query.error}/>
   const user = query.data
-  return <><Link className="back" to="/admin/users"><ArrowLeft size={16}/>{t('Все пользователи')}</Link><div className="user-detail-heading"><span className="avatar">{initials(user)}</span><div><h1>{userName(user)}</h1><p>{user.email} · {t(user.role === 'ADMIN' ? 'Администратор' : 'Студент')}</p></div><UserStatus active={user.is_active}/><UserRowActions user={user} actorId={actor.id} onStatusChange={() => setConfirm(true)}/></div>
+  return <><Link className="back" to="/admin/users"><ArrowLeft size={16}/>{t('Все пользователи')}</Link><div className="user-detail-heading"><span className="avatar">{initials(user)}</span><div><h1>{userName(user)}</h1><p>{user.email} · {t(user.role === 'ADMIN' ? 'Администратор' : 'Студент')}</p></div><UserStatus active={user.is_active}/><UserRowActions user={user} actorId={actor.id} onStatusChange={() => setConfirm(true)} onDelete={() => setDeleting(true)}/></div>
     <Notice text={notice} kind="success"/><Notice text={error} kind="error"/>{user.is_protected && <Notice text={t('Системная учётная запись доступна только для просмотра.')}/>}
     <nav className="user-detail-tabs" aria-label={t('Карточка пользователя')}>{[['general', 'Общие данные'], ['access', 'Доступ к обучению'], ['progress', 'Прогресс обучения']].map(([key, label]) => <button type="button" key={key} className={tab === key ? 'active' : ''} aria-current={tab === key ? 'page' : undefined} onClick={() => { if (key === tab || dirty && !window.confirm(t('Есть несохранённые изменения. Покинуть страницу?'))) return; setParams({ tab: key }); setNotice(''); setError('') }}>{t(label)}</button>)}</nav>
     {tab === 'general' && <GeneralForm key={`${id}-${revision}`} user={user} actor={actor} onSaved={saved} onDirty={setDirty}/>}{tab === 'access' && <AccessForm key={`${id}-${revision}`} user={user} onSaved={saved} onDirty={setDirty}/>}{tab === 'progress' && <LearningProgress userId={user.id}/>}
     {confirm && <Confirm title={t(user.is_active ? 'Деактивировать пользователя? История обучения сохранится.' : 'Активировать пользователя?')} onCancel={() => { if (!busy) setConfirm(false) }} onConfirm={() => void changeStatus()}/>}
+    {deleting && <Confirm title={`${t('Удалить пользователя')} «${userName(user)}»? ${t('История обучения сохранится.')}`} onCancel={() => { if (!busy) setDeleting(false) }} onConfirm={() => void deleteUser()}/>}
   </>
 }

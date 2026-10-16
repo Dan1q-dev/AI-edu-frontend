@@ -530,6 +530,8 @@
   "Изменить доступ": "Change access",
   "Имя или email": "Name or email",
   "История обучения сохранится.": "Learning history will be preserved.",
+  "Удалить пользователя": "Delete user",
+  "Пользователь удалён. История обучения сохранена.": "User deleted. Learning history is preserved.",
   "Карточка пользователя": "User details",
   "Конструктор": "Builder",
   "Личные данные и безопасность учётной записи.": "Personal details and account security.",

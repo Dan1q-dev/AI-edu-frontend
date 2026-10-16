@@ -137,6 +137,65 @@ describe('admin workspace', () => {
     expect(await screen.findByText('Изменения сохранены')).toBeTruthy()
   })
 
+  it('deletes a user from the list after confirmation and refreshes the list', async () => {
+    mount(<UsersPage user={actor}/>)
+    await screen.findByText('Ada Lovelace')
+    fireEvent.click(screen.getByLabelText('Действия: Ada Lovelace'))
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить пользователя' }))
+    expect(screen.getByRole('dialog').textContent).toContain('История обучения сохранится.')
+    expect(mockApi.mock.calls.some(([, method]) => method === 'DELETE')).toBe(false)
+    mockApi.mockImplementation(async (path, method) => {
+      if (method === 'DELETE') return undefined as never
+      if (path.startsWith('admin/users/?')) return { count: 0, next: null, previous: null, results: [] } as never
+      return undefined as never
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    await waitFor(() => expect(mockApi).toHaveBeenCalledWith('admin/users/2/', 'DELETE'))
+    expect(await screen.findByText('Пользователь удалён. История обучения сохранена.')).toBeTruthy()
+    expect(screen.queryByText('Ada Lovelace')).toBeNull()
+  })
+
+  it('keeps the user when deletion is cancelled or fails', async () => {
+    mount(<UsersPage user={actor}/>)
+    await screen.findByText('Ada Lovelace')
+    const openDeletion = () => {
+      fireEvent.click(screen.getByLabelText('Действия: Ada Lovelace'))
+      fireEvent.click(screen.getByRole('button', { name: 'Удалить пользователя' }))
+    }
+    openDeletion()
+    fireEvent.click(screen.getByRole('button', { name: 'Отмена' }))
+    expect(mockApi.mock.calls.some(([, method]) => method === 'DELETE')).toBe(false)
+    openDeletion()
+    mockApi.mockRejectedValueOnce(new Error('Deletion failed'))
+    fireEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    expect(await screen.findByText('Deletion failed')).toBeTruthy()
+    expect(screen.getByText('Ada Lovelace')).toBeTruthy()
+  })
+
+  it('deletes from user details and returns to the user list', async () => {
+    mount(<Routes><Route path="/admin/users/:id" element={<UserDetailPage actor={actor}/>}/><Route path="/admin/users" element={<p>User list</p>}/></Routes>, '/admin/users/2')
+    await screen.findByRole('heading', { name: 'Ada Lovelace' })
+    fireEvent.click(screen.getByLabelText('Действия: Ada Lovelace'))
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить пользователя' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Подтвердить' }))
+    expect(await screen.findByText('User list')).toBeTruthy()
+    expect(mockApi).toHaveBeenCalledWith('admin/users/2/', 'DELETE')
+  })
+
+  it('disables deletion for the current account and system accounts', async () => {
+    mockApi.mockResolvedValue({ ...student, id: actor.id } as never)
+    details()
+    await screen.findByRole('heading', { name: 'Ada Lovelace' })
+    fireEvent.click(screen.getByLabelText('Действия: Ada Lovelace'))
+    expect((screen.getByRole('button', { name: 'Удалить пользователя' }) as HTMLButtonElement).disabled).toBe(true)
+    cleanup()
+    mockApi.mockResolvedValue({ ...student, is_protected: true } as never)
+    details()
+    await screen.findByRole('heading', { name: 'Ada Lovelace' })
+    fireEvent.click(screen.getByLabelText('Действия: Ada Lovelace'))
+    expect((screen.getByRole('button', { name: 'Удалить пользователя' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
   it('keeps course selections through search and clears incompatible selections on track change', async () => {
     function Selector() {
       const [value, setValue] = useState<AccessValues>({ learning_track: 1, course_access_mode: 'CUSTOM', course_ids: [] })
