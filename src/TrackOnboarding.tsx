@@ -23,6 +23,7 @@ export function TrackOnboarding() {
   }
   return <section className="track-onboarding"><span className="eyebrow">{t('Начало обучения')}</span><h1>{t('Выберите траекторию обучения')}</h1>
     <TrackSelect tracks={tracks.data ?? []} selectedTrackId={selected} onSelect={setSelected} isLoading={tracks.isLoading} error={tracks.error ? t('Не удалось загрузить траектории') : null}/>
+    {!tracks.isLoading && !tracks.error && !tracks.data?.length && <p>{t('Траектории пока не опубликованы')}</p>}
     {tracks.error && <Button variant="secondary" onClick={() => void tracks.refetch()}>{t('Повторить')}</Button>}
     <Button disabled={!selected || busy} onClick={() => void save()}>{t(busy ? 'Сохранение…' : 'Начать обучение')}<ArrowRight size={17}/></Button><Notice text={error} kind="error"/>
   </section>

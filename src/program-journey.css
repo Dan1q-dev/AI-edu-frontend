@@ -38,7 +38,7 @@
 .certificate-verification > .brand { display: block; margin-bottom: 40px; }
 .track-onboarding { max-width: 740px; margin: 40px auto; }
 .track-onboarding h1 { font-size: 30px; }
-.track-onboarding .track-select { margin: 28px 0; }
+.track-onboarding .track-selector { margin: 28px 0; }
 @media(max-width:600px) {
   .program-heading h1 { font-size: 24px; }
   .program-timeline > li { grid-template-columns: 28px minmax(0,1fr); gap: 10px; }
