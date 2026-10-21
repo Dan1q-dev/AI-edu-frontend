@@ -5,6 +5,8 @@ import { api, type CourseLearningSummary, type LearningDashboard, type User } fr
 import { Button, ErrorState, Loading } from './components/ui'
 import { CourseProgressIndicator, LearningStatus } from './components/LearningStatus'
 import { useI18n } from './i18n'
+import { ProgramJourney, primaryProgram } from './ProgramJourney'
+import { TrackOnboarding } from './TrackOnboarding'
 
 function CourseCard({ course }: { course: CourseLearningSummary }) {
   const { t } = useI18n()
@@ -20,11 +22,14 @@ function CourseCard({ course }: { course: CourseLearningSummary }) {
 
 export function MyLearningPage({ user }: { user: User }) {
   const { t } = useI18n()
-  const dashboard = useQuery({ queryKey: ['learning-summary'], queryFn: () => api<LearningDashboard>('me/learning/'), staleTime: 30000 })
+  const dashboard = useQuery({ queryKey: ['learning-summary'], queryFn: () => api<LearningDashboard>('me/learning/'), staleTime: 30000, enabled: Boolean(user.learning_track) })
+  if (!user.learning_track) return <TrackOnboarding/>
   if (dashboard.isLoading) return <Loading label={t('Загрузка обучения…')}/>
   if (dashboard.error) return <><ErrorState error={dashboard.error}/><Button variant="secondary" onClick={() => void dashboard.refetch()}>{t('Повторить')}</Button></>
   if (!dashboard.data) return null
   const { resume_course: resume, completed_courses: completed, available_courses: available } = dashboard.data
+  const program = primaryProgram([...(dashboard.data.active_courses ?? []), ...available, ...completed])
+  if (program) return <ProgramJourney key={program.short_id} courseId={program.short_id}/>
   return <>
     <div className="page-heading-row"><div><span className="eyebrow">{user.learning_track?.title}</span><h1>{t('Моё обучение')}</h1><p>{t('Ваши курсы и место, где вы остановились.')}</p></div><Link className="text-link" to="/catalog">{t('Смотреть весь каталог')}<ChevronRight size={16}/></Link></div>
     {resume ? <section className="resume-course card" aria-labelledby="resume-title"><div className="resume-course-copy"><span className="eyebrow">{t('Продолжить обучение')}</span><h2 id="resume-title">{resume.title}</h2><p>{resume.learning_track_title}</p><CourseProgressIndicator percent={resume.percent} completed={resume.completed_items} total={resume.total_items} label="Ваш прогресс"/>

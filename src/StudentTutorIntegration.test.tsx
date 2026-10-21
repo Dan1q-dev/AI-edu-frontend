@@ -48,7 +48,7 @@ it('keeps the lecture tutor alongside course navigation, account menu and attach
   expect(screen.getByLabelText('Вопрос тьютору')).toBeTruthy()
 })
 
-it('opens the lecture chat with course navigation and without the lecture tutor', async () => {
+it('keeps the tutor in the practical workspace alongside its document tools', async () => {
   vi.mocked(api).mockImplementation(async path => {
     if (path === 'items/workshop/') return practice as never
     if (path.endsWith('/progress/')) return { percent: 0, items: {} } as never
@@ -62,7 +62,9 @@ it('opens the lecture chat with course navigation and without the lecture tutor'
   expect(await screen.findByRole('button', { name: 'Сделано' })).toBeTruthy()
   expect(screen.getByRole('textbox', { name: 'Ваш запрос' })).toBeTruthy()
   expect(document.querySelector('.is-document-workspace')).toBeTruthy()
-  expect(screen.queryByLabelText('Вопрос тьютору')).toBeNull()
-  expect(screen.queryByRole('button', { name: 'Открыть тьютора' })).toBeNull()
+  expect(screen.getByLabelText('Вопрос тьютору')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Открыть тьютора' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Разобрать задание' })).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Кратко о лекции' })).toBeNull()
   expect(screen.getByRole('button', { name: 'Закрыть оглавление' })).toBeTruthy()
 })

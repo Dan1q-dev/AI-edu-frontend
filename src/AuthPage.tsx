@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { LogIn, UserPlus } from 'lucide-react'
-import { api, apiAll, type Track, type User } from './api'
+import { api, type User } from './api'
 import { updateSession } from './session'
-import { Button, Input, Notice, TrackSelect } from './components/ui'
+import { Button, Input, Notice } from './components/ui'
 import { LanguageTabs, useI18n } from './i18n'
 
 const makeSchema = (t: (key: string) => string, mode: 'login' | 'register') => z.object({
@@ -26,31 +26,17 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors, isSubmitting }
   } = useForm<Form>({
     resolver: zodResolver(schema)
   })
 
-  const tracks = useQuery({
-    queryKey: ['registration-tracks'],
-    queryFn: () => apiAll<Track>('tracks/'),
-    enabled: mode === 'register'
-  })
-
-  const selectedTrackId = watch('learning_track')
   const [error, setError] = useState('')
   const qc = useQueryClient()
   const navigate = useNavigate()
 
   const submit = async (values: Form) => {
     setError('')
-    if (mode === 'register' && !values.learning_track) {
-      setError(t('Выберите траекторию обучения'))
-      return
-    }
-
     try {
       const user = await api<User>(
         `auth/${mode}/`,
@@ -133,38 +119,11 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             <small className="field-error">{errors.password?.message}</small>
           </label>
 
-          {mode === 'register' && (
-            <>
-              {/* Hidden input keeps form state synchronized */}
-              <input
-                type="hidden"
-                {...register('learning_track', { setValueAs: v => (v ? Number(v) : undefined) })}
-                value={selectedTrackId ? String(selectedTrackId) : ''}
-              />
-
-              <TrackSelect
-                tracks={tracks.data ?? []}
-                selectedTrackId={selectedTrackId}
-                onSelect={trackId => {
-                  setValue('learning_track', trackId, { shouldValidate: true })
-                  if (error === t('Выберите траекторию обучения')) setError('')
-                }}
-                isLoading={tracks.isLoading}
-                error={tracks.error ? t('Не удалось загрузить траектории') : null}
-                hasError={Boolean(error && !selectedTrackId)}
-                errorMessage={error && !selectedTrackId ? error : null}
-              />
-            </>
-          )}
-
           <Notice text={error} kind="error" />
 
           <Button
             type="submit"
-            disabled={
-              isSubmitting ||
-              (mode === 'register' && (tracks.isLoading || !tracks.data?.length))
-            }
+            disabled={isSubmitting}
             className="wide"
           >
             {mode === 'login' ? <LogIn size={18} aria-hidden="true"/> : <UserPlus size={18} aria-hidden="true"/>}

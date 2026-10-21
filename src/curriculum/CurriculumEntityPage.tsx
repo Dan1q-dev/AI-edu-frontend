@@ -21,6 +21,9 @@ type Form = {
   cover: number | null
   adaptive_learning_enabled: boolean
   adaptive_threshold: number
+  certificate_enabled: boolean
+  certificate_hours: number
+  certificate_module_count: number
 }
 
 function toForm(item: Course | Module, kind: Kind): Form {
@@ -32,6 +35,9 @@ function toForm(item: Course | Module, kind: Kind): Form {
     cover: kind === 'course' ? (item as Course).cover : null,
     adaptive_learning_enabled: kind === 'course' ? (item as Course).adaptive_learning_enabled ?? false : false,
     adaptive_threshold: kind === 'module' ? (item as Module).adaptive_threshold ?? 60 : 60,
+    certificate_enabled: kind === 'course' ? (item as Course).certificate_enabled ?? false : false,
+    certificate_hours: kind === 'course' ? (item as Course).certificate_hours ?? 72 : 72,
+    certificate_module_count: kind === 'course' ? (item as Course).certificate_module_count ?? 3 : 3,
   }
 }
 
@@ -79,7 +85,7 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
     setBusy(true); setMessage('')
     try {
       const payload = kind === 'course'
-        ? { title: form.title.trim(), description: form.description, learning_track: form.learning_track, cover: form.cover, position: form.position, is_published: form.is_published, adaptive_learning_enabled: form.adaptive_learning_enabled }
+        ? { title: form.title.trim(), description: form.description, learning_track: form.learning_track, cover: form.cover, position: form.position, is_published: form.is_published, adaptive_learning_enabled: form.adaptive_learning_enabled, certificate_enabled: form.certificate_enabled, certificate_hours: form.certificate_hours, certificate_module_count: form.certificate_module_count }
         : { title: form.title.trim(), description: form.description, course: form.course, position: form.position, is_published: form.is_published, adaptive_threshold: form.adaptive_threshold }
       const saved = await api<Course | Module>(`${kind}s/${id}/`, 'PATCH', payload)
       setForm(toForm(saved, kind)); setDirty(false); setIsError(false); setMessage(t('Изменения сохранены'))
@@ -106,6 +112,11 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
     <div className="curriculum-entity-heading"><div><span className="eyebrow">{t(kind === 'course' ? 'КУРС' : 'МОДУЛЬ')}</span><h1>{title}</h1><p>{t('Измените общие сведения и вернитесь к структуре учебной программы.')}</p></div><span className={`curriculum-status ${form.is_published ? 'is-published' : ''}`}>{t(form.is_published ? 'Опубликован' : 'Черновик')}</span></div>
     <div className="curriculum-entity-form">
       <section className="curriculum-form-section"><h2>{t('Основные сведения')}</h2><label>{t('Название')}<Input value={form.title} maxLength={200} onChange={event => update({ title: event.target.value })}/></label><label>{t('Описание')}<Textarea rows={5} value={form.description} onChange={event => update({ description: event.target.value })}/></label></section>
+      {kind === 'course' && <section className="curriculum-form-section"><h2>{t('Программа и сертификат')}</h2>
+        <label className="curriculum-publish-setting"><input type="checkbox" checked={form.certificate_enabled} onChange={event => update({ certificate_enabled: event.target.checked })}/><span><strong>{t('Последовательная программа с сертификатом')}</strong></span></label>
+        {form.certificate_enabled && <div className="row"><label>{t('Объём программы, часов')}<Input type="number" min="1" max="1000" value={form.certificate_hours} onChange={event => update({ certificate_hours: Number(event.target.value) })}/></label>
+          <label>{t('Количество модулей')}<Input type="number" min="1" max="50" value={form.certificate_module_count} onChange={event => update({ certificate_module_count: Number(event.target.value) })}/></label></div>}
+      </section>}
       <section className="curriculum-form-section"><h2>{t('Размещение и доступ')}</h2>{kind === 'course' ? (
         <label>{t('Траектория')}<Select value={form.learning_track ?? ''} onChange={event => update({ learning_track: Number(event.target.value) })}>{tracks.data?.map(track => <option key={track.id} value={track.id}>{track.title}</option>)}</Select></label>
       ) : <label>{t('Курс')}<Select value={form.course} onChange={event => update({ course: Number(event.target.value) })}>{courses.data?.map(course => <option key={course.id} value={course.id}>{course.title}</option>)}</Select></label>}

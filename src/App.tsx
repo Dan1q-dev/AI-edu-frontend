@@ -25,6 +25,7 @@ const AdminCurriculum = lazy(() => import('./AdminCurriculum').then(module => ({
 const CurriculumEntityPage = lazy(() => import('./curriculum/CurriculumEntityPage').then(module => ({ default: module.CurriculumEntityPage })))
 
 const MyLearningPage = lazy(() => import('./MyLearningPage').then(module => ({ default: module.MyLearningPage })))
+const CertificatePage = lazy(() => import('./ProgramJourney').then(module => ({ default: module.CertificatePage })))
 
 export function ProtectedPage({ user, children, admin = false }: { user: User | null | undefined; children: React.ReactNode; admin?: boolean }) {
   if (!user) return <Navigate to="/login" replace/>
@@ -38,6 +39,7 @@ export default function App() {
   if (isLoading) return <Loading fullPage label={t('Загрузка платформы…')} description={t('Подготовка образовательного пространства…')} />
   if (error) return <ErrorState error={error}/>
   return <Suspense fallback={<Loading fullPage label={t('Загрузка страницы…')} />}><Routes>
+    <Route path="/certificates/:token" element={<CertificatePage/>}/>
     <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage key="login" mode="login"/>}/>
     <Route path="/register" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage key="register" mode="register"/>}/>
     <Route path="/" element={<ProtectedPage user={user}>{user?.role === 'ADMIN' ? <Navigate to="/admin/curriculum" replace/> : <MyLearningPage user={user!}/>}</ProtectedPage>}/>

@@ -24,14 +24,14 @@ function loadConversation(key: string | null): Conversation {
   return { sessionId: crypto.randomUUID(), messages: [] }
 }
 
-export function TutorPanel({ contextType, contextId, lessonTitle }: { contextType: 'lesson' | 'item'; contextId: string; lessonTitle: string }) {
+export function TutorPanel({ contextType, contextId, lessonTitle, materialType = 'lecture' }: { contextType: 'lesson' | 'item'; contextId: string; lessonTitle: string; materialType?: 'lecture' | 'practice' }) {
   const queryClient = useQueryClient()
   const userId = queryClient.getQueryData<User>(['me'])?.id
   const storageKey = userId ? `ai-edu:tutor:${userId}:${contextType}:${contextId}` : null
-  return <TutorConversation key={storageKey ?? `${contextType}:${contextId}`} storageKey={storageKey} contextType={contextType} contextId={contextId} lessonTitle={lessonTitle}/>
+  return <TutorConversation key={storageKey ?? `${contextType}:${contextId}`} storageKey={storageKey} contextType={contextType} contextId={contextId} lessonTitle={lessonTitle} materialType={materialType}/>
 }
 
-function TutorConversation({ storageKey, contextType, contextId, lessonTitle }: { storageKey: string | null; contextType: 'lesson' | 'item'; contextId: string; lessonTitle: string }) {
+function TutorConversation({ storageKey, contextType, contextId, lessonTitle, materialType }: { storageKey: string | null; contextType: 'lesson' | 'item'; contextId: string; lessonTitle: string; materialType: 'lecture' | 'practice' }) {
   const { t, locale } = useI18n()
   const [conversation, setConversation] = useState(() => loadConversation(storageKey))
   const [draft, setDraft] = useState('')
@@ -176,7 +176,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle }: 
       if (node) nearBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 70
     }}>
       {!conversation.messages.length && <div className="tutor-empty"><BookHint/><h3>{t('Что разберём?')}</h3>
-        <div className="tutor-suggestions">{[['Кратко о лекции', 'Кратко объясни основные идеи этой лекции.'], ['Объяснить проще', 'Объясни эту лекцию простыми словами.'], ['Пример', 'Приведи практический пример по теме этой лекции.']].map(([label, prompt]) =>
+        <div className="tutor-suggestions">{(materialType === 'practice' ? [['Разобрать задание', 'Объясни цель и требования этой практической работы.'], ['С чего начать', 'Подскажи первый шаг в этой практической работе, не выполняя её за меня.'], ['Проверить подход', 'На что обратить внимание при проверке моего решения?']] : [['Кратко о лекции', 'Кратко объясни основные идеи этой лекции.'], ['Объяснить проще', 'Объясни эту лекцию простыми словами.'], ['Пример', 'Приведи практический пример по теме этой лекции.']]).map(([label, prompt]) =>
           <button type="button" key={label} onClick={() => void submit(t(prompt))}>{t(label)}</button>)}</div>
       </div>}
       {conversation.messages.map(message => <div className={`tutor-message ${message.role}`} key={message.id}>
@@ -186,7 +186,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle }: 
         {message.role === 'assistant' && <div className="tutor-message-tools">
           <button type="button" className="icon-button" title={t(copied === message.id ? 'Скопировано' : 'Копировать ответ')} aria-label={t('Копировать ответ')} onClick={() => void copy(message)}>{copied === message.id ? <Check size={14}/> : <Copy size={14}/>}</button>
           {!message.interrupted && <button type="button" className="icon-button" disabled={locale !== 'ru' || (localAvatarEnabled && busy && avatarMessageId !== message.id)} title={t(locale !== 'ru' ? 'Озвучка доступна на русском' : voice.speakingId === message.id || (avatar.active && avatarMessageId === message.id) ? 'Остановить озвучку' : 'Озвучить ответ')} aria-label={t(voice.speakingId === message.id || voice.loadingSpeechId === message.id || (avatar.active && avatarMessageId === message.id) ? 'Остановить озвучку' : 'Озвучить ответ')} onClick={() => void speakMessage(message)}>{voice.loadingSpeechId === message.id ? <LoaderCircle className="tutor-spinner" size={14}/> : voice.speakingId === message.id || (avatar.active && avatarMessageId === message.id) ? <Square size={14}/> : <Volume2 size={14}/>}</button>}
-          {!!message.sources?.length && <details className="tutor-sources"><summary>{t('Материал лекции')}</summary>{message.sources.map((source, index) => <div key={`${source.chunk_id}-${index}`}><strong>{source.label}</strong><p>{source.snippet ?? source.text ?? ''}</p></div>)}</details>}
+          {!!message.sources?.length && <details className="tutor-sources"><summary>{t(materialType === 'practice' ? 'Материал практической работы' : 'Материал лекции')}</summary>{message.sources.map((source, index) => <div key={`${source.chunk_id}-${index}`}><strong>{source.label}</strong><p>{source.snippet ?? source.text ?? ''}</p></div>)}</details>}
         </div>}
       </div>)}
       {busy && <div className="tutor-thinking" role="status"><span className="tutor-pulse"/>{t('Тьютор отвечает...')}</div>}
@@ -198,7 +198,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle }: 
     {(voice.recording || voice.transcribing || voice.requestingMic) && <div className="tutor-voice-status" role="status">{t(voice.recording ? 'Идёт запись...' : voice.transcribing ? 'Распознаю речь...' : 'Открываю микрофон...')}</div>}
     {(live.enabled || live.starting) && <div className={`tutor-voice-status tutor-live-status ${live.hearing ? 'hearing' : ''}`} role="status"><span className="tutor-pulse"/>{live.starting ? 'Подключаю микрофон...' : live.hearing ? 'Слушаю вас...' : live.transcribing ? 'Распознаю вопрос...' : avatar.active ? 'Кевин отвечает' : busy ? 'Кевин думает...' : 'Слушаю'}</div>}
     <form className="tutor-composer" onSubmit={onSubmit}>
-      <textarea ref={inputRef} rows={2} maxLength={4000} value={draft} placeholder={t('Спросите по лекции...')} aria-label={t('Вопрос тьютору')} onChange={event => setDraft(event.target.value)} onKeyDown={event => {
+      <textarea ref={inputRef} rows={2} maxLength={4000} value={draft} placeholder={t(materialType === 'practice' ? 'Спросите по заданию...' : 'Спросите по лекции...')} aria-label={t('Вопрос тьютору')} onChange={event => setDraft(event.target.value)} onKeyDown={event => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(draft) }
       }}/>
       <div className="tutor-composer-actions"><button type="button" className={`tutor-mic ${voice.recording ? 'recording' : ''}`} title={t(voice.recording ? 'Закончить запись' : 'Записать вопрос')} aria-label={t(voice.recording ? 'Закончить запись' : 'Записать вопрос')} aria-pressed={voice.recording} disabled={live.enabled || live.starting || busy || voice.transcribing || voice.requestingMic} onClick={() => void voice.toggleRecording()}>{voice.recording ? <Square size={16}/> : voice.transcribing || voice.requestingMic ? <LoaderCircle className="tutor-spinner" size={16}/> : <Mic size={17}/>}</button>
