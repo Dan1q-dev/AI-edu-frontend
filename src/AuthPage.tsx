@@ -4,11 +4,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
-import { BookOpen } from 'lucide-react'
+import { LogIn, UserPlus } from 'lucide-react'
 import { api, apiAll, type Track, type User } from './api'
 import { updateSession } from './session'
 import { Button, Input, Notice, TrackSelect } from './components/ui'
-import { LanguageSelect, useI18n } from './i18n'
+import { LanguageTabs, useI18n } from './i18n'
 
 const makeSchema = (t: (key: string) => string, mode: 'login' | 'register') => z.object({
   email: z.string().trim().pipe(z.email(t('Введите корректный email'))),
@@ -68,17 +68,16 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
   return (
     <div className="auth-page">
-      <div className="auth-language"><LanguageSelect compact/></div>
+      <div className="auth-language"><LanguageTabs/></div>
       <div className="auth-side">
-        <Link to="/" className="brand">
-          AI<span>edu</span>
+        <Link to="/" className="auth-brand" aria-label="AI Edu">
+          <span className="atlas-brand-mark" aria-hidden="true">AI</span>
+          <span>{t('Исследовательский прототип')}</span>
         </Link>
-        <div>
-          <div className="auth-icon">
-            <BookOpen size={46} />
-          </div>
-          <h1>{t('Обучение начинается здесь.')}</h1>
-          <p>{t('Создавайте свой путь в мире технологий и гуманитарных наук.')}</p>
+        <div className="auth-product-copy">
+          <p className="eyebrow">{t('Персонализированное обучение преподавателей')}</p>
+          <h1>AI Edu<span aria-hidden="true"> /</span></h1>
+          <p>{t('Учебная траектория меняется после каждого модуля на основе теста, практики, ошибок и освоенных компетенций.')}</p>
         </div>
         <small>© AI Edu · {t('Образовательная платформа')}</small>
       </div>
@@ -88,11 +87,14 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           className={`auth-form card ${mode === 'register' ? 'auth-form-register' : ''}`}
           onSubmit={handleSubmit(submit)}
         >
-          <span className="eyebrow">{t('ДОБРО ПОЖАЛОВАТЬ')}</span>
-          <h2>{mode === 'login' ? t('Вход в аккаунт') : t('Создать аккаунт')}</h2>
+          <nav className="auth-mode" aria-label={t('Режим входа')}>
+            <Link to="/login" aria-current={mode === 'login' ? 'page' : undefined}>{t('Войти')}</Link>
+            <Link to="/register" aria-current={mode === 'register' ? 'page' : undefined}>{t('Создать аккаунт')}</Link>
+          </nav>
+          <h2>{mode === 'login' ? t('Продолжить обучение') : t('Новый участник')}</h2>
           <p>
             {mode === 'login'
-              ? t('Продолжите обучение там, где остановились.')
+              ? t('Введите данные учетной записи')
               : t('Начните изучать новые траектории.')}
           </p>
 
@@ -114,7 +116,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             <Input
               type="email"
               autoComplete="email"
-              placeholder="alex@example.com"
+              placeholder="name@university.edu"
               {...register('email')}
             />
             <small className="field-error">{errors.email?.message}</small>
@@ -165,6 +167,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             }
             className="wide"
           >
+            {mode === 'login' ? <LogIn size={18} aria-hidden="true"/> : <UserPlus size={18} aria-hidden="true"/>}
             {isSubmitting
               ? t('Подождите…')
               : mode === 'login'

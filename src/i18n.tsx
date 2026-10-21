@@ -50,6 +50,15 @@ export function translateCurrentLocale(key: string) {
   return dictionaries[locale][key] ?? key
 }
 
+export function LanguageTabs() {
+  const { locale, setLocale, t } = useI18n()
+  const shortLabels: Record<Locale, string> = { ru: 'РУ', kz: 'ҚАЗ', en: 'EN' }
+  return <div className="language-tabs" role="group" aria-label={t('Язык интерфейса')}>
+    {languages.map(language => <button key={language.code} type="button" aria-label={language.label} title={language.label}
+      aria-pressed={locale === language.code} onClick={() => setLocale(language.code)}>{shortLabels[language.code]}</button>)}
+  </div>
+}
+
 export function LanguageSelect({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale, t } = useI18n()
   const [open, setOpen] = useState(false)

@@ -808,5 +808,11 @@
   "Не удалось выполнить AI-запрос. Попробуйте ещё раз.": "The AI request failed. Please try again.",
   "Не удалось обновить чат. Проверьте соединение и повторите.": "Unable to refresh the chat. Check your connection and try again.",
   "Лекция изменилась. Обновите чат и повторите запрос.": "The lecture has changed. Refresh the chat and try again.",
-  "Лекция изменилась или уже выполняется AI-запрос. Обновите чат.": "The lecture has changed or an AI request is already running. Refresh the chat."
+  "Лекция изменилась или уже выполняется AI-запрос. Обновите чат.": "The lecture has changed or an AI request is already running. Refresh the chat.",
+  "Исследовательский прототип": "Research prototype",
+  "Персонализированное обучение преподавателей": "Personalized learning for educators",
+  "Учебная траектория меняется после каждого модуля на основе теста, практики, ошибок и освоенных компетенций.": "Your learning path adapts after each module based on assessments, practice, mistakes and acquired skills.",
+  "Режим входа": "Authentication mode",
+  "Новый участник": "New participant",
+  "Введите данные учетной записи": "Enter your account details"
 }
