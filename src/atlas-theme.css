@@ -1,0 +1,175 @@
+/* Visual language from adaptive-learning; route layouts and behavior stay in their own modules. */
+:root {
+  --color-ink: #1e2b44;
+  --color-text: #1e2b44;
+  --color-muted: #65728a;
+  --color-subtle: #7b879d;
+  --color-primary: #4058af;
+  --color-primary-dark: #293b86;
+  --color-primary-soft: #e8edff;
+  --color-border: #d9e0ea;
+  --color-surface: #fffefa;
+  --color-canvas: #f4f6fa;
+  --color-success: #287b67;
+  --atlas-gold: #f1b84c;
+  --atlas-coral: #ce6e54;
+  --atlas-teal-soft: #e4f3ed;
+  --radius-card: 14px;
+  --radius-control: 8px;
+  --shadow-card: 0 10px 28px rgb(41 58 112 / 6%);
+  font-family: 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+}
+
+* { letter-spacing: 0; }
+body { background: var(--color-canvas); }
+h1, h2, h3 { color: var(--color-ink); letter-spacing: 0; }
+.eyebrow { color: var(--color-primary); font-family: 'Consolas', ui-monospace, monospace; letter-spacing: 0; text-transform: uppercase; }
+.button { border-radius: var(--radius-control); }
+.button.primary { background: var(--color-primary); box-shadow: 0 4px 0 #293b86, 0 8px 16px rgb(43 61 139 / 12%); }
+.button.primary:hover:not(:disabled) { background: #33499c; box-shadow: 0 3px 0 #293b86, 0 6px 12px rgb(43 61 139 / 15%); }
+.button.secondary { background: var(--color-surface); color: var(--color-ink); border-color: #cbd5e7; }
+.button.secondary:hover:not(:disabled) { background: var(--color-primary-soft); border-color: #a7b5e6; }
+.input { border-color: #cfd8e9; border-radius: var(--radius-control); color: var(--color-ink); }
+.input:focus { border-color: #667bd0; box-shadow: 0 0 0 3px rgb(95 116 203 / 13%); }
+.card, .catalog-card, .quick-link-card, .learning-course-card, .admin-home-card { background: var(--color-surface); border-color: var(--color-border); box-shadow: var(--shadow-card); }
+.avatar { background: #f3ba52; color: #23336c; }
+.progress-track, .course-progress-bar { background: #e4e8f1; }
+.progress-track > *, .course-progress-bar > * { background: var(--color-primary); }
+
+/* Navigation retains the new horizontal position, using the old blue shell. */
+.main-header { background: #2c3d7b; border-bottom-color: #26366c; backdrop-filter: none; box-shadow: 0 3px 16px rgb(27 39 86 / 10%); }
+.main-header .brand { display: inline-flex; align-items: center; gap: 0; color: #fffefa; font-size: 1.25rem; white-space: nowrap; letter-spacing: 0; }
+.main-header .brand span { color: #fffefa; margin-left: 4px; text-transform: capitalize; }
+.atlas-brand-mark, .main-header .brand::before {
+  display: inline-grid; place-items: center; flex: none; width: 42px; height: 42px;
+  background: linear-gradient(135deg, #f4b94c 0 45%, #e27a5b 45% 58%, #b9d9ce 58% 100%);
+  border: 1px solid rgb(255 255 255 / 45%); border-radius: 13px 4px 13px 4px;
+  box-shadow: 4px 4px 0 rgb(28 43 79 / 17%); transform: rotate(-4deg);
+  color: #243269; font: 800 13px ui-monospace, monospace;
+}
+.main-header .brand::before { content: 'AI'; width: 32px; height: 32px; font-size: 11px; margin-right: 10px; }
+.main-header .main-nav-link { color: #dce5ff; border-radius: 8px; }
+.main-header .main-nav-link:hover { background: rgb(255 255 255 / 10%); color: white; }
+.main-header .main-nav-link.active { background: #fffefa; color: #293a78; box-shadow: inset 0 -3px var(--atlas-gold); }
+.main-header .user-menu > summary, .main-header .user-menu-name { color: #edf1ff; }
+.main-header .language-select-trigger { border-color: rgb(255 255 255 / 25%); background: rgb(255 255 255 / 8%); color: #edf1ff; }
+.main-header .language-select-icon, .main-header .language-select-chevron { color: #d6def8; }
+.user-menu-panel, .language-select-menu { background: var(--color-surface); }
+.main-content, .admin-content { background-image: linear-gradient(rgb(218 226 240 / 25%) 1px, transparent 1px); background-size: 100% 42px; }
+.resume-course { background: #eaf0fb; border-color: #d5ddef; }
+.resume-course-art { color: #4058af; }
+.quick-link-icon, .learning-course-cover { background: var(--color-primary-soft); color: var(--color-primary); }
+.catalog-card-art { background: #e8edff; color: #4058af; }
+.catalog-card-art.tone-1 { background: var(--atlas-teal-soft); color: #287b67; }
+.catalog-card-art.tone-2 { background: #fff3dc; color: #98631b; }
+.module-number, .module-num { background: #e8edff; color: #4058af; }
+.notice.error, .toast.error { background: #fbece6; color: #a34430; }
+.status.published, .learning-status.completed { color: #236f5b; background: var(--atlas-teal-soft); }
+.course-outline, .course-outline-rail, .learning-tutor { background-color: var(--color-surface); }
+.learning-layout .learning-workspace .outline-lesson.active { background: var(--color-primary-soft); color: #293a78; }
+.learning-layout .outline-rail-trigger { color: var(--color-primary); border-color: #cbd5e7; background: #f2f4fc; }
+.learning-layout .learning-workspace .course-outline, .learning-layout .course-outline.mobile-outline {
+  --color-ink: #f0f3ff;
+  --color-muted: #c5d0ec;
+  --color-subtle: #b9c8ef;
+  --color-border: rgb(215 226 255 / 18%);
+  background: #2c3d7b;
+  color: #f0f3ff;
+}
+.learning-layout .course-outline .outline-lesson { color: #dce5ff; }
+.learning-layout .course-outline .outline-lesson:hover:not(.active) { background: rgb(255 255 255 / 9%); }
+.learning-layout .course-outline .outline-lesson.active { background: #fffefa; color: #293a78; box-shadow: inset 3px 0 var(--atlas-gold); }
+.learning-layout .course-outline .outline-lesson.active small { color: #65728a; }
+.learning-layout .course-outline .outline-progress strong { color: #fffefa; }
+.learning-layout .course-outline .eyebrow { color: #f9cb6c; }
+.learning-layout .course-outline .outline-close:hover { color: #fff; background: rgb(255 255 255 / 12%); }
+.learning-layout .course-outline .outline-lesson:not(.active) .learning-status-icon { color: #c8d4f4; }
+.learning-layout .course-outline .outline-lesson:not(.active) .learning-status-icon.is-complete { color: #97dec5; }
+.learning-header { background: var(--color-surface); border-bottom-color: var(--color-border); }
+.learning-header-title { width: 100%; overflow: hidden; }
+.learning-header-title > * { min-width: 0; max-width: 100%; width: 100%; }
+.tutor-panel { background: var(--color-surface); }
+.tutor-message.user { background: #e8edff; }
+.tutor-composer, .tutor-mic { background: var(--color-surface); }
+.tutor-composer textarea, .tutor-suggestions button { background: #f4f5fb; }
+.lecture-chat, .lecture-document-editor, .editor-canvas, .block-settings, .admin-user-form, .management-table-wrap { border-color: var(--color-border); background-color: var(--color-surface); }
+.lecture-chat-message.user { background: #e8edff; }
+.assessment-intro-icon { background: #e8edff; color: #4058af; }
+.admin-shell .curriculum-create-course { background: var(--color-primary); border-color: var(--color-primary); box-shadow: 0 4px 0 #293b86; }
+.admin-shell .curriculum-create-course:hover { background: var(--color-primary-dark); }
+.admin-shell .curriculum-course-icon { background: var(--color-primary-soft); color: var(--color-primary); }
+.admin-shell .curriculum-add-inline { color: var(--color-primary); }
+.admin-shell .curriculum-add-inline:hover { background: var(--color-primary-soft); border-color: #cbd5e7; }
+.admin-shell .curriculum-track-selector select { border-color: var(--color-border); color: var(--color-ink); }
+
+/* Login follows the reference, without the research formula or demo credentials. */
+.auth-page { position: relative; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); min-height: 100dvh; background: #f8f9fc; }
+.auth-side {
+  position: relative; isolation: isolate; overflow: hidden; display: grid; grid-template-rows: auto 1fr auto; min-height: 100dvh;
+  padding: 48px max(38px, 10%); color: #fffefa;
+  background: linear-gradient(146deg, #26376f 0%, #344a91 60%, #2d417e 100%);
+}
+.auth-side::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(143deg, transparent 35%, rgb(194 212 255 / 25%) 35.1% 35.3%, transparent 35.45%),
+    linear-gradient(42deg, transparent 50%, rgb(194 212 255 / 18%) 50.1% 50.3%, transparent 50.45%),
+    linear-gradient(95deg, transparent 68%, rgb(194 212 255 / 16%) 68.1% 68.3%, transparent 68.45%);
+}
+.auth-brand { display: flex; align-items: center; gap: 14px; width: fit-content; color: #d7def7; }
+.auth-brand > span:last-child { font: 10px/1.6 ui-monospace, monospace; text-transform: uppercase; }
+.auth-page .auth-side > .auth-product-copy { display: block; align-self: center; padding: 64px 0 80px; }
+.auth-product-copy .eyebrow { color: #f9cb6c; font-size: 10px; font-weight: 700; line-height: 1.6; margin: 0 0 14px; }
+.auth-side .auth-product-copy h1 { color: #fffefa; font-size: 80px; font-weight: 650; line-height: 1.05; margin: 0 0 32px; max-width: none; white-space: nowrap; }
+.auth-product-copy h1 span { display: inline-block; color: #f9ca68; font: 400 36px/1 ui-monospace, monospace; vertical-align: top; margin-top: 4px; }
+.auth-side .auth-product-copy > p:last-child { color: #e3e8fc; max-width: 560px; font-size: 18px; line-height: 1.65; margin: 0; }
+.auth-side > small { display: block; color: #c5d0ef; font-size: 11px; }
+.auth-language { position: absolute; z-index: 2; top: 10px; right: 5%; }
+.language-tabs { display: inline-flex; padding: 4px; gap: 2px; border: 1px solid #d9e0ea; border-radius: 10px; background: #f8f9fc; }
+.language-tabs button { display: grid; place-items: center; min-width: 38px; min-height: 30px; padding: 6px; border: 0; border-radius: 6px; background: transparent; color: #65728a; font-size: 10px; font-weight: 700; }
+.language-tabs button[aria-pressed='true'] { background: var(--color-surface); color: #293a78; box-shadow: 0 2px 8px rgb(42 58 113 / 10%); }
+.auth-form-wrap { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 100dvh; padding: 72px 38px; background: linear-gradient(rgb(212 220 241 / 25%) 1px, transparent 1px), linear-gradient(90deg, rgb(212 220 241 / 25%) 1px, transparent 1px), #f8f9fc; background-size: 38px 38px; }
+.auth-page .auth-form { display: grid; gap: 20px; width: min(100%, 460px); padding: 28px; border: 1px solid #d9e0ea; border-radius: 20px; background: var(--color-surface); box-shadow: 0 22px 55px rgb(41 58 112 / 10%); }
+.auth-mode { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; gap: 3px; margin-bottom: 20px; border: 1px solid #d9e0ea; border-radius: 10px; background: #eef1f9; }
+.auth-mode a { display: flex; align-items: center; justify-content: center; padding: 10px 7px; min-height: 38px; text-align: center; font-size: 12px; color: #65728a; border-radius: 6px; }
+.auth-mode a[aria-current='page'] { background: var(--color-surface); color: #293a78; font-weight: 650; box-shadow: 0 2px 8px rgb(42 58 113 / 12%); }
+.auth-page .auth-form h2 { margin: 0; font-size: 30px; font-weight: 650; line-height: 1.15; overflow-wrap: anywhere; }
+.auth-page .auth-form > p { margin: -10px 0 8px; font-size: 15px; line-height: 1.5; color: #65728a; }
+.auth-page .auth-form label { color: #65728a; font-size: 13px; }
+.auth-page .auth-form .input { background: var(--color-surface); min-height: 46px; border-color: #cfd8e9; font-size: 13px; }
+.auth-page .auth-form .wide { min-height: 46px; margin: 0 0 4px; }
+.auth-page .auth-form .row { align-items: flex-start; }
+.auth-switch { font-size: 12px; color: #65728a; }
+.auth-switch a { color: var(--color-primary); }
+.auth-page .track-option-btn { border-radius: 7px; }
+.auth-page .field-error:empty { display: none; }
+
+@media (max-width: 1100px) {
+  .auth-page { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); }
+  .auth-side { padding: 40px; }
+  .auth-side .auth-product-copy h1 { font-size: 64px; }
+  .auth-form-wrap { padding-inline: 30px; }
+}
+@media (max-width: 760px) {
+  .auth-page { display: block; }
+  .auth-side { grid-template-rows: auto 1fr; min-height: 330px; padding: 28px 24px; }
+  .auth-brand > span:last-child { max-width: 180px; font-size: 9px; }
+  .auth-page .auth-side > .auth-product-copy { padding: 38px 0 6px; }
+  .auth-side .auth-product-copy h1 { font-size: 58px; margin-bottom: 18px; }
+  .auth-product-copy h1 span { font-size: 28px; }
+  .auth-side .auth-product-copy > p:last-child { font-size: 15px; }
+  .auth-side > small { display: none; }
+  .auth-language { position: relative; display: flex; justify-content: flex-end; top: auto; right: auto; padding: 12px 18px; background: #f8f9fc; }
+  .auth-form-wrap { min-height: auto; padding: 24px 18px 48px; }
+  .auth-page .auth-form { padding: 24px; }
+  .auth-mode { margin-bottom: 12px; }
+  .auth-page .auth-form h2 { font-size: 27px; }
+  .main-header .brand::before { width: 28px; height: 28px; }
+  .main-layout .main-header-inner { flex-wrap: wrap; padding-block: 12px; row-gap: 10px; }
+  .main-layout .brand { margin-right: auto; }
+  .main-layout .main-nav { order: 4; flex-basis: 100%; justify-content: flex-start; overflow: visible; }
+  .main-layout .main-nav-link { flex: 1; justify-content: center; padding: 8px 6px; font-size: 12px; }
+  .main-layout .main-header-inner > .language-select, .main-layout .main-header-inner > .user-menu { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .button, .input, .auth-mode a, .language-tabs button { transition: none; }
+}

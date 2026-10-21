@@ -30,7 +30,7 @@ function mount(path = '/login', user?: User | null) {
 }
 
 async function login(email = student.email, password = 'StrongPass321!') {
-  await screen.findByRole('heading', { name: 'Вход в аккаунт' })
+  await screen.findByRole('heading', { name: 'Продолжить обучение' })
   fireEvent.change(screen.getByLabelText('Email'), { target: { value: email } })
   fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: password } })
   fireEvent.click(screen.getByRole('button', { name: 'Войти' }))
@@ -58,6 +58,27 @@ afterEach(async () => {
 })
 
 describe('authentication with mounted application', () => {
+  it('renders the old login presentation without a readiness formula or demo access', async () => {
+    mount()
+    await screen.findByRole('heading', { name: 'Продолжить обучение' })
+    expect(screen.getByRole('heading', { name: 'AI Edu' })).toBeTruthy()
+    expect(screen.getByRole('navigation', { name: 'Режим входа' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Создать аккаунт' }).getAttribute('href')).toBe('/register')
+    expect(document.querySelectorAll('form')).toHaveLength(1)
+    expect(screen.queryByText(/Ω|Интегральная готовность|Формула адаптации/)).toBeNull()
+    expect(screen.queryByText('Демонстрационный доступ')).toBeNull()
+  })
+
+  it('switches between login and registration from the reference-style mode selector', async () => {
+    mount()
+    await screen.findByRole('heading', { name: 'Продолжить обучение' })
+    fireEvent.click(screen.getByRole('link', { name: 'Создать аккаунт' }))
+    await screen.findByRole('heading', { name: 'Новый участник' })
+    expect(screen.getByTestId('location').textContent).toBe('/register')
+    expect(screen.getByLabelText('Имя')).toBeTruthy()
+    expect(screen.getByLabelText('Фамилия')).toBeTruthy()
+  })
+
   it('updates the page on login and fetches learning for the new session', async () => {
     const client = mount()
     client.setQueryData(['courses'], [{ id: 99, title: 'Previous account course' }])
@@ -68,7 +89,7 @@ describe('authentication with mounted application', () => {
     await waitFor(() => expect(vi.mocked(api)).toHaveBeenCalledWith('me/learning/'))
     expect(screen.queryByText('Previous account course')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-    expect(screen.queryByRole('heading', { name: 'Вход в аккаунт' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Продолжить обучение' })).toBeNull()
   })
 
   it('updates the page on logout and denies navigation back to private pages', async () => {
@@ -76,19 +97,19 @@ describe('authentication with mounted application', () => {
     client.setQueryData(['private-results'], ['old result'])
     await screen.findByLabelText('Меню пользователя')
     fireEvent.click(screen.getByText('Выйти'))
-    expect(await screen.findByRole('heading', { name: 'Вход в аккаунт' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Продолжить обучение' })).toBeTruthy()
     expect(screen.queryByLabelText('Меню пользователя')).toBeNull()
     expect(client.getQueryData(['me'])).toBeNull()
     expect(client.getQueryData(['private-results'])).toBeUndefined()
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-    expect(screen.getByRole('heading', { name: 'Вход в аккаунт' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Продолжить обучение' })).toBeTruthy()
   })
 
   it('supports logout followed by login as a different role', async () => {
     mount('/', student)
     await screen.findByLabelText('Меню пользователя')
     fireEvent.click(screen.getByText('Выйти'))
-    await screen.findByRole('heading', { name: 'Вход в аккаунт' })
+    await screen.findByRole('heading', { name: 'Продолжить обучение' })
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/login'))
     // Change the login response after logout settles; auth/me must still represent an anonymous session.
     vi.mocked(api).mockImplementation(async path => {
@@ -112,7 +133,7 @@ describe('authentication with mounted application', () => {
     expect(menu.open).toBe(true)
     expect(client.getQueryData(['me'])).toEqual(student)
     fireEvent.click(screen.getByText('Выйти'))
-    expect(await screen.findByRole('heading', { name: 'Вход в аккаунт' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Продолжить обучение' })).toBeTruthy()
   })
 
   it('disables repeated logout while the request is pending', async () => {
@@ -126,7 +147,7 @@ describe('authentication with mounted application', () => {
     fireEvent.click(button)
     expect(vi.mocked(api).mock.calls.filter(([path]) => path === 'auth/logout/')).toHaveLength(1)
     await act(async () => complete())
-    expect(await screen.findByRole('heading', { name: 'Вход в аккаунт' })).toBeTruthy()
+    expect(await screen.findByRole('heading', { name: 'Продолжить обучение' })).toBeTruthy()
   })
 
   it('does not restore the old user when a pending profile request completes after logout', async () => {
@@ -137,7 +158,7 @@ describe('authentication with mounted application', () => {
     let refetch!: Promise<void>
     act(() => { refetch = client.refetchQueries({ queryKey: ['me'] }) })
     fireEvent.click(screen.getByText('Выйти'))
-    await screen.findByRole('heading', { name: 'Вход в аккаунт' })
+    await screen.findByRole('heading', { name: 'Продолжить обучение' })
     await act(async () => { complete(student); await refetch })
     expect(client.getQueryData(['me'])).toBeNull()
     expect(screen.queryByLabelText('Меню пользователя')).toBeNull()
@@ -147,7 +168,7 @@ describe('authentication with mounted application', () => {
     vi.mocked(api).mockRejectedValue(new ApiError('Server unavailable', 503))
     mount('/')
     expect(await screen.findByText('Server unavailable')).toBeTruthy()
-    expect(screen.queryByRole('heading', { name: 'Вход в аккаунт' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Продолжить обучение' })).toBeNull()
   })
 
   it('allows existing accounts with a short password to attempt login', async () => {
@@ -159,7 +180,7 @@ describe('authentication with mounted application', () => {
 
   it('keeps failed login on the form and permits a corrected attempt', async () => {
     const client = mount()
-    await screen.findByRole('heading', { name: 'Вход в аккаунт' })
+    await screen.findByRole('heading', { name: 'Продолжить обучение' })
     vi.mocked(api).mockRejectedValueOnce(new ApiError('Неверный email или пароль', 400))
     await login()
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Неверный email или пароль')
@@ -170,12 +191,12 @@ describe('authentication with mounted application', () => {
 
   it('resets errors and passwords when switching to registration', async () => {
     mount()
-    await screen.findByRole('heading', { name: 'Вход в аккаунт' })
+    await screen.findByRole('heading', { name: 'Продолжить обучение' })
     vi.mocked(api).mockRejectedValueOnce(new ApiError('Неверный email или пароль', 400))
     await login()
     await screen.findByRole('alert')
     fireEvent.click(screen.getByRole('link', { name: 'Зарегистрироваться' }))
-    await screen.findByRole('heading', { name: 'Создать аккаунт' })
+    await screen.findByRole('heading', { name: 'Новый участник' })
     expect(screen.queryByRole('alert')).toBeNull()
     expect((screen.getByLabelText('Пароль') as HTMLInputElement).value).toBe('')
   })
@@ -185,7 +206,7 @@ describe('authentication with mounted application', () => {
       ? [{ id: 1, title: 'IT', short_id: 'it', description: '', cover: null, is_published: true, is_active: true, is_system: false }] as never
       : [] as never)
     mount('/register')
-    await screen.findByRole('heading', { name: 'Создать аккаунт' })
+    await screen.findByRole('heading', { name: 'Новый участник' })
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: student.email } })
     fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: 'StrongPass321!' } })
     fireEvent.click(await screen.findByRole('radio', { name: 'IT' }))
