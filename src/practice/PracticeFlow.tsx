@@ -114,7 +114,7 @@ export function PracticeFlow({ state, plugin, item, ownerId, busy, start, submit
 
   return <section ref={root} className={`practice-flow ${workspace ? 'is-workspace' : ''}`}>
     {!workspace && <>
-      <header className="practice-flow-heading"><span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{version.title}</h1>{version.description && <p>{version.description}</p>}</header>
+      <header className="practice-flow-heading"><span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{version.title}</h1></header>
       <nav className="practice-flow-steps" aria-label={t('Этапы практической работы')}>
         {(['task', 'work', 'review'] as Step[]).map((value, index) => <button key={value} type="button" aria-current={step === value ? 'step' : undefined}
           disabled={busy || value === 'review' && (!canReview || workPending)} onClick={() => value === 'work' ? void enter() : setStep(value)}>

@@ -51,6 +51,7 @@ describe('Practice Engine completion', () => {
     })
     mount(<PracticeRunner item={item}/>)
     await screen.findByRole('button', { name: 'Начать выполнение' })
+    expect(screen.queryByText(version.description)).toBeNull()
     expect(screen.queryByRole('textbox', { name: 'Ваш запрос' })).toBeNull()
     expect(mockedApi.mock.calls.some(([, method]) => method === 'POST')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Начать выполнение' }))
@@ -95,11 +96,11 @@ describe('Practice Engine completion', () => {
 })
 
 describe('changing the assigned practice', () => {
-  it('replaces the selected practice on the same item and retains title and description', async () => {
+  it('replaces the selected practice on the same item and retains title and keeps the legacy description hidden', async () => {
     mockEditor()
     mount(<PracticeEditorPage item={item}/>)
     fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Custom title' } })
-    fireEvent.change(screen.getByLabelText('Описание'), { target: { value: 'Custom description' } })
+    expect(screen.queryByLabelText('Описание')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Изменить практику' }))
     const catalog = screen.getByRole('region', { name: 'Выберите тип практической работы' })
     expect((await within(catalog).findByRole('button', { name: /Виртуальная мастерская/ }) as HTMLButtonElement).disabled).toBe(true)
@@ -107,12 +108,12 @@ describe('changing the assigned practice', () => {
     expect(screen.getByRole('heading', { name: 'Вторая практика' })).toBeTruthy()
     expect(screen.getByText('Настройки второй практики')).toBeTruthy()
     expect(screen.getByLabelText('Название').getAttribute('value')).toBe('Custom title')
-    expect(screen.getByLabelText('Описание').textContent).toBe('Custom description')
+    expect(screen.queryByLabelText('Описание')).toBeNull()
     expect(mockedApi.mock.calls.some(([, method]) => method === 'PUT')).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: 'Обновить публикацию' }))
     await screen.findByText('Практика опубликована')
     expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', {
-      practice_type: second.type, plugin_version: second.version, title: 'Custom title', description: 'Custom description', config: { mode: 'second' },
+      practice_type: second.type, plugin_version: second.version, title: 'Custom title', description: version.description, config: { mode: 'second' },
     })
     expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'POST')
   })

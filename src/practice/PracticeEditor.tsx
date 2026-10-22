@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ListChecks, Puzzle, Sparkles } from 'lucide-react'
 import { api, type LearningItem } from '../api'
-import { Button, ErrorState, Input, Loading, Notice, Textarea } from '../components/ui'
+import { Button, ErrorState, Input, Loading, Notice } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useLeaveWarning } from '../useLeaveWarning'
 import { getPracticePlugin } from './registry'
@@ -31,7 +31,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const catalogTrigger = useRef<HTMLButtonElement>(null)
   const catalog = useQuery({ queryKey: ['practice-types'], queryFn: () => api<PracticeManifest[]>('practice-types/') })
   const [title, setTitle] = useState(seed?.title ?? item.title)
-  const [description, setDescription] = useState(seed?.description ?? item.description)
+  const description = seed?.description ?? item.description
   const [published, setPublished] = useState(initial.published)
   const [hasDraft, setHasDraft] = useState(Boolean(initial.draft))
   const [dirty, setDirty] = useState(false)
@@ -81,7 +81,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       <div className="practice-selection-heading"><h2>{t(selected ? selectedName : 'Выберите тип практической работы')}</h2><button ref={catalogTrigger} type="button" className="button secondary" disabled={busy} aria-expanded={catalogOpen} aria-controls="practice-type-catalog" onClick={() => setCatalogOpen(open => !open)}>{t(catalogOpen ? 'Закрыть выбор' : selected ? 'Изменить практику' : 'Выбрать практику')}</button></div>
       {manifest && <p>{t(manifest.description)}</p>}
       {catalogOpen && <section id="practice-type-catalog" aria-label={t('Выберите тип практической работы')}>
-        <p>{t('Название, описание, инструкция и критерии сохранятся при смене инструмента.')}</p>
+        <p>{t('Название, инструкция и критерии сохранятся при смене инструмента.')}</p>
         {catalog.isLoading ? <Loading variant="inline"/> : catalog.error ? <><ErrorState error={catalog.error}/><Button variant="secondary" onClick={() => void catalog.refetch()} disabled={catalog.isFetching}>{t('Повторить')}</Button></> : <>
           <div className="practice-catalog">{catalog.data?.map(entry => {
             const active = entry.type === selected?.type && entry.version === selected.version
@@ -94,7 +94,6 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       </section>}
       {selected && !plugin && <Notice text={t('Этот тип практики пока недоступен')} kind="error"/>}
       <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => { setTitle(event.target.value); setDirty(true) }}/></label>
-      <label>{t('Описание')}<Textarea value={description} rows={5} disabled={busy} onChange={event => { setDescription(event.target.value); setDirty(true) }}/></label>
       {ConfigEditor && <ConfigEditor key={selected?.type} config={config} disabled={busy} onChange={value => { setConfig(value); setDirty(true) }}/>}
       <div className="row"><Button variant="secondary" disabled={busy || !dirty || !title.trim() || !plugin} onClick={() => void save(false)}>{t('Сохранить')}</Button>
         <Button disabled={busy || !title.trim() || !plugin || (!dirty && !hasDraft)} onClick={() => void save(true)}>{t(published ? 'Обновить публикацию' : 'Опубликовать')}</Button></div>

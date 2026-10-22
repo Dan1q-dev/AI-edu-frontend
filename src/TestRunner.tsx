@@ -82,12 +82,13 @@ function LoadedTestRunner({ itemId, ownerId, next, courseSlug, test }: Props & {
           <div className="assessment-submit"><p>{t('После отправки ответы изменить нельзя. Сначала убедитесь, что вы ответили на все вопросы.')}</p><Button disabled={submitting || !test.questions.length || answered !== test.questions.length} onClick={() => { setMessage(''); setConfirm(true) }}>{t('Отправить ответы')}</Button><Button variant="secondary" onClick={() => go()}>{t('Сохранить и выйти')}</Button></div>
         </>}
       </div> : attempts.isLoading && !result ? <Loading/> : result ? <>
-        <div className={`assessment-result-banner ${result.passed ? 'passed' : 'failed'}`}><div><div><h1>{t('Ваш результат')}: <strong>{result.percent}%</strong></h1><p>{t(result.passed ? 'Тест пройден!' : 'Тест не пройден')} · {result.earned_points} {t('из')} {result.total_points} {t('баллов')}{result.test_version === test.version && <> · {t('Проходной балл')} {test.passing_percent}%</>}</p>{counts}</div>{(!result.adaptive_result || result.adaptive_result.module_completed) && <NextItemAction next={next} courseSlug={courseSlug} nextItemId={result.adaptive_result?.next_item_short_id}/>}</div></div>
+        <div className={`assessment-result-banner ${result.passed ? 'passed' : 'failed'}`}><div><div><h1>{t('Ваш результат')}: <strong>{result.percent}%</strong></h1><p>{t(result.passed ? 'Тест пройден!' : 'Тест не пройден')} · {result.earned_points} {t('из')} {result.total_points} {t('баллов')}{result.test_version === test.version && <> · {t('Проходной балл')} {test.passing_percent}%</>}</p>{counts}</div></div></div>
         <div className="assessment-content assessment-review">{result.adaptive_result && <AdaptiveResultCard result={result.adaptive_result} showNext={false}/>}
           <ol className="assessment-questions">{result.snapshot?.map((question, index) => <li key={index}><ReviewQuestion question={question} index={index}/></li>)}</ol>
           <div className="assessment-review-actions">{canRetry && <Button variant="secondary" disabled={submitting} onClick={() => { setAnswers({}); go('assessment') }}>{t('Пройти ещё раз')}</Button>}{exhausted && <p>{t('Лимит попыток исчерпан')}</p>}</div>
         </div>
       </> : <div className="assessment-content"><ErrorState error={new Error(t('Не удалось загрузить результат этой попытки'))}/><Button variant="secondary" onClick={() => go()}>{t('Вернуться к тесту')}</Button></div>}
+      {reviewing && result && (!result.adaptive_result || result.adaptive_result.module_completed) && <div className="learning-next-bar"><NextItemAction next={next} courseSlug={courseSlug} nextItemId={result.adaptive_result?.next_item_short_id}/></div>}
     </div>
     {confirm && <SubmitConfirmation busy={submitting} message={message} onCancel={() => { if (!sending.current) setConfirm(false) }} onSubmit={() => void submit()}/>}
   </section>

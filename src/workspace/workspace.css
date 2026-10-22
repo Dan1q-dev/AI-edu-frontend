@@ -6,11 +6,6 @@
 .learning-layout.is-document-workspace .learning-center { min-height: 0; height: 100%; overflow: hidden; background: #fff; }
 .learning-layout.is-document-workspace .learning-main { display: flex; flex-direction: column; width: 100%; max-width: none; min-height: 0; padding: 0; }
 .is-document-workspace .learning-workspace > .desktop-outline, .is-document-workspace .course-outline-rail, .is-document-workspace .learning-workspace > .learning-tutor { position: relative; top: 0; height: 100%; min-height: 0; }
-.learning-layout.is-document-workspace .learning-next-bar { position: static; padding: 3px 16px max(3px, env(safe-area-inset-bottom, 0px)); border: 0; background: #fff; box-shadow: none; }
-.learning-layout.is-document-workspace .learning-next-bar .next-item-action { width: 100%; }
-.learning-layout.is-document-workspace .learning-next-bar .button { width: auto; min-height: 26px; padding: 3px 6px; color: var(--color-muted); background: transparent; border: 0; border-radius: 6px; box-shadow: none; font-size: .7rem; }
-.learning-layout.is-document-workspace .learning-next-bar .button:hover { color: var(--color-primary); background: #f3f5fa; }
-.is-document-workspace .learning-next-bar .button svg { width: 14px; height: 14px; }
 .is-document-workspace .tutor-suggestions button { padding: 8px 10px; font-size: .75rem; }
 @media (min-width: 1251px) {
   .learning-layout.is-document-workspace.has-lecture-tutor .learning-workspace { grid-template-columns: minmax(0, 1fr) clamp(260px, var(--learning-tutor-width, 300px), 38vw); }

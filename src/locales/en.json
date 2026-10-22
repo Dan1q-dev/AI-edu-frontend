@@ -842,5 +842,5 @@
   "Не удалось загрузить результат. Откройте инструмент и повторите самопроверку.": "Could not load the result. Open the tool and return to self-check.",
   "Подготовьте результат по инструкции задания. Затем перейдите к самопроверке.": "Prepare your result following the assignment instructions, then go to self-check.",
   "Открыть результат": "Open result",
-  "Название, описание, инструкция и критерии сохранятся при смене инструмента.": "The title, description, instructions and criteria are preserved when switching tools."
+  "Название, инструкция и критерии сохранятся при смене инструмента.": "The title, instructions and criteria are preserved when switching tools."
 }
