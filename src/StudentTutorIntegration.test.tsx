@@ -52,14 +52,15 @@ it('keeps the tutor in the practical workspace alongside its document tools', as
   vi.mocked(api).mockImplementation(async path => {
     if (path === 'items/workshop/') return practice as never
     if (path.endsWith('/progress/')) return { percent: 0, items: {} } as never
-    if (path === 'items/workshop/practice/') return {
+    if (path === 'items/workshop/practice/' || path === 'items/workshop/practice/start/') return {
       version: { id: 1, practice_definition: 1, practice_type: 'lecture_workshop', plugin_version: '1.0.0', version_number: 1, title: 'Workshop task', description: '', config: { criteria: [{ title: 'Reviewed', description: '', is_required: true }] }, status: 'PUBLISHED', published_at: null },
-      current_version_id: 1, submission: null, result: null, progress_percent: 0, is_completed: false,
+      current_version_id: 1, submission: path.endsWith('/start/') ? { id: 12, status: 'IN_PROGRESS', submission_data: {} } : null, result: null, progress_percent: 0, is_completed: false,
     } as never
     return [] as never
   })
   mount(practice)
-  expect(await screen.findByRole('button', { name: 'Сделано' })).toBeTruthy()
+  fireEvent.click(await screen.findByRole('button', { name: /Начать выполнение/ }))
+  expect(await screen.findByRole('textbox', { name: /Ваш запрос/ })).toBeTruthy()
   expect(screen.getByRole('textbox', { name: 'Ваш запрос' })).toBeTruthy()
   expect(document.querySelector('.is-document-workspace')).toBeTruthy()
   expect(screen.getByLabelText('Вопрос тьютору')).toBeTruthy()

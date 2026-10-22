@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AdaptiveResultCard, LearningItemLink, PracticeRunner } from './AdaptiveLearning'
@@ -50,15 +50,14 @@ describe('adaptive learning', () => {
     expect(screen.getByText('Сначала завершите текущий модуль')).toBeTruthy()
   })
 
-  it('completes a legacy practice without displaying self-assessment criteria', async () => {
+  it('opens a legacy practice in its workspace without adding self-assessment controls', async () => {
     const state = { version: { id: 1, practice_type: 'checklist_practice', plugin_version: '1.0.0', version_number: 1, title: 'Задание', description: '', config: { criteria: [
       { title: 'Первый критерий', description: '', is_required: true }, { title: 'Второй критерий', description: '', is_required: true },
     ] } }, submission: { id: 9, status: 'IN_PROGRESS', submission_data: {} }, result: null, progress_percent: 0, is_completed: false }
     mockedApi.mockResolvedValue(state as never)
     mount(<PracticeRunner item={item}/>)
-    fireEvent.click(await screen.findByRole('button', { name: 'Сделано' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/practice-1/practice/', 'POST', { submission_id: 9, submission_data: { completed: true } }))
-    expect(await screen.findByText('Практическая работа завершена')).toBeTruthy()
+    fireEvent.click(await screen.findByRole('button', { name: /Продолжить выполнение/ }))
+    expect(document.querySelector('.practice-flow.is-workspace')).toBeTruthy()
     expect(screen.queryByRole('checkbox')).toBeNull()
   })
 })
