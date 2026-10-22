@@ -190,18 +190,35 @@ describe('shared teaching constructors', () => {
     })
   }
 
-  it('selects a saved lecture and sends its ID through the shared chat', async () => {
+  it('offers a saved lecture only in response to an assistant source offer and sends its ID', async () => {
     mockedAll.mockImplementation(async path => path === 'workspace/source-lectures/'
-      ? [{ id: 8, title: 'Сохранённая лекция', updated_at: '' }] as never : [])
+      ? [{ id: 8, title: 'Сохранённая лекция', updated_at: '' }] as never : structuredClone(messages) as never)
     const original = mockedApi.getMockImplementation()!
     mockedApi.mockImplementation((path, method, data) => path.endsWith('/workspace/') || path === 'workspace/documents/44/'
       ? Promise.resolve({ ...document, content: {}, document_type: 'practical_session' } as never) : original(path, method, data))
-    mount({ version: { ...state.version!, practice_type: 'practical_workshop' }, submission: null })
+    messages = [{ id: 1, operation: 71, role: 'assistant', text: 'Можно выбрать готовую лекцию или продолжить по теме.', offer_source_lecture: true, created_at: '' }]
+    operation.status = 'SUCCEEDED'
+    mount({ version: { ...state.version!, practice_type: 'practical_workshop' } })
     await screen.findByRole('option', { name: 'Сохранённая лекция' })
     fireEvent.change(screen.getByRole('combobox', { name: 'Созданная лекция' }), { target: { value: '8' } })
     fireEvent.click(screen.getByRole('button', { name: 'Отправить запрос' }))
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST',
       expect.objectContaining({ source_lecture_id: 8, kind: 'chat', prompt: 'Подготовь практическое занятие по выбранной лекции.' })))
+  })
+
+  it('accepts pasted lecture text without showing or fetching saved lectures', async () => {
+    const original = mockedApi.getMockImplementation()!
+    mockedApi.mockImplementation((path, method, data) => path.endsWith('/workspace/') || path === 'workspace/documents/44/'
+      ? Promise.resolve({ ...document, content: {}, document_type: 'practical_session' } as never) : original(path, method, data))
+    mount({ version: { ...state.version!, practice_type: 'practical_workshop' }, submission: null })
+    expect(screen.queryByRole('combobox', { name: 'Созданная лекция' })).toBeNull()
+    const text = 'Создай практику по лекции: Формирующее оценивание помогает выявить пробелы. Обратная связь направляет обучение.'
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: text } })
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить запрос' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST', expect.objectContaining({ prompt: text })))
+    expect(mockedAll).not.toHaveBeenCalledWith('workspace/source-lectures/')
+    const input = mockedApi.mock.calls.find(([path]) => path.endsWith('/operations/'))![2]
+    expect(input).not.toHaveProperty('source_lecture_id')
   })
 
   it('offers all eight pedagogical formats and includes the selected format in the request', async () => {

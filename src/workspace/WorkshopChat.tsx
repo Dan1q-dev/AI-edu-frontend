@@ -102,8 +102,12 @@ function Chat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackT
     }, refetchInterval: query => ['PENDING', 'RUNNING'].includes(query.state.data?.status ?? '') ? 2000 : false })
   const pending = operation.data?.status === 'PENDING' || operation.data?.status === 'RUNNING'
   const choosing = !messages.data?.length && !loaded.data?.content.title
-  const sources = useQuery({ queryKey: ['workspace-source-lectures', ownerId], enabled: !!definition.sourceLecture && active && choosing,
+  const latestAssistant = messages.data?.filter(message => message.role === 'assistant').at(-1)
+  const offeringSource = !!definition.sourceLecture && active && !loaded.data?.content.title && !!latestAssistant?.offer_source_lecture &&
+    latestAssistant.id === messages.data?.at(-1)?.id && !sending && !pending
+  const sources = useQuery({ queryKey: ['workspace-source-lectures', ownerId], enabled: offeringSource,
     queryFn: workspaceApi.sourceLectures, retry: false })
+  useEffect(() => setSourceId(''), [latestAssistant?.id])
   const tracking = !!documentId && (loaded.isPending || loaded.isFetching || !!loaded.error || messages.isPending || messages.isFetching || !!messages.error || !!operationId && (operation.isPending || !!operation.error))
   const disabled = !active || busy || sending || pending || tracking
   useEffect(() => {
@@ -147,7 +151,7 @@ function Chat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackT
 
   const send = async (text = prompt) => {
     const requestText = [choosing && sessionType ? `${t('Формат занятия')}: ${t(sessionType)}.` : '',
-      text.trim() || (choosing && sourceId ? t('Подготовь практическое занятие по выбранной лекции.') : '')].filter(Boolean).join('\n')
+      text.trim() || (offeringSource && sourceId ? t('Подготовь практическое занятие по выбранной лекции.') : '')].filter(Boolean).join('\n')
     if (sendingRef.current || disabled || !item || (!retryRequest && !requestText.trim())) return
     sendingRef.current = true; setSending(true); setError('')
     let request = retryRequest
@@ -161,7 +165,7 @@ function Chat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackT
         await qc.invalidateQueries({ queryKey: ['practice', item.short_id] })
       }
       request ??= { document: document!.id, input: { request_id: crypto.randomUUID(), revision: document!.revision, kind: 'chat', prompt: requestText,
-        ...(choosing && sourceId ? { source_lecture_id: Number(sourceId) } : {}) } }
+        ...(offeringSource && sourceId ? { source_lecture_id: Number(sourceId) } : {}) } }
       const next = await workspaceApi.start(request.document, request.input)
       setOperationId(next.id); setRetryRequest(null); setPrompt('')
       writeReference(referenceKey(ownerId, document?.submission ?? state.submission?.id), request.document, next.id)
@@ -184,7 +188,6 @@ function Chat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackT
   const lastUserMessage = messages.data?.filter(message => message.role === 'user').at(-1)
   const fallback = loaded.data?.content
   const hasAnswers = messages.data?.some(message => message.content)
-  const latestAssistant = messages.data?.filter(message => message.role === 'assistant').at(-1)
   const readyForReview = !!loaded.data && isWorkspaceContent(loaded.data.content, definition.documentType) && !busy && !sending && !pending && !tracking
   const goToReview = () => {
     if (!readyForReview || !loaded.data) return
@@ -203,13 +206,6 @@ function Chat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackT
         {!active && !state.is_completed && <Button disabled={busy} onClick={() => void onStart()}>{t('Продолжить практику')}</Button>}
         <div className="lecture-chat-messages" role="log" aria-label={t('История сообщений')} aria-live="polite">
           {choosing && <div className="lecture-chat-welcome"><span className="lecture-chat-avatar"><Sparkles size={22}/></span><h2>{t(definition.welcome)}</h2><p>{t(definition.description)}</p><small className="lecture-chat-scope">{t(definition.scope)}</small>
-            {active && definition.sourceLecture && <div className="workshop-source">
-              <label>{t('Созданная лекция')}<Select aria-label={t('Созданная лекция')} value={sourceId} disabled={disabled || !!retryRequest || sources.isPending} onChange={event => setSourceId(event.target.value)}>
-                <option value="">{t('Своя тема без лекции')}</option>{sources.data?.map(source => <option key={source.id} value={source.id}>{source.title}</option>)}
-              </Select></label>
-              {sources.isPending && <Loading variant="inline"/>}
-              {sources.error ? <><Notice text={t('Не удалось загрузить лекции. Можно написать тему или повторить загрузку.')} kind="error"/><Button variant="secondary" disabled={sources.isFetching} onClick={() => void sources.refetch()}>{t('Повторить')}</Button></> : sources.isSuccess && !sources.data.length && <small>{t('Созданных лекций пока нет. Напишите тему в чате.')}</small>}
-            </div>}
             {active && definition.sessionTypes && <div className="lecture-chat-choices workshop-formats" role="group" aria-label={t('Формат занятия')}>
               {sessionTypes.map(type => <button key={type} type="button" aria-pressed={type === sessionType} disabled={disabled || !!retryRequest} onClick={() => setSessionType(type === sessionType ? '' : type)}>{t(type)}</button>)}
             </div>}
@@ -221,6 +217,13 @@ function Chat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackT
             {message.artifact && <DocumentAttachment artifact={message.artifact}/>}
             {active && message.id === latestAssistant?.id && !!message.choices?.length && <div className="lecture-chat-choices" role="group" aria-label={t('Варианты ответа')}>
               {message.choices.map(choice => <button key={choice} type="button" disabled={disabled || !!retryRequest || !!prompt.trim()} onClick={() => void send(choice)}>{choice}</button>)}
+            </div>}
+            {offeringSource && message.id === latestAssistant?.id && <div className="workshop-source">
+              <label>{t('Созданная лекция')}<Select aria-label={t('Созданная лекция')} value={sourceId} disabled={disabled || !!retryRequest || sources.isPending} onChange={event => setSourceId(event.target.value)}>
+                <option value="">{t('Своя тема без лекции')}</option>{sources.data?.map(source => <option key={source.id} value={source.id}>{source.title}</option>)}
+              </Select></label>
+              {sources.isPending && <Loading variant="inline"/>}
+              {sources.error ? <><Notice text={t('Не удалось загрузить лекции. Можно написать тему или повторить загрузку.')} kind="error"/><Button variant="secondary" disabled={sources.isFetching} onClick={() => void sources.refetch()}>{t('Повторить')}</Button></> : sources.isSuccess && !sources.data.length && <small>{t('Созданных лекций пока нет. Напишите тему в чате.')}</small>}
             </div>}
           </div>)}
           {!hasAnswers && fallback && isWorkspaceContent(fallback, definition.documentType) && <div className="lecture-chat-message assistant"><DocumentAnswer content={fallback}/></div>}
@@ -237,7 +240,7 @@ function Chat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackT
             onChange={event => setPrompt(event.target.value)} onKeyDown={event => {
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() }
             }}/>
-          <Button type="submit" className="lecture-chat-send" disabled={disabled || !retryRequest && !prompt.trim() && !(choosing && sourceId)} title={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')} aria-label={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')}><Send size={16}/></Button>
+          <Button type="submit" className="lecture-chat-send" disabled={disabled || !retryRequest && !prompt.trim() && !(offeringSource && sourceId)} title={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')} aria-label={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')}><Send size={16}/></Button>
         </form> : <p className="lecture-chat-completed"><Check size={18}/>{t('Практическая работа завершена')}</p>}
         <p className="lecture-chat-disclaimer">{t('AI может ошибаться. Проверяйте сгенерированный материал.')}</p>
       </div>

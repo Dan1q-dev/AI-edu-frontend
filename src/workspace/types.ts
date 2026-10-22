@@ -23,7 +23,7 @@ export type WorkspaceDocument = {
   parameters: WorkspaceParameters; content: WorkspaceContent | Record<string, never>; revision: number; created_at: string; updated_at: string
 }
 export type WorkspaceArtifact = { id: number; name: string; size: number; url: string; revision: number }
-export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; content?: WorkspaceContent | null; choices?: string[]; artifact?: WorkspaceArtifact | null; created_at: string }
+export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; content?: WorkspaceContent | null; choices?: string[]; artifact?: WorkspaceArtifact | null; offer_source_lecture?: boolean; created_at: string }
 export type OperationInput = { request_id: string; revision: number; kind: 'generate' | 'improve_prompt' | 'chat'; prompt: string; source_lecture_id?: number }
 export type SourceLecture = { id: number; title: string; updated_at: string }
 export type WorkspaceOperation = {
