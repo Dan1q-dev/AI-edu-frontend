@@ -49,8 +49,8 @@ export function RichLessonContent({ value }: { value: string }) {
       case 'horizontalRule': return <hr key={key}/>
       case 'table': return <table key={key}><tbody>{children}</tbody></table>
       case 'tableRow': return <tr key={key}>{children}</tr>
-      case 'tableCell': return <td key={key} colSpan={Math.min(100, Math.max(1, Number(node.attrs?.colspan) || 1))} rowSpan={Math.min(100, Math.max(1, Number(node.attrs?.rowspan) || 1))}>{children}</td>
-      case 'tableHeader': return <th key={key} colSpan={Math.min(100, Math.max(1, Number(node.attrs?.colspan) || 1))} rowSpan={Math.min(100, Math.max(1, Number(node.attrs?.rowspan) || 1))}>{children}</th>
+      case 'tableCell': return <td key={key} style={{ backgroundColor: safeTextColor(node.attrs?.backgroundColor) }} colSpan={Math.min(100, Math.max(1, Number(node.attrs?.colspan) || 1))} rowSpan={Math.min(100, Math.max(1, Number(node.attrs?.rowspan) || 1))}>{children}</td>
+      case 'tableHeader': return <th key={key} style={{ backgroundColor: safeTextColor(node.attrs?.backgroundColor) }} colSpan={Math.min(100, Math.max(1, Number(node.attrs?.colspan) || 1))} rowSpan={Math.min(100, Math.max(1, Number(node.attrs?.rowspan) || 1))}>{children}</th>
       case 'callout': return <aside key={key} className="lecture-callout" data-tone={['important', 'tip'].includes(String(node.attrs?.tone)) ? String(node.attrs?.tone) : 'note'}>{children}</aside>
       case 'lectureVideo': {
         const source = videoSource(String(node.attrs?.src ?? ''))

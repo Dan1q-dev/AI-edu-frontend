@@ -18,6 +18,7 @@ import { Callout, LectureImage, LectureRoot, LectureVideo } from './nodes'
 import { LectureRibbon } from './LectureRibbon'
 import { LectureImportDialog } from './LectureImportDialog'
 import { closeHistory } from '@tiptap/pm/history'
+import { TableCellBackground } from './table'
 import './lecture-document.css'
 
 const options = [
@@ -32,7 +33,7 @@ type Dialog = { kind: 'video' | 'math' | 'link'; value: string; from: number; to
 export function lectureExtensions(onMathClick?: (node: { attrs: Record<string, unknown> }, pos: number, inline: boolean) => void) {
   return [
     StarterKit.configure({ document: false, heading: { levels: [2, 3] }, link: { openOnClick: false, protocols: ['https', 'http', 'mailto'] } }), LectureRoot,
-    TextAlign.configure({ types: ['heading', 'paragraph'] }), TableKit.configure({ table: { resizable: false } }),
+    TextAlign.configure({ types: ['heading', 'paragraph'] }), TableKit.configure({ table: { resizable: false } }), TableCellBackground,
     TextStyle, Color, Highlight.configure({ multicolor: true }),
     Callout, LectureImage, LectureVideo,
     Mathematics.configure({ katexOptions: { throwOnError: false, trust: false, strict: 'ignore' },
