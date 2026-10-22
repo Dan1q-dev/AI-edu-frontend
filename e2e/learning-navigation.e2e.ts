@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
-async function openMaterial(page: Page, id: string, workspace = false, failSubmit = false) {
-  const errors: string[] = [], posts: unknown[] = []
+async function openMaterial(page: Page, id: string, workspace = false, failSubmit = false, guided = false) {
+  const errors: string[] = [], posts: unknown[] = [], progressPosts: number[] = []
   let attempt: Record<string, unknown> | null = null
   page.on('pageerror', error => errors.push(error.message))
   const common = { module: 1, module_title: 'Основы', module_position: 0, course_id: 1, course_short_id: 'course', course_title: 'Учебный курс', status: 'PUBLISHED', description: '' }
@@ -26,7 +26,10 @@ async function openMaterial(page: Page, id: string, workspace = false, failSubmi
     if (path === 'items/') return json({ results: items.map(item => item.short_id === 'locked' ? { ...item, is_locked: !attempt } : item), next: null, previous: null, count: items.length })
     if (/^items\/[^/]+\/$/.test(path)) return json(items.find(item => path === `items/${item.short_id}/`))
     if (path === 'courses/course/progress/') return json({ percent: attempt ? 100 : 20, items: { intro: { progress_percent: 100, is_completed: true }, lecture: { progress_percent: 35, is_completed: false } } })
-    if (/\/progress\/$/.test(path)) return json({ progress_percent: 100 })
+    if (/\/progress\/$/.test(path)) {
+      progressPosts.push(request.postDataJSON().progress_percent)
+      return json({ progress_percent: 100 })
+    }
     if (/\/blocks\/$/.test(path)) return json([{ id: 1, type: 'TEXT', position: 0, media: null, config: {}, content: path.includes('lecture-content') ? Array.from({ length: 35 }, (_, index) => `## Раздел ${index + 1}\n\nТекст учебного материала. Прочитайте объяснение и рассмотрите примеры.`).join('\n\n') : 'Короткий материал.' }])
     if (/\/attachments\/$/.test(path)) return json([])
     if (path === 'items/test/test/') return json({ id: 1, version: 1, title: 'Итоговый тест', description: 'Проверьте знания по модулю.', passing_percent: 50, max_attempts: 3, questions })
@@ -44,12 +47,35 @@ async function openMaterial(page: Page, id: string, workspace = false, failSubmi
       }
       return json({ count: attempt ? 1 : 0, results: attempt ? [attempt] : [], next: null, previous: null })
     }
-    if (path === 'items/practice/practice/') return json({ version: { id: 1, practice_type: workspace ? 'lecture_workshop' : 'checklist_practice', plugin_version: '1.0.0', title: 'Практическая работа', description: 'Выполните задания по порядку.', version_number: 1, config: { criteria } }, submission: null, current_version_id: 1, result: null, progress_percent: 0, is_completed: false })
+    if (path === 'items/practice/practice/') return json({ version: { id: 1, practice_type: guided ? 'guided_assignment' : workspace ? 'lecture_workshop' : 'checklist_practice', plugin_version: '1.0.0', title: 'Практическая работа', description: 'Выполните задания по порядку.', version_number: 1, config: { criteria, instructions: ['Assignment instructions'] } }, submission: null, current_version_id: 1, result: null, progress_percent: 0, is_completed: false })
     throw new Error(`Unexpected API request: ${path}`)
   })
   await page.goto(`/#/items/${id}`)
   await expect(page.locator('.learning-main h1,.learning-main h2').first()).toBeVisible()
-  return { errors, posts }
+  return { errors, posts, progressPosts }
+}
+
+for (const width of [1920, 1100, 390]) {
+  test(`practice scroll stays inside the material column at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 910 })
+    await openMaterial(page, 'practice', false, false, true)
+    await page.getByRole('tab', { name: 'Результат работы' }).click()
+    const center = page.locator('.learning-center')
+    await center.evaluate(node => node.scrollTo(0, node.scrollHeight))
+    await expect(page.getByRole('button', { name: 'Сдать работу' })).toBeInViewport({ ratio: 1 })
+    await expect(page.locator('.learning-next-bar')).toBeInViewport({ ratio: 1 })
+    expect(await center.evaluate(node => node.scrollTop)).toBeGreaterThan(0)
+    expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBe(910)
+    expect(await page.locator('.learning-workspace').evaluate(node => node.getBoundingClientRect().bottom)).toBeCloseTo(910, 0)
+    if (width > 1250) {
+      for (const panel of ['.desktop-outline', '.learning-workspace > .learning-tutor']) {
+        expect(await page.locator(panel).evaluate(node => node.getBoundingClientRect().bottom)).toBeCloseTo(910, 0)
+      }
+    }
+    await page.getByRole('link', { name: 'Перейти к следующему материалу' }).click()
+    await expect(page).toHaveURL(/#\/items\/test$/)
+    await expect.poll(() => center.evaluate(node => node.scrollTop)).toBe(0)
+  })
 }
 
 for (const width of [1440, 1100, 390]) {
@@ -62,22 +88,25 @@ for (const width of [1440, 1100, 390]) {
     await expect(next).toHaveCount(1)
     await expect(next).toBeInViewport({ ratio: 1 })
     const initial = await next.boundingBox()
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight / 2))
+    await page.locator('.learning-center').evaluate(node => node.scrollTo(0, node.scrollHeight / 2))
     await expect(next).toBeInViewport({ ratio: 1 })
     expect((await next.boundingBox())!.y).toBeCloseTo(initial!.y, 0)
-    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+    await page.locator('.learning-center').evaluate(node => node.scrollTo(0, node.scrollHeight))
     await expect(next).toBeInViewport({ ratio: 1 })
     const lastParagraph = await page.locator('.lesson-article p').last().boundingBox()
     const bar = await page.locator('.learning-next-bar').boundingBox()
     const center = await page.locator('.learning-center').boundingBox()
     expect(lastParagraph!.y + lastParagraph!.height).toBeLessThanOrEqual(bar!.y)
+    await expect.poll(() => Math.max(...state.progressPosts)).toBe(100)
     expect(bar!.x).toBeCloseTo(center!.x, 0)
     expect(bar!.width).toBeCloseTo(center!.width, 0)
     await page.screenshot({ path: `test-results/next-item-${width}.png` })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await next.click()
     await expect(page).toHaveURL(/#\/items\/practice$/)
-    await expect(page.locator('.learning-tutor')).toHaveCount(0)
+    await expect(page.locator('.is-document-workspace')).toBeVisible()
+    if (width > 1250) await expect(page.locator('.learning-workspace > .learning-tutor')).toBeVisible()
+    else await expect(page.locator('.learning-workspace > .learning-tutor')).toBeHidden()
     await expect(next).toBeInViewport({ ratio: 1 })
     expect(state.errors).toEqual([])
   })

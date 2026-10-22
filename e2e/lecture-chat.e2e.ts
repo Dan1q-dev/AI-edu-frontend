@@ -12,14 +12,22 @@ for (const width of [1440, 390]) {
     let started = false, done = false, generated = 0, turns = 0
     let lastPrompt = ''
     const messages: Record<string, unknown>[] = []
+    const criteria = [
+      { title: 'Лекция соответствует заданию', description: 'Проверьте тему и аудиторию', is_required: true },
+      { title: 'Содержание проверено', description: 'Исправьте неточности', is_required: true },
+    ]
+    const instruction = JSON.stringify({ type: 'doc', content: [{ type: 'paragraph', content: [
+      { type: 'text', text: 'Подготовьте полную лекцию и проверьте её перед завершением работы.' }] }] })
     const sectionIds = ['goal', 'learning_outcomes', 'outline', 'introduction', 'main_material', 'examples', 'key_concepts', 'conclusions', 'control_questions', 'self_study']
     const lecture = () => ({ title: generated > 1 ? 'Лекция с примерами' : 'Как применять AI в образовании',
       sections: sectionIds.map((id, index) => ({ id, title: `Раздел ${index + 1}`, content: { type: 'doc', content: [
         { type: 'paragraph', content: [{ type: 'text', text: 'Искусственный интеллект помогает преподавателю готовить материалы и адаптировать обучение к потребностям студентов.' }] },
       ] } })) })
     const state = () => ({ version: { id: 1, practice_type: 'lecture_workshop', plugin_version: '1.0.0', version_number: 1,
-      title: item.title, description: 'Подготовьте лекцию по своей дисциплине, используя AI.', config: {} },
-      submission: started ? { id: 99, document_id: 44, status: done ? 'SUBMITTED' : 'IN_PROGRESS', submission_data: {} } : null,
+      title: item.title, description: 'Подготовьте лекцию по своей дисциплине, используя AI.', config: { instructions: [instruction], criteria } },
+      submission: started ? { id: 99, document_id: generated ? 44 : null, status: done ? 'SUBMITTED' : 'IN_PROGRESS',
+        submission_data: done ? { completed: true, checks: [true, true] } : {},
+        criteria_snapshot: done ? criteria.map((row, i) => ({ ...row, id: i + 1, position: i, checked: true })) : [] } : null,
       current_version_id: 1, result: null, progress_percent: done ? 100 : 0, is_completed: done })
     await page.route(/^https:\/\//, route => route.abort())
     await page.route('**/api/v1/**', async route => {
@@ -31,12 +39,13 @@ for (const width of [1440, 390]) {
       if (path === 'items/') return json({ count: 2, results: [item, next], next: null, previous: null })
       if (path === 'courses/course/progress/') return json({ percent: done ? 50 : 0, items: { practice: { progress_percent: done ? 100 : 0, is_completed: done } } })
       if (path === 'items/practice/practice/') {
-        if (request.method() === 'POST') { expect(request.postDataJSON().submission_data).toEqual({ completed: true }); done = true }
+        if (request.method() === 'POST') { expect(request.postDataJSON().submission_data).toMatchObject({ completed: true, checks: [true, true], document_id: 44 }); done = true }
         return json(state())
       }
+      if (path === 'items/practice/practice/start/') { started = true; return json(state()) }
       if (path === 'items/practice/practice/workspace/' || path === 'workspace/documents/44/') {
         if (request.method() === 'POST') { expect(request.postDataJSON()).toEqual({ language: 'ru' }); started = true }
-        return json({ id: 44, submission: 99, document_type: 'lecture', schema_version: 1, revision: generated + 1, parameters: {}, content: generated ? lecture() : {} })
+        return json({ id: 44, submission: 99, document_type: 'lecture', schema_version: 1, revision: turns + 1, parameters: {}, content: generated ? lecture() : {} })
       }
       if (path === 'workspace/documents/44/messages/') return json({ count: messages.length, results: messages, next: null, previous: null })
       if (path === 'workspace/artifacts/1/download/') return route.fulfill({
@@ -65,11 +74,16 @@ for (const width of [1440, 390]) {
         }
         return json({ id: turns, document: 44, ...data, status: 'SUCCEEDED', result: { ...result, revision: turns + 1 } }, 202)
       }
-      if (/^workspace\/operations\/\d+\/$/.test(path)) return json({ id: Number(path.split('/')[2]), document: 44, kind: 'generate', status: 'SUCCEEDED', result: { content: lecture(), revision: generated + 1 } })
+      if (/^workspace\/operations\/\d+\/$/.test(path)) return json({ id: Number(path.split('/')[2]), document: 44, kind: 'chat', status: 'SUCCEEDED', result: { revision: turns + 1 } })
       throw new Error(`Unexpected API ${request.method()} ${path}`)
     })
     await page.goto('/#/items/practice')
     const prompt = page.getByRole('textbox', { name: 'Ваш запрос' })
+    await expect(page.getByRole('heading', { name: 'Инструкция к заданию', exact: true })).toBeVisible()
+    await expect(prompt).toHaveCount(0)
+    expect(turns).toBe(0)
+    await page.screenshot({ path: `test-results/lecture-task-${width}.png`, fullPage: true })
+    await page.getByRole('button', { name: 'Начать выполнение', exact: true }).click()
     await expect(prompt).toBeVisible()
     const compactInput = await prompt.boundingBox()
     expect(compactInput!.height).toBeLessThanOrEqual(36)
@@ -98,6 +112,7 @@ for (const width of [1440, 390]) {
       await page.keyboard.press('ArrowRight')
       const remembered = (await tutor.boundingBox())!.width
       await page.reload()
+      await page.getByRole('button', { name: 'Продолжить выполнение', exact: true }).click()
       await expect.poll(async () => (await tutor.boundingBox())!.width).toBeCloseTo(remembered, 0)
       await handle.dblclick()
       await expect.poll(async () => (await tutor.boundingBox())!.width).toBeCloseTo(300, 0)
@@ -111,6 +126,8 @@ for (const width of [1440, 390]) {
     await page.getByRole('button', { name: 'Русский', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Как применять AI в образовании' })).toBeVisible()
     await page.reload()
+    await expect(prompt).toHaveCount(0)
+    await page.getByRole('button', { name: 'Продолжить выполнение', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Как применять AI в образовании' })).toBeVisible()
     expect(generated).toBe(1)
     await prompt.fill('Добавь практические примеры')
@@ -149,8 +166,24 @@ for (const width of [1440, 390]) {
     expect(download.suggestedFilename()).toMatch(/\.docx$/)
     expect(generated).toBe(2)
     await page.screenshot({ path: `test-results/lecture-chat-docx-${width}.png`, fullPage: true })
-    await page.getByRole('button', { name: 'Сделано', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Выполнено', exact: true })).toBeDisabled()
+    await page.getByRole('button', { name: 'Перейти к самопроверке', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Завершить работу', exact: true })).toBeDisabled()
+    expect(done).toBe(false)
+    const checks = page.getByRole('checkbox')
+    await expect(checks).toHaveCount(2)
+    await checks.nth(0).check()
+    await page.getByRole('button', { name: 'Продолжить редактирование', exact: true }).click()
+    await expect(prompt).toBeVisible()
+    await page.getByRole('button', { name: 'К заданию', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Инструкция к заданию', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Продолжить выполнение', exact: true }).click()
+    await page.getByRole('button', { name: 'Перейти к самопроверке', exact: true }).click()
+    await expect(checks.nth(0)).toBeChecked()
+    await checks.nth(1).check()
+    await page.screenshot({ path: `test-results/lecture-review-${width}.png`, fullPage: true })
+    await page.getByRole('button', { name: 'Завершить работу', exact: true }).click()
+    await expect(page.locator('.assignment-submitted')).toContainText('Практическая работа завершена')
+    expect(done).toBe(true)
     await expect(prompt).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Перейти к следующему материалу' })).toHaveAttribute('href', '#/items/next')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)

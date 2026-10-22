@@ -20,14 +20,14 @@ const state: PracticeState = { version: { id: 7, practice_definition: 9, practic
   submission: { id: 99, document_id: 44, status: 'IN_PROGRESS', practice_version: 7, submission_data: {}, criteria_snapshot: [], started_at: '', submitted_at: null, completed_at: null },
   result: null, progress_percent: 0, is_completed: false }
 let operation: WorkspaceOperation, messages: WorkspaceMessage[], clients: QueryClient[]
-const submit = vi.fn()
+const submit = vi.fn(), review = vi.fn()
 function mount(overrides: Partial<PracticeState> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false, gcTime: Infinity } } }); clients.push(client)
-  const view = render(<I18nProvider><QueryClientProvider client={client}><LectureWorkshop state={{ ...state, ...overrides }} item={item} ownerId={5} busy={false} onStart={vi.fn()} onSubmit={submit}/></QueryClientProvider></I18nProvider>)
+  const view = render(<I18nProvider><QueryClientProvider client={client}><LectureWorkshop state={{ ...state, ...overrides }} item={item} ownerId={5} busy={false} onStart={vi.fn()} onSubmit={submit} onReview={review}/></QueryClientProvider></I18nProvider>)
   return { ...view, client }
 }
 async function ready() {
-  await waitFor(() => expect((screen.getByRole('button', { name: /Сделано|Done|Дайын/ }) as HTMLButtonElement).disabled).toBe(false))
+  await waitFor(() => expect((screen.getByRole('button', { name: /Перейти к самопроверке|Go to self-check|Өзін-өзі тексеруге өту/ }) as HTMLButtonElement).disabled).toBe(false))
 }
 beforeEach(() => {
   vi.clearAllMocks(); localStorage.clear(); clients = []; messages = []
@@ -75,11 +75,11 @@ describe('lecture chat', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Добавь примеры' } })
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', shiftKey: false })
     await screen.findByText('Запрос в очереди. Ожидаем начала генерации…')
-    expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Перейти к самопроверке' }) as HTMLButtonElement).disabled).toBe(true)
     operation = { ...operation, status: 'RUNNING' }
     await act(() => client.invalidateQueries({ queryKey: ['workspace-operation'] }))
     await screen.findByText('Помощник готовит ответ…')
-    expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Перейти к самопроверке' }) as HTMLButtonElement).disabled).toBe(true)
     operation = { ...operation, status: 'SUCCEEDED', result: { content: lecture, revision: 2 } }
     await act(() => client.invalidateQueries({ queryKey: ['workspace-operation'] }))
     await ready()
@@ -100,15 +100,16 @@ describe('lecture chat', () => {
     const calls = mockedApi.mock.calls.filter(([path]) => path.endsWith('/operations/'))
     expect(calls[0]![2]).toEqual(calls[1]![2])
   })
-  it('completes without criteria and shows completed chats as read-only', async () => {
+  it('opens self-check without submitting and keeps completed chats read-only', async () => {
     mount(); await ready()
-    fireEvent.click(screen.getByRole('button', { name: 'Сделано' }))
-    expect(submit).toHaveBeenCalledWith({ completed: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Перейти к самопроверке' }))
+    expect(review).toHaveBeenCalledWith({ completed: true, document_id: 44, document_revision: 1 }, expect.objectContaining({ title: lecture.title }))
+    expect(submit).not.toHaveBeenCalled()
     cleanup()
     mount({ submission: { ...state.submission!, status: 'SUBMITTED' }, is_completed: true })
-    await screen.findByText(lecture.title)
+    await screen.findByText(lecture.title); await ready()
     expect(screen.queryByRole('textbox')).toBeNull()
-    expect((screen.getByRole('button', { name: 'Выполнено' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Перейти к самопроверке' }) as HTMLButtonElement).disabled).toBe(false)
   })
   it('can retry a failed AI generation with the previous prompt and a new request UUID', async () => {
     messages = [{ id: 1, operation: 71, role: 'user', text: 'Создай лекцию', created_at: '' }]
@@ -158,7 +159,7 @@ describe('lecture chat', () => {
     expect(screen.queryByRole('button', { name: 'Старый вариант' })).toBeNull()
     expect(screen.queryByRole('link', { name: /Bad.docx/ })).toBeNull()
   })
-  it.each([['en', 'Done', 'en'], ['kz', 'Дайын', 'kk']])('uses %s labels and the corresponding generation language', async (locale, done, language) => {
+  it.each([['en', 'Go to self-check', 'en'], ['kz', 'Өзін-өзі тексеруге өту', 'kk']])('uses %s labels and the corresponding generation language', async (locale, done, language) => {
     localStorage.setItem('ai-edu-locale', locale!)
     mount({ submission: null })
     expect(screen.getByRole('button', { name: done })).toBeTruthy()

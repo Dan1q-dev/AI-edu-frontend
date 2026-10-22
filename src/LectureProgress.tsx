@@ -47,7 +47,7 @@ export function LectureProgress({ itemId, courseId, savedPercent, children }: {
       }
     }
     const onPageHide = () => save(true)
-    window.addEventListener('scroll', measure, { passive: true })
+    window.addEventListener('scroll', measure, { passive: true, capture: true })
     window.addEventListener('resize', measure)
     window.addEventListener('pagehide', onPageHide)
     const frame = requestAnimationFrame(measure)
@@ -55,7 +55,7 @@ export function LectureProgress({ itemId, courseId, savedPercent, children }: {
       disposed = true
       cancelAnimationFrame(frame)
       if (timer) clearTimeout(timer)
-      window.removeEventListener('scroll', measure)
+      window.removeEventListener('scroll', measure, true)
       window.removeEventListener('resize', measure)
       window.removeEventListener('pagehide', onPageHide)
       save(true)

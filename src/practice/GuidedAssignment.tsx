@@ -1,50 +1,42 @@
 import { useState } from 'react'
-import { BookOpen, Check, ExternalLink, FileCheck2, RotateCcw, Send } from 'lucide-react'
-import { RichLessonContent } from '../components/RichLessonContent'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { Button, Input, Textarea } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useLeaveWarning } from '../useLeaveWarning'
-import type { Criterion, RuntimeProps } from './types'
+import type { RuntimeProps } from './types'
+import { safeResultLink, type TaskConfig } from './commonTask'
 
-export type AssignmentConfig = { instructions: string[]; criteria: Criterion[]; source_url?: string }
-const safeLink = (value: string) => { try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : undefined } catch { return undefined } }
+export type AssignmentConfig = TaskConfig
 
-export function GuidedAssignment(props: RuntimeProps) {
-  return <AssignmentForm key={`${props.state.version!.id}:${props.state.submission?.id ?? 'new'}`} {...props}/>
-}
-
-function AssignmentForm({ state, busy, onStart, onSubmit }: RuntimeProps) {
+export function GuidedAssignment({ state, busy, draft, onDraftChange, onBackToTask, onReview, onSubmit }: RuntimeProps) {
   const { t } = useI18n()
-  const version = state.version!
-  const config = version.config as AssignmentConfig
-  const submitted = Boolean(state.submission && state.submission.status !== 'IN_PROGRESS')
-  const saved = state.submission?.submission_data
-  const [tab, setTab] = useState<'task' | 'report'>(submitted ? 'report' : 'task')
-  const [report, setReport] = useState(String(saved?.report ?? ''))
-  const [artifact, setArtifact] = useState(String(saved?.artifact_url ?? ''))
-  const [checks, setChecks] = useState<boolean[]>(config.criteria.map((_, index) => Boolean((saved?.checks as boolean[] | undefined)?.[index])))
+  const submitted = !!state.submission && state.submission.status !== 'IN_PROGRESS'
+  const [local, setLocal] = useState<Record<string, unknown>>(state.submission?.submission_data ?? {})
   const [dirty, setDirty] = useState(false)
+  const value = submitted ? state.submission!.submission_data : draft ?? local
+  const report = String(value.report ?? ''), artifact = String(value.artifact_url ?? '')
+  const change = (next: Record<string, unknown>) => {
+    setDirty(true); setLocal(next); onDraftChange?.(next)
+  }
   useLeaveWarning(dirty && !submitted)
-  const ready = report.trim().length >= 40 && (!artifact || Boolean(safeLink(artifact)))
-    && config.criteria.every((criterion, index) => !criterion.is_required || checks[index])
-  return <section className="guided-assignment">
-    <header><span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{version.title}</h1>{version.description && <p>{version.description}</p>}</header>
-    <div className="assignment-tabs" role="tablist" aria-label={t('Практическая работа')}>
-      <button role="tab" aria-selected={tab === 'task'} aria-controls="assignment-task" id="assignment-task-tab" onClick={() => setTab('task')}><BookOpen size={17}/>{t('Задание')}</button>
-      <button role="tab" aria-selected={tab === 'report'} aria-controls="assignment-report" id="assignment-report-tab" onClick={() => setTab('report')}><FileCheck2 size={17}/>{t('Результат работы')}</button>
-    </div>
-    <div role="tabpanel" id="assignment-task" aria-labelledby="assignment-task-tab" hidden={tab !== 'task'}>
-      <article className="article markdown assignment-instructions">{config.instructions.map((part, index) => <RichLessonContent key={index} value={part}/>)}</article>
-      <div className="assignment-actions">{config.source_url && safeLink(config.source_url) && <a className="button secondary" href={config.source_url} target="_blank" rel="noreferrer"><ExternalLink size={17}/>{t('Исходный документ')}</a>}<Button onClick={() => setTab('report')}><FileCheck2 size={17}/>{t('К результату работы')}</Button></div>
-    </div>
-    <div role="tabpanel" id="assignment-report" aria-labelledby="assignment-report-tab" hidden={tab !== 'report'}>
-      <form className="assignment-report" onSubmit={event => { event.preventDefault(); if (ready && !busy && !submitted) void onSubmit({ report: report.trim(), artifact_url: artifact.trim(), checks }) }}>
-        <label>{t('Отчёт о выполнении')}<Textarea rows={9} maxLength={20000} minLength={40} required disabled={busy || submitted} value={report} onChange={event => { setReport(event.target.value); setDirty(true) }} placeholder={t('Что Вы подготовили? Какие источники использовали, что проверили и исправили самостоятельно?')}/><small>{report.trim().length} / 20000 · {t('минимум 40 символов')}</small></label>
-        <label>{t('Ссылка на результат (необязательно)')}<Input type="url" maxLength={2000} disabled={busy || submitted} placeholder="https://" value={artifact} onChange={event => { setArtifact(event.target.value); setDirty(true) }}/></label>
-        {submitted && artifact && safeLink(artifact) && <a href={artifact} target="_blank" rel="noreferrer"><ExternalLink size={16}/>{t('Открыть результат')}</a>}
-        <fieldset disabled={busy || submitted}><legend>{t('Самопроверка')}</legend>{config.criteria.map((criterion, index) => <label className="assignment-check" key={index}><input type="checkbox" checked={checks[index] ?? false} onChange={event => { setChecks(values => values.map((value, i) => i === index ? event.target.checked : value)); setDirty(true) }}/><span><strong>{criterion.title}</strong>{criterion.description && <small>{criterion.description}</small>}</span></label>)}</fieldset>
-        {submitted ? <div className="assignment-submitted" role="status"><p><Check size={18}/>{t(state.is_completed ? 'Работа сдана' : 'Работа сохранена, требуется доработка')}</p><p>{t('Самопроверка:')} {checks.filter(Boolean).length} / {checks.length}. {t('Не является оценкой преподавателя или ИИ.')}</p><Button variant="secondary" type="button" disabled={busy} onClick={() => void onStart()}><RotateCcw size={17}/>{t('Новая попытка')}</Button></div> : <Button type="submit" disabled={busy || !ready}><Send size={17}/>{t(busy ? 'Сохранение…' : 'Сдать работу')}</Button>}
-      </form>
-    </div>
+  const ready = report.trim().length >= 40 && (!artifact || !!safeResultLink(artifact))
+  const review = () => {
+    if (!ready || busy) return
+    const data = { report: report.trim(), artifact_url: artifact.trim() }
+    if (onReview) onReview(data, { files: artifact ? [{ name: t('Открыть результат'), url: artifact }] : [] })
+    else void onSubmit(data)
+  }
+  return <section className="guided-assignment-execution">
+    <h2>{t('Результат работы')}</h2>
+    <p className="muted">{t('Подготовьте результат по инструкции задания. Затем перейдите к самопроверке.')}</p>
+    <form className="assignment-report" onSubmit={event => { event.preventDefault(); review() }}>
+      <label>{t('Отчёт о выполнении')}<Textarea rows={9} maxLength={20000} minLength={40} required disabled={busy || submitted} value={report}
+        onChange={event => change({ ...value, report: event.target.value })} placeholder={t('Что Вы подготовили? Какие источники использовали, что проверили и исправили самостоятельно?')}/>
+        <small>{report.trim().length} / 20000 · {t('минимум 40 символов')}</small></label>
+      <label>{t('Ссылка на результат (необязательно)')}<Input type="url" maxLength={2000} disabled={busy || submitted} placeholder="https://" value={artifact}
+        onChange={event => change({ ...value, artifact_url: event.target.value })}/></label>
+      <div className="practice-flow-actions">{onBackToTask && <Button type="button" variant="secondary" onClick={onBackToTask}><ArrowLeft size={16}/>{t('К заданию')}</Button>}
+        <Button type="submit" disabled={busy || !ready}>{t('Перейти к самопроверке')}<ArrowRight size={16}/></Button></div>
+    </form>
   </section>
 }

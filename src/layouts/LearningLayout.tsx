@@ -36,6 +36,7 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
     } catch { return 300 }
   })
   const tutorPanelRef = useRef<HTMLElement>(null)
+  const centerRef = useRef<HTMLDivElement>(null)
   const resizeTutor = (width: number) => {
     setTutorWidth(width)
     try { localStorage.setItem('learning-tutor-width', String(width)) } catch { /* Optional preference. */ }
@@ -66,6 +67,7 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
     setDrawerOpen(false); setTutorOpen(false)
     if (activeModule !== undefined) setExpanded(current => ({ ...current, [activeModule]: true }))
     window.scrollTo?.(0, 0)
+    centerRef.current?.scrollTo?.(0, 0)
   }, [lessonId, activeModule])
   useEffect(() => { setDesktopOpen(outlinePreference(preferenceKey)); setExpanded({}) }, [preferenceKey])
   useEffect(() => {
@@ -119,7 +121,7 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
         <button ref={triggerRef} type="button" className="outline-rail-trigger" onClick={() => { if (compact) setDrawerOpen(true); else { focusOutlinePanel.current = true; setOutlineVisible(true) } }} aria-label={t('Содержание')} title={t('Содержание')} aria-expanded={compact ? drawerOpen : false} aria-haspopup={compact ? 'dialog' : undefined}><PanelLeftOpen size={19}/><ChevronRight size={16}/></button>
         {courseProgress !== undefined && <div className="outline-rail-progress" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} title={`${t('Ваш прогресс')}: ${percent}%`}><strong>{percent}%</strong><span className="outline-rail-progress-track" aria-hidden="true"><span style={{ width: `${percent}%` }}/></span></div>}
       </div></aside>}
-      <div className="learning-center"><main className="learning-main">{children}</main>{!hideNext && <div className="learning-next-bar"><NextItemAction next={next} courseSlug={courseSlug}/></div>}</div>
+      <div ref={centerRef} className="learning-center"><main className="learning-main">{children}</main>{!hideNext && <div className="learning-next-bar"><NextItemAction next={next} courseSlug={courseSlug}/></div>}</div>
       {tutor && !assessment && !tutorOpen && <aside ref={tutorPanelRef} id="learning-tutor-panel" className="learning-tutor" aria-label={t('AI Tutor')}>
         {workspace && <PanelResizeHandle panel={tutorPanelRef} width={tutorWidth} onResize={resizeTutor}/>}{tutor}
       </aside>}

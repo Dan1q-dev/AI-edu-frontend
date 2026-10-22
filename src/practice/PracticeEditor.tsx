@@ -7,6 +7,7 @@ import { Button, ErrorState, Input, Loading, Notice, Textarea } from '../compone
 import { useI18n } from '../i18n'
 import { useLeaveWarning } from '../useLeaveWarning'
 import { getPracticePlugin } from './registry'
+import { hasCommonTask, normalizeTaskConfig } from './commonTask'
 import type { PracticeManifest, PracticeVersion } from './types'
 import './practice.css'
 
@@ -25,7 +26,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const qc = useQueryClient()
   const seed = initial.draft ?? initial.published
   const [selected, setSelected] = useState(seed ? { type: seed.practice_type, version: seed.plugin_version } : null)
-  const [config, setConfig] = useState(seed?.config ?? {})
+  const [config, setConfig] = useState(seed && hasCommonTask(seed.practice_type) ? normalizeTaskConfig(seed.config) : seed?.config ?? {})
   const [catalogOpen, setCatalogOpen] = useState(!seed)
   const catalogTrigger = useRef<HTMLButtonElement>(null)
   const catalog = useQuery({ queryKey: ['practice-types'], queryFn: () => api<PracticeManifest[]>('practice-types/') })
@@ -60,7 +61,11 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const choose = (entry: PracticeManifest) => {
     const implementation = getPracticePlugin(entry.type, entry.version)
     if (busy || !entry.available || !implementation) return
-    setSelected({ type: entry.type, version: entry.version }); setConfig(implementation.initialConfig())
+    const next = implementation.initialConfig()
+    if (selected && hasCommonTask(selected.type) && hasCommonTask(entry.type)) {
+      for (const field of ['instructions', 'criteria', 'source_url']) if (field in config) next[field] = config[field]
+    }
+    setSelected({ type: entry.type, version: entry.version }); setConfig(next)
     setDirty(true); setCatalogOpen(false); setMessage(''); setFailed(false)
     catalogTrigger.current?.focus()
   }
@@ -76,7 +81,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       <div className="practice-selection-heading"><h2>{t(selected ? selectedName : 'Выберите тип практической работы')}</h2><button ref={catalogTrigger} type="button" className="button secondary" disabled={busy} aria-expanded={catalogOpen} aria-controls="practice-type-catalog" onClick={() => setCatalogOpen(open => !open)}>{t(catalogOpen ? 'Закрыть выбор' : selected ? 'Изменить практику' : 'Выбрать практику')}</button></div>
       {manifest && <p>{t(manifest.description)}</p>}
       {catalogOpen && <section id="practice-type-catalog" aria-label={t('Выберите тип практической работы')}>
-        <p>{t('При смене практики её настройки будут заменены. Название и описание сохранятся.')}</p>
+        <p>{t('Название, описание, инструкция и критерии сохранятся при смене инструмента.')}</p>
         {catalog.isLoading ? <Loading variant="inline"/> : catalog.error ? <><ErrorState error={catalog.error}/><Button variant="secondary" onClick={() => void catalog.refetch()} disabled={catalog.isFetching}>{t('Повторить')}</Button></> : <>
           <div className="practice-catalog">{catalog.data?.map(entry => {
             const active = entry.type === selected?.type && entry.version === selected.version
@@ -90,7 +95,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       {selected && !plugin && <Notice text={t('Этот тип практики пока недоступен')} kind="error"/>}
       <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => { setTitle(event.target.value); setDirty(true) }}/></label>
       <label>{t('Описание')}<Textarea value={description} rows={5} disabled={busy} onChange={event => { setDescription(event.target.value); setDirty(true) }}/></label>
-      {ConfigEditor && <ConfigEditor config={config} disabled={busy} onChange={value => { setConfig(value); setDirty(true) }}/>}
+      {ConfigEditor && <ConfigEditor key={selected?.type} config={config} disabled={busy} onChange={value => { setConfig(value); setDirty(true) }}/>}
       <div className="row"><Button variant="secondary" disabled={busy || !dirty || !title.trim() || !plugin} onClick={() => void save(false)}>{t('Сохранить')}</Button>
         <Button disabled={busy || !title.trim() || !plugin || (!dirty && !hasDraft)} onClick={() => void save(true)}>{t(published ? 'Обновить публикацию' : 'Опубликовать')}</Button></div>
     </div>

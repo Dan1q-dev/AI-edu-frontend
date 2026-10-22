@@ -7,6 +7,7 @@ import { PracticeRunner } from './PracticeRunner'
 import { PracticeEditorPage } from './PracticeEditor'
 import type { PracticeManifest, PracticeState, PracticeVersion } from './types'
 import { registerPractice } from './registry'
+import { normalizeTaskConfig } from './commonTask'
 
 vi.mock('../api', async importOriginal => ({ ...await importOriginal<typeof import('../api')>(), api: vi.fn(), apiAll: vi.fn() }))
 const mockedApi = vi.mocked(api)
@@ -38,31 +39,35 @@ function mount(element: React.ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client)
   return render(<QueryClientProvider client={client}><MemoryRouter>{element}</MemoryRouter></QueryClientProvider>)
 }
-beforeEach(() => { mockedApi.mockReset(); localStorage.clear() })
+beforeEach(() => { mockedApi.mockReset(); localStorage.clear(); sessionStorage.clear() })
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients = []; vi.restoreAllMocks() })
 
 describe('Practice Engine completion', () => {
-  it('starts and completes a practice with one Done click and no generated document', async () => {
+  it('opens the assignment first and starts the selected tool without completing it', async () => {
     mockedApi.mockImplementation(async (path, method = 'GET') => {
       if (path.endsWith('/start/')) return { ...state, submission } as never
       if (method === 'POST') return { ...state, submission: { ...submission, status: 'SUBMITTED' }, is_completed: true, progress_percent: 100 } as never
       return state as never
     })
     mount(<PracticeRunner item={item}/>)
-    fireEvent.click(await screen.findByRole('button', { name: 'Сделано' }))
-    await screen.findByRole('button', { name: 'Выполнено' })
-    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/', 'POST', { submission_id: 2, submission_data: { completed: true } })
-    expect(screen.queryByRole('checkbox')).toBeNull()
+    await screen.findByRole('button', { name: 'Начать выполнение' })
+    expect(screen.queryByRole('textbox', { name: 'Ваш запрос' })).toBeNull()
+    expect(mockedApi.mock.calls.some(([, method]) => method === 'POST')).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Начать выполнение' }))
+    await screen.findByRole('textbox', { name: 'Ваш запрос' })
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/start/', 'POST')
+    expect(mockedApi.mock.calls.some(([path, method]) => path === 'items/p1/practice/' && method === 'POST')).toBe(false)
   })
-  it('leaves the practice open after a failed completion request', async () => {
+  it('keeps the task visible when starting the attempt fails', async () => {
     mockedApi.mockImplementation(async (_path, method = 'GET') => {
       if (method === 'POST') throw new Error('offline')
-      return { ...state, submission } as never
+      return state as never
     })
     mount(<PracticeRunner item={item}/>)
-    fireEvent.click(await screen.findByRole('button', { name: 'Сделано' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Начать выполнение' }))
     await screen.findByText('offline')
-    expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('button', { name: 'Начать выполнение' }) as HTMLButtonElement).disabled).toBe(false)
+    expect(screen.queryByRole('textbox', { name: 'Ваш запрос' })).toBeNull()
   })
   it('displays unsupported plugins safely', async () => {
     mockedApi.mockResolvedValue({ ...state, version: { ...version, practice_type: 'unknown' } } as never)
@@ -76,7 +81,7 @@ describe('Practice Engine completion', () => {
     fireEvent.click(await within(catalog).findByRole('button', { name: /Виртуальная мастерская/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Опубликовать' }))
     await screen.findByText('Практика опубликована')
-    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', { practice_type: 'lecture_workshop', plugin_version: '1.0.0', title: 'Current title', description: '', config: {} })
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', { practice_type: 'lecture_workshop', plugin_version: '1.0.0', title: 'Current title', description: '', config: normalizeTaskConfig({}) })
   })
   it('keeps the existing type and settings when only editing a title', async () => {
     const config = { criteria: [{ title: 'Original criterion', description: '', is_required: true }] }
@@ -85,7 +90,7 @@ describe('Practice Engine completion', () => {
     fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Updated title' } })
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }))
     await screen.findByText('Черновик сохранён')
-    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', expect.objectContaining({ practice_type: 'checklist_practice', title: 'Updated title', config }))
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', expect.objectContaining({ practice_type: 'checklist_practice', title: 'Updated title', config: normalizeTaskConfig(config) }))
   })
 })
 
@@ -178,6 +183,6 @@ describe('changing the assigned practice', () => {
     fireEvent.click(await screen.findByRole('button', { name: /Виртуальная мастерская/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Обновить публикацию' }))
     await screen.findByText('Практика опубликована')
-    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', expect.objectContaining({ practice_type: 'lecture_workshop', config: {} }))
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', expect.objectContaining({ practice_type: 'lecture_workshop', config: normalizeTaskConfig({ criteria: [{ title: 'Old', description: '', is_required: true }] }) }))
   })
 })

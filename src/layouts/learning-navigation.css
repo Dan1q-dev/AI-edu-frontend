@@ -28,6 +28,12 @@
 .learning-layout .outline-entry-copy small{display:flex;align-items:center;gap:5px;color:var(--color-muted);font-size:11px;font-weight:400}
 .learning-layout .outline-entry-copy small svg{flex:none}.learning-layout .outline-lesson.is-locked{opacity:.65}
 .learning-layout .learning-center{display:flex;flex-direction:column;min-width:0;padding-bottom:0}.learning-layout .learning-main{flex:1;margin:0 auto;min-width:0}
+/* Keep each study panel inside the viewport; only the material column scrolls. */
+.learning-layout:not(.is-document-workspace):not(.is-assessment){display:flex;flex-direction:column;height:100dvh;min-height:0;overflow:hidden}
+.learning-layout:not(.is-document-workspace):not(.is-assessment) .learning-header{flex:none}
+.learning-layout:not(.is-document-workspace):not(.is-assessment) .learning-workspace{flex:1;width:100%;min-height:0;overflow:hidden}
+.learning-layout:not(.is-document-workspace):not(.is-assessment) .learning-center{height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.learning-layout:not(.is-document-workspace):not(.is-assessment) .learning-workspace > :is(.desktop-outline,.course-outline-rail,.learning-tutor){position:relative;top:0;height:100%;min-height:0}
 /* Sticky keeps the action visible and reserves its own height in the document flow. */
 .learning-next-bar{position:sticky;bottom:0;z-index:20;flex:none;padding:14px 0 calc(14px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--color-border);background:#f8fafc;box-shadow:0 -6px 18px rgb(20 31 56 / 4%)}
 .learning-next-bar .next-item-action{display:flex;justify-content:flex-end;align-items:center;width:min(100% - 64px,900px);margin:0 auto;gap:16px}

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Download, FileText, Loader2, RefreshCw, Send, Sparkles } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Download, FileText, Loader2, RefreshCw, Send, Sparkles } from 'lucide-react'
 import { ApiError } from '../api'
 import { Button, ErrorState, Loading, Notice } from '../components/ui'
 import { RichLessonContent } from '../components/RichLessonContent'
@@ -59,7 +59,7 @@ export function LectureWorkshop(props: RuntimeProps) {
   return <LectureChat key={props.state.submission?.status === 'SUBMITTED' ? props.state.submission.id : 'active'} {...props}/>
 }
 
-function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeProps) {
+function LectureChat({ state, item, ownerId, busy, onSubmit, onStart, onReview, onBackToTask, onActivityChange }: RuntimeProps) {
   const { t, locale } = useI18n()
   const qc = useQueryClient()
   const reference = readReference(referenceKey(ownerId, state.submission?.id))
@@ -97,6 +97,10 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
   const pending = operation.data?.status === 'PENDING' || operation.data?.status === 'RUNNING'
   const tracking = !!documentId && (loaded.isPending || loaded.isFetching || !!loaded.error || messages.isPending || messages.isFetching || !!messages.error || !!operationId && (operation.isPending || !!operation.error))
   const disabled = !active || busy || sending || pending || tracking
+  useEffect(() => {
+    onActivityChange?.(sending || pending || tracking)
+    return () => onActivityChange?.(false)
+  }, [sending, pending, tracking, onActivityChange])
 
   useEffect(() => {
     const latest = messages.data?.at(-1)
@@ -169,9 +173,19 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
   const fallback = loaded.data?.content
   const hasAnswers = messages.data?.some(message => message.content)
   const latestAssistant = messages.data?.filter(message => message.role === 'assistant').at(-1)
+  const readyForReview = !!loaded.data && isLecture(loaded.data.content) && !busy && !sending && !pending && !tracking
+  const goToReview = () => {
+    if (!readyForReview || !loaded.data) return
+    const document = loaded.data
+    const data = { completed: true, document_id: document.id, document_revision: document.revision }
+    const file = messages.data?.map(message => message.artifact).filter(artifact => artifact?.revision === document.revision).at(-1)
+    if (onReview) onReview(data, { title: document.content.title, files: file ? [{ name: file.name, url: file.url }] : [] })
+    else void onSubmit(data)
+  }
   return <div className="lecture-workshop lecture-chat">
-    <header className="lecture-chat-heading"><span className="lecture-chat-heading-icon" aria-hidden="true"><Sparkles size={19}/></span><div><span className="eyebrow">{t('Мастерская лекций')}</span><h1 title={state.version!.title}>{state.version!.title}</h1></div>
-      <Button disabled={disabled || !!retryRequest || state.is_completed} onClick={() => void onSubmit({ completed: true })}><Check size={18}/>{t(state.is_completed ? 'Выполнено' : 'Сделано')}</Button></header>
+    <header className="lecture-chat-heading">{onBackToTask && <Button variant="secondary" className="lecture-chat-back" aria-label={t('К заданию')} title={t('К заданию')} onClick={onBackToTask}><ArrowLeft size={16}/></Button>}
+      <span className="lecture-chat-heading-icon" aria-hidden="true"><Sparkles size={19}/></span><div><span className="eyebrow">{t('Мастерская лекций')}</span><h1 title={state.version!.title}>{state.version!.title}</h1></div>
+      <Button disabled={!readyForReview || !!retryRequest} onClick={goToReview} aria-label={t('Перейти к самопроверке')} title={t('Перейти к самопроверке')}>{t('Самопроверка')}<ArrowRight size={15}/></Button></header>
     <div className="lecture-chat-body">
       <div className="lecture-chat-scroll" ref={scrollRef}>
         {state.version!.description && <p className="lecture-chat-instructions">{state.version!.description}</p>}

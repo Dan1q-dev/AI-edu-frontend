@@ -28,7 +28,12 @@ export type RuntimeProps = {
   state: PracticeState; busy: boolean
   item?: LearningItem; ownerId?: number
   onStart: () => Promise<void>; onSubmit: (data: Record<string, unknown>) => Promise<void>
+  onBackToTask?: () => void
+  onReview?: (data: Record<string, unknown>, preview?: WorkPreview) => void
+  draft?: Record<string, unknown>; onDraftChange?: (draft: Record<string, unknown>) => void
+  onActivityChange?: (active: boolean) => void
 }
+export type WorkPreview = { title?: string; files?: { name: string; url: string }[] }
 export type PracticePlugin = {
   type: string; version: string; initialConfig: () => PracticeConfig
   layout?: 'workspace'
