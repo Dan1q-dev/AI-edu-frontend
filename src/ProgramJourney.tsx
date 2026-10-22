@@ -72,7 +72,7 @@ export function ProgramJourney({ courseId }: { courseId: string }) {
       {journey.certificate ? <CertificateResult certificate={journey.certificate}/> : <><p>{t('Сертификат на')} {hoursLabel(journey.hours, locale)}</p>
         <p>{t(journey.can_issue ? 'Все модули завершены. Сертификат готов к выдаче.' : 'Сертификат откроется после всех модулей и итоговых тестов.')}</p>
         <Button disabled={!journey.can_issue || issuing} onClick={() => void issue()}><Award size={17}/>{t(issuing ? 'Формирование…' : 'Получить сертификат')}</Button></>}
-      <Notice text={error} kind="error"/></div></section>
+      <Notice text={error} onDismiss={() => setError('')} kind="error"/></div></section>
   </div>
 }
 

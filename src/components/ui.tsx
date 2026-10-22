@@ -1,5 +1,8 @@
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import './notifications.css'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
-import { BookOpen, Loader2 } from 'lucide-react'
+import { BookOpen, CircleCheck, CircleAlert, Loader2 } from 'lucide-react'
 import { useI18n } from '../i18n'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }
@@ -109,8 +112,35 @@ export function ErrorState({ error }: { error: unknown }) {
   return <div className="notice error" role="alert">{error instanceof Error ? error.message : t('Не удалось загрузить данные')}</div>
 }
 
-export function Notice({ text, kind = 'success' }: { text: string; kind?: 'success' | 'error' }) {
-  return text ? <div role={kind === 'error' ? 'alert' : 'status'} className={`toast ${kind}`}>{text}</div> : null
+export function Notice({ text, kind = 'success', onDismiss }: { text: string; kind?: 'success' | 'error'; onDismiss?: () => void }) {
+  const [host, setHost] = useState<HTMLElement | null>(null)
+  const [visible, setVisible] = useState(false)
+  const dismiss = useRef(onDismiss)
+  useEffect(() => { dismiss.current = onDismiss }, [onDismiss])
+
+  useEffect(() => {
+    if (!text) { setVisible(false); return }
+    let container = document.getElementById('notification-stack')
+    if (!container) {
+      container = document.createElement('div')
+      container.id = 'notification-stack'
+      container.className = 'notification-stack'
+      document.body.appendChild(container)
+    }
+    setHost(container)
+    setVisible(true)
+    const timer = window.setTimeout(() => {
+      setVisible(false)
+      dismiss.current?.()
+    }, 1500)
+    return () => window.clearTimeout(timer)
+  }, [text, kind])
+
+  if (!text || !visible || !host) return null
+  const Icon = kind === 'error' ? CircleAlert : CircleCheck
+  return createPortal(<div role={kind === 'error' ? 'alert' : 'status'} aria-atomic="true" className={`toast notification-toast ${kind}`}>
+    <Icon size={20} aria-hidden="true"/><span>{text}</span>
+  </div>, host)
 }
 
 export function Confirm({ title, onConfirm, onCancel }: { title: string; onConfirm: () => void; onCancel: () => void }) {

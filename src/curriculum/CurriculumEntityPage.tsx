@@ -127,6 +127,6 @@ export function CurriculumEntityPage({ kind }: { kind: Kind }) {
       {kind === 'course' && <section className="curriculum-form-section"><h2>{t('Обложка курса')}</h2><p>{t('Изображение показывается в каталоге студентам.')}</p>{form.cover && <div className="curriculum-cover-preview"><img src={`/api/v1/media/${form.cover}/`} alt={t('Обложка курса')}/><button aria-label={t('Убрать обложку')} onClick={() => update({ cover: null })}><X size={16}/></button></div>}<label className="curriculum-cover-upload"><ImagePlus size={18}/>{t(form.cover ? 'Заменить изображение' : 'Загрузить изображение')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={uploading} onChange={event => { const file = event.target.files?.[0]; if (file) void uploadCover(file); event.currentTarget.value = '' }}/></label></section>}
     </div>
     <div className="curriculum-form-footer"><span>{t(dirty ? 'Есть несохранённые изменения' : 'Все изменения сохранены')}</span><Button onClick={() => void save()} disabled={!dirty || busy || uploading || !form.title.trim() || (kind === 'course' && !form.learning_track)}><Save size={16}/>{busy ? t('Сохранение…') : t('Сохранить')}</Button></div>
-    {message && <Notice text={message} kind={isError ? 'error' : 'success'}/>}
+    {message && <Notice text={message} onDismiss={() => setMessage('')} kind={isError ? 'error' : 'success'}/>}
   </div>
 }

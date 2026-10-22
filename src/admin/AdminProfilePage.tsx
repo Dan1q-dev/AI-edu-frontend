@@ -18,7 +18,7 @@ export function AdminProfilePage({ user }: { user: User }) {
     catch (cause) { setError((cause as Error).message) } finally { setBusy(false) }
   }
   return <div className="admin-profile"><div className="admin-page-heading"><div><h1>{t('Мой профиль')}</h1><p>{t('Личные данные и безопасность учётной записи.')}</p></div></div>
-    <form className="admin-user-form card" onSubmit={event => void save(event)}><label>Email<Input value={user.email} readOnly/></label><div className="admin-form-grid"><label>{t('Имя')}<Input maxLength={150} value={first} onChange={event => setFirst(event.target.value)}/></label><label>{t('Фамилия')}<Input maxLength={150} value={last} onChange={event => setLast(event.target.value)}/></label></div><Notice text={error} kind="error"/><Notice text={notice} kind="success"/><div className="admin-form-actions"><Button type="submit" disabled={busy || !dirty}>{busy ? t('Сохранение…') : t('Сохранить изменения')}</Button></div></form>
+    <form className="admin-user-form card" onSubmit={event => void save(event)}><label>Email<Input value={user.email} readOnly/></label><div className="admin-form-grid"><label>{t('Имя')}<Input maxLength={150} value={first} onChange={event => setFirst(event.target.value)}/></label><label>{t('Фамилия')}<Input maxLength={150} value={last} onChange={event => setLast(event.target.value)}/></label></div><Notice text={error} onDismiss={() => setError('')} kind="error"/><Notice text={notice} onDismiss={() => setNotice('')} kind="success"/><div className="admin-form-actions"><Button type="submit" disabled={busy || !dirty}>{busy ? t('Сохранение…') : t('Сохранить изменения')}</Button></div></form>
     <PasswordSection/>
   </div>
 }

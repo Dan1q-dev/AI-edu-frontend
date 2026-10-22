@@ -37,5 +37,5 @@ export function PracticeRunner({ item, ownerId, onWorkspaceChange }: { item: Lea
   if (!state.data?.version) return <div className="card"><p>{t('Практическая работа ещё не настроена.')}</p></div>
   if (!plugin) return <ErrorState error={new Error(t('Этот тип практики пока недоступен'))}/>
   return <><PracticeFlow key={state.data.version.id} state={state.data} plugin={plugin} item={item} ownerId={ownerId} busy={busy}
-    start={() => perform(true)} submit={data => perform(false, data)} onWorkspaceChange={onWorkspaceChange}/><Notice text={notice} kind={failed ? 'error' : 'success'}/></>
+    start={() => perform(true)} submit={data => perform(false, data)} onWorkspaceChange={onWorkspaceChange}/><Notice text={notice} onDismiss={() => setNotice('')} kind={failed ? 'error' : 'success'}/></>
 }

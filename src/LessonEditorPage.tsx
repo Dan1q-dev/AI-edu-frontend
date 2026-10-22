@@ -117,7 +117,7 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
   </>
   return <EditorLayout className="lecture-authoring-layout" title={t('Редактор лекции')} status={status} saveState={uploads ? 'saving' : saveState} actions={actions} backLabel={backLabel}>
     <div className="lesson-editor-shell">
-      {notice && <Notice text={notice} kind={noticeKind}/>}
+      {notice && <Notice text={notice} onDismiss={() => setNotice('')} kind={noticeKind}/>}
       {preview && <article className="lesson-preview lecture-paper"><h1>{draft.title}</h1>{draft.description && <p className="lesson-summary">{draft.description}</p>}{draft.blocks.map((block, index) => <BlockPreview key={index} block={block}/>)}<LessonAttachments attachments={draft.attachments}/></article>}
       <div hidden={preview} className="lecture-editing-view">
         <div className="lecture-ribbon-host" ref={setToolbarTarget}/>

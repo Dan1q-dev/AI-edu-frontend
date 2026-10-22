@@ -83,7 +83,7 @@ export function UserCreateDialog({ onClose, onCreated }: { onClose: () => void; 
       <label>{t('Роль')}<Select value={form.role} onChange={event => setForm({ ...form, role: event.target.value as AdminUser['role'], learning_track: null, course_access_mode: 'TRACK_DEFAULT', course_ids: [] })}><option value="STUDENT">{t('Студент')}</option><option value="ADMIN">{t('Администратор')}</option></Select></label>
       {form.role === 'STUDENT' && (tracks.isLoading ? <Loading variant="inline"/> : tracks.error ? <ErrorState error={tracks.error}/> : <CourseAccessSelector value={form} tracks={tracks.data ?? []} onChange={value => setForm(current => ({ ...current, ...value }))} onUnavailableChange={setUnavailable}/>)}
       <label>{t('Временный пароль')}<Input type="password" required minLength={8} autoComplete="new-password" value={form.password} onChange={event => setForm({ ...form, password: event.target.value })}/></label>
-      <p className="admin-form-note">{t('Пользователь сможет изменить пароль в своём профиле.')}</p><Notice text={error} kind="error"/>
+      <p className="admin-form-note">{t('Пользователь сможет изменить пароль в своём профиле.')}</p><Notice text={error} onDismiss={() => setError('')} kind="error"/>
       <div className="admin-form-actions"><Button type="button" variant="secondary" onClick={onClose} disabled={busy}>{t('Отмена')}</Button><Button type="submit" disabled={busy || form.role === 'STUDENT' && (!form.learning_track || unavailable || tracks.isLoading || Boolean(tracks.error))}>{busy ? t('Сохранение…') : t('Создать пользователя')}</Button></div>
       </fieldset>
     </form>

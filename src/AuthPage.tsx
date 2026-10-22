@@ -119,7 +119,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             <small className="field-error">{errors.password?.message}</small>
           </label>
 
-          <Notice text={error} kind="error" />
+          <Notice text={error} onDismiss={() => setError('')} kind="error" />
 
           <Button
             type="submit"

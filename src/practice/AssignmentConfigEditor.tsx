@@ -6,7 +6,7 @@ import { Color, TextStyle } from '@tiptap/extension-text-style'
 import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
 import { Bold, Italic, List, ListOrdered, Plus, Table2, Trash2 } from 'lucide-react'
-import { Input, Textarea } from '../components/ui'
+import { Input, Notice, Textarea } from '../components/ui'
 import { useI18n } from '../i18n'
 import { blocksToDocument, documentToBlocks } from '../lecture/document'
 import { TableCellBackground } from '../lecture/table'
@@ -67,7 +67,7 @@ export function AssignmentConfigEditor({ config, disabled, onChange, onUploading
       <span className="practice-file-status" aria-live="polite">{uploading ? t('Загрузка файлов…') : value.source_files?.length ? `${t('Файлов загружено:')} ${value.source_files.length}` : t('Файлы не выбраны')}</span>
     </span></label>
     <small>{t(uploading ? 'Загрузка файлов…' : 'PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 10 МБ на файл.')}</small>
-    {error && <p role="alert" className="notice error">{error}</p>}
+    <Notice text={error} kind="error" onDismiss={() => setError('')}/>
     <LessonAttachments attachments={value.source_files ?? []} onRemove={disabled || uploading ? undefined : media => onChange({ ...value, source_files: value.source_files?.filter(file => file.media !== media) })}/>
     <div className="practice-criteria-heading"><h3>{t('Критерии самопроверки')}</h3><p>{t('Что студент должен проверить перед отправкой? Один пункт — одно понятное действие.')}</p></div>
     {value.criteria.map((criterion, index) => <div className="practice-criterion-editor" key={index}>

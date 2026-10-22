@@ -110,7 +110,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => { setTitle(event.target.value); setDirty(true) }}/></label>
       {ConfigEditor && <ConfigEditor key={selected?.type} config={config} disabled={busy} onUploadingChange={setUploading} onChange={value => { setConfig(value); setDirty(true) }}/>}
     </div>
-    <Notice text={message} kind={failed ? 'error' : 'success'}/>
+    <Notice text={message} onDismiss={() => setMessage('')} kind={failed ? 'error' : 'success'}/>
     </div>
     {leaveTo && <UnsavedPracticeDialog busy={busy} canSave={Boolean(title.trim() && plugin)} error={failed ? message : ''}
       onCancel={() => setLeaveTo(null)} onDiscard={() => navigate(leaveTo)}
