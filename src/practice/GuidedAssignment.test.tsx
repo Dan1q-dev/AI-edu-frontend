@@ -43,6 +43,7 @@ describe('Source-based practical assignments', () => {
       criteria_snapshot: [], started_at: '', submitted_at: '', completed_at: '',
     } }
     render(<GuidedAssignment state={completed} busy={false} onStart={vi.fn()} onSubmit={vi.fn()}/>)
+    expect(screen.getByRole('tabpanel', { name: 'Результат работы' })).toBeTruthy()
     fireEvent.click(screen.getByRole('tab', { name: 'Результат работы' }))
     expect((screen.getByLabelText(/Отчёт о выполнении/) as HTMLTextAreaElement).value).toBe(report)
     expect(screen.getByText(/Не является оценкой преподавателя или ИИ/)).toBeTruthy()

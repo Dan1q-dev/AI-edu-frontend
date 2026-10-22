@@ -19,7 +19,7 @@ function AssignmentForm({ state, busy, onStart, onSubmit }: RuntimeProps) {
   const config = version.config as AssignmentConfig
   const submitted = Boolean(state.submission && state.submission.status !== 'IN_PROGRESS')
   const saved = state.submission?.submission_data
-  const [tab, setTab] = useState<'task' | 'report'>('task')
+  const [tab, setTab] = useState<'task' | 'report'>(submitted ? 'report' : 'task')
   const [report, setReport] = useState(String(saved?.report ?? ''))
   const [artifact, setArtifact] = useState(String(saved?.artifact_url ?? ''))
   const [checks, setChecks] = useState<boolean[]>(config.criteria.map((_, index) => Boolean((saved?.checks as boolean[] | undefined)?.[index])))
