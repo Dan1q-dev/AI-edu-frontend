@@ -8,6 +8,7 @@ import { PracticeEditorPage } from './PracticeEditor'
 import type { PracticeManifest, PracticeState, PracticeVersion } from './types'
 import { registerPractice } from './registry'
 import { normalizeTaskConfig } from './commonTask'
+import { workshops } from '../workspace/workshops'
 
 vi.mock('../api', async importOriginal => ({ ...await importOriginal<typeof import('../api')>(), api: vi.fn(), apiAll: vi.fn() }))
 const mockedApi = vi.mocked(api)
@@ -43,6 +44,18 @@ beforeEach(() => { mockedApi.mockReset(); localStorage.clear(); sessionStorage.c
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients = []; vi.restoreAllMocks() })
 
 describe('Practice Engine completion', () => {
+  it.each(['practical_workshop', 'pedagogical_workshop', 'syllabus_workshop'])('publishes %s from the catalog and preserves shared instructions', async type => {
+    const definition = workshops[type]!
+    const entry = { ...workshop, type, name: definition.title, frontend_editor: type, student_runtime: type }
+    const config = normalizeTaskConfig({ criteria: [{ title: 'Критерий преподавателя', description: '', is_required: true }] })
+    mockEditor({ published: { ...version, config }, catalog: [workshop, entry] })
+    mount(<PracticeEditorPage item={item}/>)
+    fireEvent.click(await screen.findByRole('button', { name: 'Изменить практику' }))
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(definition.title) }))
+    fireEvent.click(screen.getByRole('button', { name: 'Обновить публикацию' }))
+    await screen.findByText('Практика опубликована')
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', expect.objectContaining({ practice_type: type, config }))
+  })
   it('opens the assignment first and starts the selected tool without completing it', async () => {
     mockedApi.mockImplementation(async (path, method = 'GET') => {
       if (path.endsWith('/start/')) return { ...state, submission } as never

@@ -1,19 +1,20 @@
 import { api, apiAll } from '../api'
-import { isLecture, type Lecture, type LectureParameters, type OperationInput, type WorkspaceDocument, type WorkspaceMessage, type WorkspaceOperation } from './types'
+import { isWorkspaceContent, workspaceSections, type WorkspaceContent, type LectureParameters, type OperationInput, type SourceLecture, type WorkspaceDocument, type WorkspaceMessage, type WorkspaceOperation } from './types'
 
 function checkedDocument(document: WorkspaceDocument): WorkspaceDocument {
-  if (document.document_type !== 'lecture' || document.schema_version !== 1 ||
-      (!isLecture(document.content) && Object.keys(document.content).length !== 0)) throw new Error('Формат лекции не поддерживается')
+  if (!Object.hasOwn(workspaceSections, document.document_type) || document.schema_version !== 1 ||
+      (!isWorkspaceContent(document.content, document.document_type) && Object.keys(document.content).length !== 0)) throw new Error('Формат документа не поддерживается')
   return document
 }
 export const workspaceApi = {
   create: (item: string, language: LectureParameters['language']) => api<WorkspaceDocument>(`items/${item}/practice/workspace/`, 'POST', { language }).then(checkedDocument),
   document: (id: number) => api<WorkspaceDocument>(`workspace/documents/${id}/`).then(checkedDocument),
-  save: (id: number, data: { revision: number; parameters: LectureParameters; content?: Lecture }) =>
+  save: (id: number, data: { revision: number; parameters: LectureParameters; content?: WorkspaceContent }) =>
     api<WorkspaceDocument>(`workspace/documents/${id}/`, 'PATCH', data).then(checkedDocument),
   messages: (id: number) => apiAll<WorkspaceMessage>(`workspace/documents/${id}/messages/`),
   start: (id: number, data: OperationInput) => api<WorkspaceOperation>(`workspace/documents/${id}/operations/`, 'POST', data),
   operation: (id: number) => api<WorkspaceOperation>(`workspace/operations/${id}/`),
+  sourceLectures: () => apiAll<SourceLecture>('workspace/source-lectures/'),
 }
 
 // Only identifiers are persisted. Ownership/access always comes from the server.

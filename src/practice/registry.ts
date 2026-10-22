@@ -1,5 +1,6 @@
 import type { PracticePlugin } from './types'
-import { LectureWorkshop } from '../workspace/LectureWorkshop'
+import { WorkshopChat } from '../workspace/WorkshopChat'
+import { workshops } from '../workspace/workshops'
 import { GuidedAssignment } from './GuidedAssignment'
 import { AssignmentConfigEditor } from './AssignmentConfigEditor'
 import { defaultTaskConfig, validateTaskConfig } from './commonTask'
@@ -12,10 +13,10 @@ export function registerPractice(plugin: PracticePlugin) {
 }
 export function getPracticePlugin(type: string, version: string) { return plugins.get(`${type}@${version}`) }
 
-for (const type of ['lecture_workshop', 'checklist_practice']) {
+for (const type of [...Object.keys(workshops), 'checklist_practice']) {
   registerPractice({ type, version: '1.0.0', layout: 'workspace',
     initialConfig: defaultTaskConfig, ConfigEditor: AssignmentConfigEditor,
-    StudentRuntime: LectureWorkshop, validateConfig: validateTaskConfig,
+    StudentRuntime: WorkshopChat, validateConfig: validateTaskConfig,
   })
 }
 

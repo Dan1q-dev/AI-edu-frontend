@@ -171,3 +171,8 @@
   .is-document-workspace .learning-center .lesson-navigation { width: calc(100% - 28px); }
 }
 @media (prefers-reduced-motion: reduce) { .workspace-spinner { animation: none; } }
+.workshop-source { width: min(100%, 460px); margin: 20px auto 0; text-align: left; }
+.workshop-source label { display: grid; gap: 8px; }
+.workshop-source select { width: 100%; min-width: 0; }
+.workshop-formats { justify-content: center; margin-top: 20px; }
+.workshop-formats button[aria-pressed="true"], .workshop-formats button[aria-pressed="true"]:hover:not(:disabled), .workshop-formats button[aria-pressed="true"]:focus-visible { background: var(--color-primary); color: white; border-color: var(--color-primary); }

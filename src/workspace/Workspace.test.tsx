@@ -6,6 +6,9 @@ import { I18nProvider } from '../i18n'
 import type { PracticeState } from '../practice/types'
 import { LectureWorkshop } from './LectureWorkshop'
 import { sectionIds, type Lecture, type WorkspaceDocument, type WorkspaceMessage, type WorkspaceOperation } from './types'
+import { workspaceSections } from './types'
+import { workshops } from './workshops'
+import { getPracticePlugin } from '../practice/registry'
 
 vi.mock('../api', async importOriginal => ({ ...await importOriginal<typeof import('../api')>(), api: vi.fn(), apiAll: vi.fn() }))
 const mockedApi = vi.mocked(api), mockedAll = vi.mocked(apiAll)
@@ -167,5 +170,57 @@ describe('lecture chat', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Lecture' } })
     fireEvent.submit(screen.getByRole('textbox').closest('form')!)
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('items/workshop-1/practice/workspace/', 'POST', { language }))
+  })
+})
+
+describe('shared teaching constructors', () => {
+  for (const [type, definition] of Object.entries(workshops).filter(([type]) => type !== 'lecture_workshop')) {
+    it(`restores and reviews ${type} with its own content contract`, async () => {
+      const content = { title: definition.title, sections: workspaceSections[definition.documentType]!.map(id => ({
+        id, title: id, content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: `Result ${id}` }] }] },
+      })) }
+      const original = mockedApi.getMockImplementation()!
+      mockedApi.mockImplementation((path, method, data) => path === 'workspace/documents/44/'
+        ? Promise.resolve({ ...document, document_type: definition.documentType, content } as never) : original(path, method, data))
+      expect(getPracticePlugin(type, '1.0.0')?.layout).toBe('workspace')
+      mount({ version: { ...state.version!, practice_type: type } })
+      await screen.findByText(`Result ${content.sections.at(-1)!.id}`); await ready()
+      fireEvent.click(screen.getByRole('button', { name: 'Перейти к самопроверке' }))
+      expect(review).toHaveBeenCalledWith({ completed: true, document_id: 44, document_revision: 1 }, expect.objectContaining({ title: definition.title }))
+    })
+  }
+
+  it('selects a saved lecture and sends its ID through the shared chat', async () => {
+    mockedAll.mockImplementation(async path => path === 'workspace/source-lectures/'
+      ? [{ id: 8, title: 'Сохранённая лекция', updated_at: '' }] as never : [])
+    const original = mockedApi.getMockImplementation()!
+    mockedApi.mockImplementation((path, method, data) => path.endsWith('/workspace/') || path === 'workspace/documents/44/'
+      ? Promise.resolve({ ...document, content: {}, document_type: 'practical_session' } as never) : original(path, method, data))
+    mount({ version: { ...state.version!, practice_type: 'practical_workshop' }, submission: null })
+    await screen.findByRole('option', { name: 'Сохранённая лекция' })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Созданная лекция' }), { target: { value: '8' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить запрос' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST',
+      expect.objectContaining({ source_lecture_id: 8, kind: 'chat', prompt: 'Подготовь практическое занятие по выбранной лекции.' })))
+  })
+
+  it('offers all eight pedagogical formats and includes the selected format in the request', async () => {
+    const original = mockedApi.getMockImplementation()!
+    mockedApi.mockImplementation((path, method, data) => path.endsWith('/workspace/') || path === 'workspace/documents/44/'
+      ? Promise.resolve({ ...document, content: {}, document_type: 'pedagogical_scenario' } as never) : original(path, method, data))
+    mount({ version: { ...state.version!, practice_type: 'pedagogical_workshop' }, submission: null })
+    expect(screen.getByRole('group', { name: 'Формат занятия' }).querySelectorAll('button')).toHaveLength(8)
+    fireEvent.click(screen.getByRole('button', { name: 'Деловая игра' }))
+    expect(screen.getByRole('button', { name: 'Деловая игра' }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Управление конфликтами' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Отправить запрос' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST',
+      expect.objectContaining({ prompt: 'Формат занятия: Деловая игра.\nУправление конфликтами' })))
+  })
+
+  it('explains the required syllabus inputs without creating a document on mount', () => {
+    mount({ version: { ...state.version!, practice_type: 'syllabus_workshop' }, submission: null })
+    expect(screen.getByText(workshops.syllabus_workshop!.description)).toBeTruthy()
+    expect(mockedApi.mock.calls.some(([, method]) => method === 'POST')).toBe(false)
   })
 })

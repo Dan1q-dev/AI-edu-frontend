@@ -7,23 +7,39 @@ export type LectureParameters = {
   difficulty: 'beginner' | 'intermediate' | 'advanced'; learning_outcomes: string[]; language: 'ru' | 'kk' | 'en'
 }
 export type Lecture = { title: string; sections: { id: SectionId; title: string; content: JSONContent }[] }
+export type WorkspaceParameters = LectureParameters & {
+  session_type?: 'seminar' | 'round_table' | 'discussion' | 'business_game' | 'case_study' | 'research' | 'project' | 'group'
+  specialty?: string; credits?: number; duration_weeks?: number
+}
+export type WorkspaceContent = { title: string; sections: { id: string; title: string; content: JSONContent }[] }
+export const workspaceSections: Record<string, readonly string[]> = {
+  lecture: sectionIds,
+  practical_session: ['goal', 'objectives', 'learning_outcomes', 'basic_tasks', 'intermediate_tasks', 'advanced_tasks', 'cases', 'problem_questions', 'execution_stages', 'assessment_criteria'],
+  pedagogical_scenario: ['goal', 'learning_outcomes', 'format', 'preparation', 'roles', 'scenario', 'tasks', 'discussion_questions', 'assessment_criteria', 'reflection'],
+  syllabus: ['course_information', 'goals', 'learning_outcomes', 'thematic_plan', 'lectures', 'practical_sessions', 'independent_assignments', 'teaching_methods', 'assessment', 'literature'],
+}
 export type WorkspaceDocument = {
   id: number; submission: number; document_type: string; schema_version: number
-  parameters: LectureParameters; content: Lecture | Record<string, never>; revision: number; created_at: string; updated_at: string
+  parameters: WorkspaceParameters; content: WorkspaceContent | Record<string, never>; revision: number; created_at: string; updated_at: string
 }
 export type WorkspaceArtifact = { id: number; name: string; size: number; url: string; revision: number }
-export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; content?: Lecture | null; choices?: string[]; artifact?: WorkspaceArtifact | null; created_at: string }
-export type OperationInput = { request_id: string; revision: number; kind: 'generate' | 'improve_prompt' | 'chat'; prompt: string }
+export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; content?: WorkspaceContent | null; choices?: string[]; artifact?: WorkspaceArtifact | null; created_at: string }
+export type OperationInput = { request_id: string; revision: number; kind: 'generate' | 'improve_prompt' | 'chat'; prompt: string; source_lecture_id?: number }
+export type SourceLecture = { id: number; title: string; updated_at: string }
 export type WorkspaceOperation = {
   id: number; document: number; request_id: string; kind: OperationInput['kind']; status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
-  base_revision: number; result: { content?: Lecture; revision?: number; improved_prompt?: string; action?: string; choices?: string[]; artifact?: WorkspaceArtifact }; error_code: string
+  base_revision: number; result: { content?: WorkspaceContent; revision?: number; improved_prompt?: string; action?: string; choices?: string[]; artifact?: WorkspaceArtifact }; error_code: string
   model: string; duration_ms: number | null; input_tokens: number | null; output_tokens: number | null; total_tokens: number | null
   cost: string | null; cost_currency: string; attempts: number; created_at: string; started_at: string | null; finished_at: string | null
 }
 
 export function isLecture(content: WorkspaceDocument['content']): content is Lecture {
-  return typeof content.title === 'string' && Array.isArray(content.sections) && content.sections.length === 10 &&
-    content.sections.every((section, index) => section.id === sectionIds[index] && typeof section.title === 'string' && section.content?.type === 'doc')
+  return isWorkspaceContent(content, 'lecture')
+}
+export function isWorkspaceContent(content: WorkspaceDocument['content'], documentType: string): content is WorkspaceContent {
+  const expected = workspaceSections[documentType]
+  return !!expected && typeof content.title === 'string' && Array.isArray(content.sections) && content.sections.length === expected.length &&
+    content.sections.every((section, index) => section.id === expected[index] && typeof section.title === 'string' && section.content?.type === 'doc')
 }
 export function initialParameters(language: LectureParameters['language']): LectureParameters {
   return { discipline: '', topic: '', course: '', audience: '', duration_minutes: 45, difficulty: 'intermediate', learning_outcomes: [''], language }
