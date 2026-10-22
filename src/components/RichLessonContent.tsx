@@ -47,6 +47,12 @@ export function RichLessonContent({ value }: { value: string }) {
       case 'codeBlock': return <pre key={key}><code>{children}</code></pre>
       case 'hardBreak': return <br key={key}/>
       case 'horizontalRule': return <hr key={key}/>
+      case 'practiceImage': {
+        const media = Number(node.attrs?.media)
+        if (!Number.isSafeInteger(media) || media <= 0) return null
+        const caption = String(node.attrs?.caption ?? '')
+        return <figure key={key}><img src={`/api/v1/media/${media}/`} alt={caption} loading="lazy"/>{caption && <figcaption>{caption}</figcaption>}</figure>
+      }
       case 'table': return <table key={key}><tbody>{children}</tbody></table>
       case 'tableRow': return <tr key={key}>{children}</tr>
       case 'tableCell': return <td key={key} style={{ backgroundColor: safeTextColor(node.attrs?.backgroundColor) }} colSpan={Math.min(100, Math.max(1, Number(node.attrs?.colspan) || 1))} rowSpan={Math.min(100, Math.max(1, Number(node.attrs?.rowspan) || 1))}>{children}</td>

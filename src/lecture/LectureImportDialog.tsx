@@ -24,17 +24,26 @@ const warnings: Record<string, string> = {
   ai_long_element: 'Длинные фрагменты перенесены без уточнения структуры с ИИ.',
 }
 
-export function LectureImportDialog({ lessonId, onClose, onApply }: { lessonId: string; onClose: () => void; onApply: (blocks: Block[], mode: 'append' | 'replace') => void }) {
+type ImportDialogProps = { onClose: () => void; onApply: (blocks: Block[], mode: 'append' | 'replace') => void }
+export function LectureImportDialog({ lessonId, ...props }: ImportDialogProps & { lessonId: string }) {
+  return <DocumentImportDialog root={`lessons/${lessonId}/imports/`} {...props}/>
+}
+
+export function PracticeImportDialog({ itemId, ...props }: ImportDialogProps & { itemId: string }) {
+  return <DocumentImportDialog root={`items/${itemId}/practice/imports/`} practice {...props}/>
+}
+
+function DocumentImportDialog({ root, practice = false, onClose, onApply }: ImportDialogProps & { root: string; practice?: boolean }) {
   const { t } = useI18n(), qc = useQueryClient()
-  const root = `lessons/${lessonId}/imports/`
   const [selected, setSelected] = useState<string | null>(null)
   const [file, setFile] = useState<File | null>(null), [uploading, setUploading] = useState(false)
   const [mode, setMode] = useState<'append' | 'replace' | null>(null), [error, setError] = useState('')
   const panel = useRef<HTMLDivElement>(null)
   const closeRef = useRef(onClose); closeRef.current = onClose
-  const history = useQuery({ queryKey: ['lecture-imports', lessonId], queryFn: () => api<{ jobs: LectureImportJob[] }>(root) })
+  const historyKey = ['document-imports', root]
+  const history = useQuery({ queryKey: historyKey, queryFn: () => api<{ jobs: LectureImportJob[] }>(root) })
   const jobId = selected ?? history.data?.jobs[0]?.id
-  const query = useQuery({ queryKey: ['lecture-import', lessonId, jobId], queryFn: () => api<LectureImportJob>(`${root}${jobId}/`), enabled: !!jobId,
+  const query = useQuery({ queryKey: ['document-import', root, jobId], queryFn: () => api<LectureImportJob>(`${root}${jobId}/`), enabled: !!jobId,
     refetchInterval: query => ['PENDING', 'RUNNING'].includes(query.state.data?.status ?? '') ? 1500 : false })
   const job = query.data ?? history.data?.jobs.find(item => item.id === jobId)
   const active = !!job && ['PENDING', 'RUNNING'].includes(job.status)
@@ -65,20 +74,20 @@ export function LectureImportDialog({ lessonId, onClose, onApply }: { lessonId: 
     try {
       const form = new FormData(); form.append('file', file)
       const created = await api<LectureImportJob>(root, 'POST', form)
-      qc.setQueryData(['lecture-import', lessonId, created.id], created)
+      qc.setQueryData(['document-import', root, created.id], created)
       setSelected(created.id); setFile(null); setMode(null)
-      void qc.invalidateQueries({ queryKey: ['lecture-imports', lessonId] })
+      void qc.invalidateQueries({ queryKey: historyKey })
     } catch (cause) {
       setError(cause instanceof ApiError && cause.status === 413 ? t('Сервер ограничил размер файла. Загрузите файл меньшего размера.') : cause instanceof Error ? cause.message : t('Не удалось загрузить файл'))
-      if (cause instanceof ApiError && cause.status === 409) { setSelected(null); setFile(null); void qc.invalidateQueries({ queryKey: ['lecture-imports', lessonId] }) }
+      if (cause instanceof ApiError && cause.status === 409) { setSelected(null); setFile(null); void qc.invalidateQueries({ queryKey: historyKey }) }
     }
     finally { setUploading(false) }
   }
   return createPortal(<div className="lecture-import-backdrop"><div className="lecture-import-dialog" ref={panel} role="dialog" aria-modal="true" aria-labelledby="lecture-import-title" tabIndex={-1}>
-    <header><div><h2 id="lecture-import-title">{t('Импорт лекции из файла')}</h2><p>{t('Загрузите материал, проверьте результат и перенесите его в редактор.')}</p></div><button type="button" aria-label={t('Закрыть')} onClick={onClose}><X size={21}/></button></header>
+    <header><div><h2 id="lecture-import-title">{t(practice ? 'Импорт инструкции из файла' : 'Импорт лекции из файла')}</h2><p>{t(practice ? 'Загрузите задание, проверьте результат и перенесите его в инструкцию. Критерии самопроверки сохранятся.' : 'Загрузите материал, проверьте результат и перенесите его в редактор.')}</p></div><button type="button" aria-label={t('Закрыть')} onClick={onClose}><X size={21}/></button></header>
     <div className="lecture-import-body">
       <div className="lecture-import-upload">
-        <label className="lecture-import-file"><FileUp size={24}/><span><strong>{file?.name ?? t('Выбрать файл')}</strong><small>PDF, DOCX, PPTX · {t('до 10 МБ')}</small></span><input type="file" aria-label={t('Файл лекции')} accept=".pdf,.docx,.pptx" disabled={uploading || active} onChange={event => { setFile(event.target.files?.[0] ?? null); setMode(null); setError('') }}/></label>
+        <label className="lecture-import-file"><FileUp size={24}/><span><strong>{file?.name ?? t('Выбрать файл')}</strong><small>PDF, DOCX, PPTX · {t('до 10 МБ')}</small></span><input type="file" aria-label={t(practice ? 'Файл инструкции' : 'Файл лекции')} accept=".pdf,.docx,.pptx" disabled={uploading || active} onChange={event => { setFile(event.target.files?.[0] ?? null); setMode(null); setError('') }}/></label>
         <button type="button" disabled={!file || uploading || active} onClick={() => void start()}>{t(uploading ? 'Загрузка…' : 'Распознать файл')}</button>
       </div>
       {history.data && history.data.jobs.length > 0 && <label className="lecture-import-history">{t('Последние импорты')}<select aria-label={t('Последние импорты')} value={jobId ?? ''} disabled={uploading} onChange={event => { setSelected(event.target.value); setFile(null); setMode(null); setError('') }}>{history.data.jobs.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
@@ -95,7 +104,7 @@ export function LectureImportDialog({ lessonId, onClose, onApply }: { lessonId: 
       <div className="lecture-import-mode" role="group" aria-label={t('Способ переноса')}>
         {(['append', 'replace'] as const).map(value => <button type="button" key={value} aria-pressed={mode === value} disabled={!result || uploading || active} onClick={() => setMode(value)}><span className="lecture-import-mode-check" aria-hidden="true">{mode === value && <Check size={15}/>}</span>{t(value === 'append' ? 'Добавить в конец' : 'Заменить содержимое')}</button>)}
       </div>
-      <div><button type="button" onClick={onClose}>{t('Закрыть')}</button><button type="button" disabled={!result || !mode || uploading || active} onClick={() => { if (result && mode) { try { onApply(result.blocks, mode) } catch (cause) { setError(cause instanceof Error ? cause.message : t('Не удалось перенести содержимое')) } } }}>{t('Перенести в черновик')}</button></div>
+      <div><button type="button" onClick={onClose}>{t('Закрыть')}</button><button type="button" disabled={!result || !mode || uploading || active} onClick={() => { if (result && mode) { try { onApply(result.blocks, mode) } catch (cause) { setError(cause instanceof Error ? cause.message : t('Не удалось перенести содержимое')) } } }}>{t(practice ? 'Перенести в инструкцию' : 'Перенести в черновик')}</button></div>
     </footer>
   </div></div>, document.body)
 }

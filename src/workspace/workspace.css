@@ -27,7 +27,6 @@
 .lecture-chat-body { display: flex; flex-direction: column; flex: 1; width: 100%; min-height: 0; }
 .lecture-chat-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; padding: 24px max(24px, calc((100% - 900px) / 2)) 22px; display: flex; flex-direction: column; gap: 20px; }
 .lecture-chat-footer { flex: none; display: grid; gap: 6px; padding: 8px max(24px, calc((100% - 900px) / 2)) 5px; background: #fff; }
-.lecture-chat-instructions { margin: 0; white-space: pre-wrap; line-height: 1.75; }
 .lecture-chat-messages { flex: 1 0 auto; display: flex; flex-direction: column; gap: 28px; min-width: 0; }
 .lecture-chat-welcome { padding: clamp(28px, 8vh, 70px) 0 28px; max-width: 600px; }
 .lecture-chat-avatar { width: 44px; height: 44px; display: inline-grid; place-items: center; border-radius: 14px; background: #eef4fc; color: var(--color-primary); }

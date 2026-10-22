@@ -16,7 +16,7 @@ const document: WorkspaceDocument = { id: 44, submission: 99, document_type: 'le
     difficulty: 'intermediate', learning_outcomes: ['Объяснить методы'], language: 'ru' } }
 const item = { id: 3, short_id: 'workshop-1', type: 'PRACTICE' } as LearningItem
 const state: PracticeState = { version: { id: 7, practice_definition: 9, practice_type: 'lecture_workshop', plugin_version: '1.0.0', version_number: 1,
-  title: 'Мастерская', description: '', status: 'PUBLISHED', published_at: null, config: {} }, current_version_id: 7,
+  title: 'Мастерская', description: 'Legacy practice description', status: 'PUBLISHED', published_at: null, config: {} }, current_version_id: 7,
   submission: { id: 99, document_id: 44, status: 'IN_PROGRESS', practice_version: 7, submission_data: {}, criteria_snapshot: [], started_at: '', submitted_at: null, completed_at: null },
   result: null, progress_percent: 0, is_completed: false }
 let operation: WorkspaceOperation, messages: WorkspaceMessage[], clients: QueryClient[]
@@ -50,6 +50,7 @@ afterEach(() => { cleanup(); clients.forEach(client => client.clear()); vi.resto
 describe('lecture chat', () => {
   it('restores the lecture from server submission without localStorage or POST requests', async () => {
     mount(); await screen.findByText(lecture.title); await ready()
+    expect(screen.queryByText('Legacy practice description')).toBeNull()
     expect(screen.queryByLabelText('Название лекции')).toBeNull()
     expect(screen.queryByLabelText('Дисциплина')).toBeNull()
     expect(screen.queryByRole('checkbox')).toBeNull()

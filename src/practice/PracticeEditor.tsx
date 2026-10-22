@@ -37,7 +37,9 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const description = seed?.description ?? item.description
   const [published, setPublished] = useState(initial.published)
   const [hasDraft, setHasDraft] = useState(Boolean(initial.draft))
-  const [dirty, setDirty] = useState(false)
+  const snapshot = JSON.stringify({ selected, title, config })
+  const [savedSnapshot, setSavedSnapshot] = useState(snapshot)
+  const dirty = snapshot !== savedSnapshot
   const [saving, setBusy] = useState(false)
   const [uploading, setUploading] = useState(false)
   const busy = saving || uploading
@@ -55,9 +57,10 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
     try {
       const path = `items/${item.short_id}/practice/draft/`
       await api<PracticeVersion>(path, 'PUT', { practice_type: selected.type, plugin_version: selected.version, title: title.trim(), description, config })
+      setTitle(title.trim()); setSavedSnapshot(JSON.stringify({ selected, title: title.trim(), config }))
       setHasDraft(true)
       if (publish) { setPublished(await api<PracticeVersion>(path, 'POST')); setHasDraft(false) }
-      setDirty(false); setFailed(false)
+      setFailed(false)
       setMessage(t(publish ? 'Практика опубликована' : 'Черновик сохранён'))
       await Promise.all([qc.invalidateQueries({ queryKey: ['admin', 'items'] }), qc.invalidateQueries({ queryKey: ['admin-item', item.short_id] }), qc.invalidateQueries({ queryKey: ['practice-draft', item.short_id] })])
       return true
@@ -72,7 +75,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       for (const field of ['instructions', 'criteria', 'source_url', 'source_files']) if (field in config) next[field] = config[field]
     }
     setSelected({ type: entry.type, version: entry.version }); setConfig(next)
-    setDirty(true); setCatalogOpen(false); setMessage(''); setFailed(false)
+    setCatalogOpen(false); setMessage(''); setFailed(false)
     catalogTrigger.current?.focus()
   }
   const track = params.get('track')
@@ -107,8 +110,8 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
         </>}
       </section>}
       {selected && !plugin && <Notice text={t('Этот тип практики пока недоступен')} kind="error"/>}
-      <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => { setTitle(event.target.value); setDirty(true) }}/></label>
-      {ConfigEditor && <ConfigEditor key={selected?.type} config={config} disabled={busy} onUploadingChange={setUploading} onChange={value => { setConfig(value); setDirty(true) }}/>}
+      <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => setTitle(event.target.value)}/></label>
+      {ConfigEditor && <ConfigEditor key={selected?.type} itemId={item.short_id} config={config} disabled={busy} onUploadingChange={setUploading} onChange={setConfig}/>}
     </div>
     <Notice text={message} onDismiss={() => setMessage('')} kind={failed ? 'error' : 'success'}/>
     </div>

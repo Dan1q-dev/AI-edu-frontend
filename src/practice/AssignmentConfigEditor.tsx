@@ -5,24 +5,29 @@ import { TableKit } from '@tiptap/extension-table'
 import { Color, TextStyle } from '@tiptap/extension-text-style'
 import Highlight from '@tiptap/extension-highlight'
 import TextAlign from '@tiptap/extension-text-align'
-import { Bold, Italic, List, ListOrdered, Plus, Table2, Trash2 } from 'lucide-react'
+import { Bold, FileUp, Italic, List, ListOrdered, Plus, Table2, Trash2 } from 'lucide-react'
+import { closeHistory } from '@tiptap/pm/history'
+import Mathematics from '@tiptap/extension-mathematics'
 import { Input, Notice, Textarea } from '../components/ui'
 import { useI18n } from '../i18n'
 import { blocksToDocument, documentToBlocks } from '../lecture/document'
 import { TableCellBackground } from '../lecture/table'
+import { PracticeImportDialog } from '../lecture/LectureImportDialog'
+import { InstructionImage } from './instructionImage'
 import type { ConfigEditorProps } from './types'
 import type { AssignmentConfig } from './GuidedAssignment'
 import { api, type LessonAttachment } from '../api'
 import { LessonAttachments } from '../components/LessonAttachments'
 import { ATTACHMENT_ACCEPT, validateUploadSize } from '../utils/upload'
 
-export function AssignmentConfigEditor({ config, disabled, onChange, onUploadingChange }: ConfigEditorProps) {
+export function AssignmentConfigEditor({ config, disabled, itemId, onChange, onUploadingChange }: ConfigEditorProps) {
   const { t } = useI18n()
   const value = config as AssignmentConfig
   const latest = useRef({ value, onChange })
   latest.current = { value, onChange }
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
+  const [importOpen, setImportOpen] = useState(false)
   async function uploadFiles(files: File[]) {
     setError('')
     setUploading(true)
@@ -42,16 +47,16 @@ export function AssignmentConfigEditor({ config, disabled, onChange, onUploading
     finally { setUploading(false); onUploadingChange?.(false) }
   }
   const editor = useEditor({
-    extensions: [StarterKit, TableKit, TableCellBackground, TextStyle, Color, Highlight.configure({ multicolor: true }), TextAlign.configure({ types: ['paragraph', 'heading'] })],
+    extensions: [StarterKit, TableKit, TableCellBackground, InstructionImage, Mathematics.configure({ katexOptions: { throwOnError: false, trust: false } }), TextStyle, Color, Highlight.configure({ multicolor: true }), TextAlign.configure({ types: ['paragraph', 'heading'] })],
     content: blocksToDocument(value.instructions.map((content, position) => ({ type: 'TEXT', position, content, media: null, config: {} }))),
     editable: !disabled,
     editorProps: { attributes: { 'aria-label': t('Инструкция к заданию'), role: 'textbox', 'aria-multiline': 'true' } },
     onUpdate: ({ editor: instance }) => {
       const instructions = documentToBlocks(instance.getJSON()).map(block => block.content)
-      onChange({ ...value, instructions })
+      latest.current.onChange({ ...latest.current.value, instructions })
     },
   })
-  useEffect(() => { editor?.setEditable(!disabled) }, [editor, disabled])
+  useEffect(() => { editor?.setEditable(!disabled, false) }, [editor, disabled])
   const toolbar = [
     { Icon: Bold, label: 'Полужирный', action: () => editor?.chain().focus().toggleBold().run() },
     { Icon: Italic, label: 'Курсив', action: () => editor?.chain().focus().toggleItalic().run() },
@@ -60,6 +65,21 @@ export function AssignmentConfigEditor({ config, disabled, onChange, onUploading
     { Icon: Table2, label: 'Вставить таблицу', action: () => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
   ]
   return <fieldset disabled={disabled} className="practice-config"><legend>{t('Инструкция к заданию')}</legend>
+    <div className="practice-instruction-heading"><p>{t('Напишите задание или перенесите готовую инструкцию из документа.')}</p>{itemId && <button type="button" className="button secondary" disabled={disabled || uploading || !editor} onClick={() => setImportOpen(true)}><FileUp size={17}/>{t('Импорт из файла')}</button>}</div>
+    {importOpen && itemId && <PracticeImportDialog itemId={itemId} onClose={() => setImportOpen(false)} onApply={(blocks, mode) => {
+      if (!editor || disabled || uploading) throw new Error(t('Дождитесь завершения сохранения или загрузки файлов.'))
+      const incoming = blocks.flatMap(block => block.type === 'IMAGE'
+        ? [{ type: 'practiceImage', attrs: { media: block.media, caption: block.content } }]
+        : blocksToDocument([block]).content ?? [])
+      const document = { type: 'doc', content: mode === 'append' ? [...(editor.getJSON().content ?? []), ...incoming] : incoming }
+      const converted = documentToBlocks(document)
+      if (!incoming.length || converted.length > 10 || converted.some(block => block.content.length > 50000) || converted.reduce((size, block) => size + block.content.length, 0) > 200000) throw new Error(t('Содержимое слишком большое. Импортируйте документ частями.'))
+      // Validate the schema before changing the current instruction; keep the import undoable.
+      editor.schema.nodeFromJSON(document).check()
+      const end = editor.state.doc.content.size
+      editor.chain().command(({ tr }) => { closeHistory(tr); return true }).insertContentAt(mode === 'replace' ? { from: 0, to: end } : end, incoming).run()
+      setImportOpen(false)
+    }}/>}
     <div className="assignment-editor"><div className="assignment-editor-toolbar">{toolbar.map(({ Icon, label, action }) => <button type="button" key={label} title={t(label)} aria-label={t(label)} onClick={action}><Icon size={17}/></button>)}</div><EditorContent editor={editor}/></div>
     <label>{t('Исходный документ')}<span className="practice-file-picker">
       <Input className="practice-file-input" aria-label={t('Исходный документ')} type="file" multiple accept={ATTACHMENT_ACCEPT} disabled={uploading || (value.source_files?.length ?? 0) >= 20} onChange={event => { const files = Array.from(event.target.files ?? []); event.currentTarget.value = ''; if (files.length) void uploadFiles(files) }}/>

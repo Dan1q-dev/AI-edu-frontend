@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { api, type LearningItem } from '../api'
@@ -102,6 +102,42 @@ describe('changing the assigned practice', () => {
     mockEditor()
     mount(<Routes><Route path="/" element={<PracticeEditorPage item={item} moduleTitle="Модуль"/>}/><Route path="/admin/curriculum" element={<p>Содержание модуля</p>}/></Routes>)
   }
+  it('leaves an unchanged practice without a warning', async () => {
+    mountLeaveFlow()
+    await screen.findByLabelText('Название')
+    expect(screen.getByText('Все изменения сохранены')).toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: 'Модуль' }))
+    await screen.findByText('Содержание модуля')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+  it('clears the warning when title and criterion edits are reverted', async () => {
+    mountLeaveFlow()
+    const title = await screen.findByLabelText('Название')
+    const criterion = screen.getByLabelText('Критерий 1') as HTMLInputElement
+    const originalCriterion = criterion.value
+    fireEvent.change(title, { target: { value: 'Temporary title' } })
+    fireEvent.change(criterion, { target: { value: 'Temporary criterion' } })
+    expect(screen.getByText('Есть несохранённые изменения')).toBeTruthy()
+    fireEvent.change(title, { target: { value: version.title } })
+    fireEvent.change(criterion, { target: { value: originalCriterion } })
+    expect(screen.getByText('Все изменения сохранены')).toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: 'Модуль' }))
+    await screen.findByText('Содержание модуля')
+  })
+  it.each([
+    ['Сохранить', 'Черновик сохранён'],
+    ['Обновить публикацию', 'Практика опубликована'],
+  ])('leaves without a warning after %s', async (button, notice) => {
+    mountLeaveFlow()
+    fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Saved title' } })
+    fireEvent.click(screen.getByRole('button', { name: button }))
+    await screen.findByText(notice)
+    await waitFor(() => expect(screen.getByText('Все изменения сохранены')).toBeTruthy())
+    expect((screen.getByRole('button', { name: 'Сохранить' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('link', { name: 'Модуль' }))
+    await screen.findByText('Содержание модуля')
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
   it('keeps edits when leaving is cancelled and discards only after confirmation', async () => {
     mountLeaveFlow()
     const confirm = vi.spyOn(window, 'confirm')

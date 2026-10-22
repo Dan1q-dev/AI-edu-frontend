@@ -8,6 +8,15 @@ vi.mock('../api', () => ({ api: vi.fn() }))
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 
 describe('assignment source upload', () => {
+  it('does not report content changes on mount or when saving toggles editability', () => {
+    const onChange = vi.fn()
+    const config = defaultTaskConfig()
+    const view = render(<AssignmentConfigEditor config={config} disabled={false} onChange={onChange}/>)
+    expect(onChange).not.toHaveBeenCalled()
+    view.rerender(<AssignmentConfigEditor config={config} disabled onChange={onChange}/>)
+    view.rerender(<AssignmentConfigEditor config={config} disabled={false} onChange={onChange}/>)
+    expect(onChange).not.toHaveBeenCalled()
+  })
   it('uploads a file and stores its download metadata while retaining current edits', async () => {
     const onChange = vi.fn()
     let finish!: (value: unknown) => void

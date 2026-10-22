@@ -23,7 +23,7 @@ export type PracticeState = {
     criteria_snapshot: (Criterion & { id: number; position: number; checked: boolean })[]; started_at: string; submitted_at: string | null; completed_at: string | null } | null
   result: PracticeResult | null; progress_percent: number; is_completed: boolean
 }
-export type ConfigEditorProps = { config: PracticeConfig; onChange: (config: PracticeConfig) => void; disabled: boolean; onUploadingChange?: (uploading: boolean) => void }
+export type ConfigEditorProps = { config: PracticeConfig; onChange: (config: PracticeConfig) => void; disabled: boolean; itemId?: string; onUploadingChange?: (uploading: boolean) => void }
 export type RuntimeProps = {
   state: PracticeState; busy: boolean
   item?: LearningItem; ownerId?: number

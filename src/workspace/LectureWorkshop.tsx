@@ -188,7 +188,6 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart, onReview, 
       <Button disabled={!readyForReview || !!retryRequest} onClick={goToReview} aria-label={t('Перейти к самопроверке')} title={t('Перейти к самопроверке')}>{t('Самопроверка')}<ArrowRight size={15}/></Button></header>
     <div className="lecture-chat-body">
       <div className="lecture-chat-scroll" ref={scrollRef}>
-        {state.version!.description && <p className="lecture-chat-instructions">{state.version!.description}</p>}
         {!active && !state.is_completed && <Button disabled={busy} onClick={() => void onStart()}>{t('Продолжить практику')}</Button>}
         <div className="lecture-chat-messages" role="log" aria-label={t('История сообщений')} aria-live="polite">
           {!messages.data?.length && !fallback?.title && <div className="lecture-chat-welcome"><span className="lecture-chat-avatar"><Sparkles size={22}/></span><h2>{t('Какую лекцию подготовим?')}</h2><p>{t('Напишите тему. Помощник уточнит аудиторию, длительность и язык, подготовит полную лекцию и поможет оформить её в Word.')}</p><small className="lecture-chat-scope">{t('Полные лекции · Редактирование · Word (.docx)')}</small></div>}

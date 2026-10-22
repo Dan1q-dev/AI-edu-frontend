@@ -26,6 +26,8 @@ test('practice editor keeps actions visible and protects unsaved edits on deskto
   await page.goto('/#/admin/curriculum/items/practice-1/edit')
   const title = page.getByRole('textbox', { name: 'Название', exact: true })
   await expect(title).toBeVisible()
+  await expect(page.getByText('Все изменения сохранены', { exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled()
   await expect(page.getByLabel('Описание критерия', { exact: true }).first()).toBeHidden()
   await page.locator('.practice-criterion-details summary').first().click()
   await expect(page.getByRole('textbox', { name: 'Описание критерия', exact: true }).first()).toBeVisible()
@@ -36,6 +38,14 @@ test('practice editor keeps actions visible and protects unsaved edits on deskto
   await page.getByRole('link', { name: 'Основы работы с ИИ' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
+  const expectCenteredDialog = async () => {
+    const bounds = await dialog.boundingBox()
+    const viewport = page.viewportSize()!
+    expect(bounds).not.toBeNull()
+    expect(Math.abs(bounds!.x + bounds!.width / 2 - viewport.width / 2)).toBeLessThanOrEqual(1)
+    expect(Math.abs(bounds!.y + bounds!.height / 2 - viewport.height / 2)).toBeLessThanOrEqual(1)
+  }
+  await expectCenteredDialog()
   await expect(dialog.getByRole('button', { name: 'Остаться' })).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
@@ -48,6 +58,7 @@ test('practice editor keeps actions visible and protects unsaved edits on deskto
   await page.screenshot({ path: 'test-results/practice-editor-mobile.png', fullPage: false })
   await page.getByRole('link', { name: 'Основы работы с ИИ' }).click()
   await expect(dialog).toBeVisible()
+  await expectCenteredDialog()
   await dialog.getByRole('button', { name: 'Сохранить и выйти' }).click()
   await expect(page).toHaveURL(/#\/admin\/curriculum$/)
   expect(saved).toEqual(['Изменённая практика'])
