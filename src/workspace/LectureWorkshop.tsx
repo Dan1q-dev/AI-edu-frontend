@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Loader2, RefreshCw, Send, Sparkles } from 'lucide-react'
 import { ApiError } from '../api'
@@ -49,7 +49,9 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
   const [retryRequest, setRetryRequest] = useState<{ document: number; input: OperationInput } | null>(null)
   const sendingRef = useRef(false)
   const handledOperation = useRef<number | null>(null)
-  const endRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const footerRef = useRef<HTMLDivElement>(null)
   const active = !state.submission || state.submission.status === 'IN_PROGRESS'
   useLeaveWarning(active && Boolean(prompt.trim()))
 
@@ -88,7 +90,20 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
     void loaded.refetch()
     void messages.refetch()
   }, [operation.data, pending, retryRequest])
-  useEffect(() => { endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' }) }, [messages.data?.length, pending])
+  useLayoutEffect(() => {
+    const body = bodyRef.current, footer = footerRef.current
+    if (!body || !footer) return
+    const reserveFooter = () => body.style.setProperty('--chat-footer-height', `${footer.offsetHeight}px`)
+    reserveFooter()
+    if (typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(reserveFooter)
+    observer.observe(footer)
+    return () => observer.disconnect()
+  }, [active])
+  useEffect(() => {
+    const scroll = scrollRef.current
+    if (scroll) scroll.scrollTop = scroll.scrollHeight
+  }, [messages.data, loaded.data?.content, pending])
 
   const send = async (text = prompt) => {
     if (sendingRef.current || disabled || !item || (!retryRequest && !text.trim())) return
@@ -129,30 +144,33 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
   return <div className="lecture-workshop lecture-chat">
     <header className="lecture-chat-heading"><div><span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{state.version!.title}</h1><p>{t('Виртуальная мастерская генерации лекции')}</p></div>
       <Button disabled={disabled || !!retryRequest || state.is_completed} onClick={() => void onSubmit({ completed: true })}><Check size={18}/>{t(state.is_completed ? 'Выполнено' : 'Сделано')}</Button></header>
-    <div className="lecture-chat-body">
-      {state.version!.description && <p className="lecture-chat-instructions">{state.version!.description}</p>}
-      {!active && !state.is_completed && <Button disabled={busy} onClick={() => void onStart()}>{t('Продолжить практику')}</Button>}
-      <div className="lecture-chat-messages" role="log" aria-label={t('История сообщений')} aria-live="polite">
-        {!messages.data?.length && !fallback?.title && <div className="lecture-chat-welcome"><span className="lecture-chat-avatar"><Sparkles size={22}/></span><h2>{t('Какую лекцию подготовим?')}</h2><p>{t('Напишите тему и пожелания в сообщении. AI сгенерирует текст лекции, а вы сможете уточнить запрос в этом же чате.')}</p></div>}
-        {documentId && (loaded.isPending || messages.isPending) && <Loading variant="inline"/>}
-        {messages.data?.map(message => <div key={message.id} className={`lecture-chat-message ${message.role}`}><span className="lecture-chat-message-author">{t(message.role === 'user' ? 'Вы' : 'AI Assistant')}</span>
-          {message.content ? <LectureAnswer lecture={message.content}/> : <p>{message.text}</p>}</div>)}
-        {!hasAnswers && fallback && isLecture(fallback) && <div className="lecture-chat-message assistant"><LectureAnswer lecture={fallback}/></div>}
-        {(sending || pending) && <div className="lecture-chat-pending" role="status"><Loader2 size={18} className="workspace-spinner"/>{t(sending ? 'Отправляем запрос…' : operation.data?.status === 'PENDING' ? 'Запрос в очереди. Ожидаем начала генерации…' : 'Генерируем лекцию…')}</div>}
-        <div ref={endRef}/>
+    <div className="lecture-chat-body" ref={bodyRef}>
+      <div className="lecture-chat-scroll" ref={scrollRef}>
+        {state.version!.description && <p className="lecture-chat-instructions">{state.version!.description}</p>}
+        {!active && !state.is_completed && <Button disabled={busy} onClick={() => void onStart()}>{t('Продолжить практику')}</Button>}
+        <div className="lecture-chat-messages" role="log" aria-label={t('История сообщений')} aria-live="polite">
+          {!messages.data?.length && !fallback?.title && <div className="lecture-chat-welcome"><span className="lecture-chat-avatar"><Sparkles size={22}/></span><h2>{t('Какую лекцию подготовим?')}</h2><p>{t('Напишите тему и пожелания в сообщении. AI сгенерирует текст лекции, а вы сможете уточнить запрос в этом же чате.')}</p></div>}
+          {documentId && (loaded.isPending || messages.isPending) && <Loading variant="inline"/>}
+          {messages.data?.map(message => <div key={message.id} className={`lecture-chat-message ${message.role}`}><span className="lecture-chat-message-author">{t(message.role === 'user' ? 'Вы' : 'AI Assistant')}</span>
+            {message.content ? <LectureAnswer lecture={message.content}/> : <p>{message.text}</p>}</div>)}
+          {!hasAnswers && fallback && isLecture(fallback) && <div className="lecture-chat-message assistant"><LectureAnswer lecture={fallback}/></div>}
+          {(sending || pending) && <div className="lecture-chat-pending" role="status"><Loader2 size={18} className="workspace-spinner"/>{t(sending ? 'Отправляем запрос…' : operation.data?.status === 'PENDING' ? 'Запрос в очереди. Ожидаем начала генерации…' : 'Генерируем лекцию…')}</div>}
+        </div>
+        <Notice text={error || failure} kind="error"/>
+        {active && failure && lastUserMessage && <Button variant="secondary" disabled={disabled || !!retryRequest} onClick={() => void send(lastUserMessage.text)}><RefreshCw size={16}/>{t('Повторить отправку')}</Button>}
+        {(loaded.error || messages.error || operation.error) && <Notice text={t('Не удалось обновить чат. Проверьте соединение и повторите.')} kind="error"/>}
+        {(error || loaded.error || messages.error || operation.error) && documentId && <Button variant="secondary" disabled={sending} onClick={() => void refresh()}><RefreshCw size={16}/>{t('Обновить чат')}</Button>}
       </div>
-      <Notice text={error || failure} kind="error"/>
-      {active && failure && lastUserMessage && <Button variant="secondary" disabled={disabled || !!retryRequest} onClick={() => void send(lastUserMessage.text)}><RefreshCw size={16}/>{t('Повторить отправку')}</Button>}
-      {(loaded.error || messages.error || operation.error) && <Notice text={t('Не удалось обновить чат. Проверьте соединение и повторите.')} kind="error"/>}
-      {(error || loaded.error || messages.error || operation.error) && documentId && <Button variant="secondary" disabled={sending} onClick={() => void refresh()}><RefreshCw size={16}/>{t('Обновить чат')}</Button>}
-      {active ? <form className="lecture-chat-composer" onSubmit={event => { event.preventDefault(); void send() }}>
-        <Textarea aria-label={t('Ваш запрос')} placeholder={t('Напишите запрос для генерации лекции…')} rows={3} maxLength={8000} value={prompt} disabled={disabled || !!retryRequest}
-          onChange={event => setPrompt(event.target.value)} onKeyDown={event => {
-            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() }
-          }}/>
-        <div className="lecture-chat-composer-actions"><span>{t('Enter — отправить, Shift + Enter — новая строка')}</span><Button type="submit" disabled={disabled || !retryRequest && !prompt.trim()} aria-label={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')}><Send size={18}/>{t(retryRequest ? 'Повторить отправку' : 'Отправить')}</Button></div>
-      </form> : <p className="lecture-chat-completed"><Check size={18}/>{t('Практическая работа завершена')}</p>}
-      <p className="lecture-chat-disclaimer">{t('AI может ошибаться. Проверяйте сгенерированный материал.')}</p>
+      <div className="lecture-chat-footer" ref={footerRef}>
+        {active ? <form className="lecture-chat-composer" onSubmit={event => { event.preventDefault(); void send() }}>
+          <Textarea aria-label={t('Ваш запрос')} placeholder={t('Напишите запрос для генерации лекции…')} rows={3} maxLength={8000} value={prompt} disabled={disabled || !!retryRequest}
+            onChange={event => setPrompt(event.target.value)} onKeyDown={event => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() }
+            }}/>
+          <div className="lecture-chat-composer-actions"><span>{t('Enter — отправить, Shift + Enter — новая строка')}</span><Button type="submit" disabled={disabled || !retryRequest && !prompt.trim()} aria-label={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')}><Send size={18}/>{t(retryRequest ? 'Повторить отправку' : 'Отправить')}</Button></div>
+        </form> : <p className="lecture-chat-completed"><Check size={18}/>{t('Практическая работа завершена')}</p>}
+        <p className="lecture-chat-disclaimer">{t('AI может ошибаться. Проверяйте сгенерированный материал.')}</p>
+      </div>
     </div>
   </div>
 }

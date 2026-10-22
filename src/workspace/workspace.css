@@ -3,12 +3,14 @@
 .is-document-workspace .learning-center .lesson-navigation { width: calc(100% - 48px); max-width: none; }
 .is-document-workspace .outline-button { display: inline-flex; }
 .lecture-workshop { color: var(--color-ink); }
-.lecture-chat { border: 1px solid var(--color-border); border-radius: 18px; background: #fff; overflow: hidden; }
-.lecture-chat-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 28px; border-bottom: 1px solid var(--color-border); }
+.lecture-chat { display: flex; flex-direction: column; height: max(360px, calc(100dvh - 190px)); border: 1px solid var(--color-border); border-radius: 18px; background: #fff; overflow: hidden; }
+.lecture-chat-heading { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 28px; border-bottom: 1px solid var(--color-border); }
 .lecture-chat-heading h1 { margin: 5px 0 6px; font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.35; }
 .lecture-chat-heading p { margin: 0; color: var(--color-muted); font-size: .85rem; }
 .lecture-chat-heading > .button { flex-shrink: 0; }
-.lecture-chat-body { width: min(100%, 860px); min-height: 65vh; margin: 0 auto; padding: 32px 28px 18px; display: flex; flex-direction: column; gap: 20px; }
+.lecture-chat-body { position: relative; flex: 1; width: min(100%, 860px); min-height: 0; margin: 0 auto; }
+.lecture-chat-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 32px 28px calc(var(--chat-footer-height, 220px) + 20px); display: flex; flex-direction: column; gap: 20px; }
+.lecture-chat-footer { position: absolute; z-index: 1; bottom: 0; left: 0; right: 0; display: grid; gap: 12px; padding: 14px 28px calc(18px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid var(--color-border); }
 .lecture-chat-instructions { margin: 0; white-space: pre-wrap; line-height: 1.75; }
 .lecture-chat-messages { flex: 1; display: flex; flex-direction: column; gap: 28px; min-width: 0; }
 .lecture-chat-welcome { padding: 44px 0 56px; max-width: 600px; }
@@ -26,7 +28,7 @@
 .lecture-chat-pending, .lecture-chat-completed { display: flex; align-items: center; gap: 10px; color: var(--color-primary); font-size: .9rem; }
 .lecture-chat-composer { border: 1px solid transparent; border-radius: 14px; background: #f2f5fa; padding: 14px 16px; }
 .lecture-chat-composer:focus-within { border-color: var(--color-primary); }
-.lecture-chat-composer .input { display: block; width: 100%; border: 0; box-shadow: none; background: transparent; resize: vertical; padding: 4px; min-height: 85px; font: inherit; line-height: 1.6; }
+.lecture-chat-composer .input { display: block; width: 100%; border: 0; box-shadow: none; background: transparent; resize: vertical; padding: 4px; min-height: 85px; max-height: min(160px, 25dvh); font: inherit; line-height: 1.6; }
 .lecture-chat-composer .input:focus { outline: 0; box-shadow: none; }
 .lecture-chat-composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
 .lecture-chat-composer-actions > span { font-size: .7rem; color: var(--color-muted); }
@@ -35,7 +37,8 @@
   .lecture-chat-heading { padding: 18px 16px; align-items: flex-start; gap: 12px; }
   .lecture-chat-heading .eyebrow { font-size: .6rem; }
   .lecture-chat-heading > .button { padding: 9px 12px; font-size: .8rem; }
-  .lecture-chat-body { padding: 22px 16px 16px; }
+  .lecture-chat-scroll { padding: 22px 16px calc(var(--chat-footer-height, 220px) + 16px); }
+  .lecture-chat-footer { padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
   .lecture-chat-welcome { padding: 22px 0 30px; }
   .lecture-chat-composer-actions > span { display: none; }
   .lecture-chat-composer-actions { justify-content: flex-end; }
