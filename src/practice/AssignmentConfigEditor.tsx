@@ -61,7 +61,11 @@ export function AssignmentConfigEditor({ config, disabled, onChange, onUploading
   ]
   return <fieldset disabled={disabled} className="practice-config"><legend>{t('Инструкция к заданию')}</legend>
     <div className="assignment-editor"><div className="assignment-editor-toolbar">{toolbar.map(({ Icon, label, action }) => <button type="button" key={label} title={t(label)} aria-label={t(label)} onClick={action}><Icon size={17}/></button>)}</div><EditorContent editor={editor}/></div>
-    <label>{t('Исходный документ')}<Input type="file" multiple accept={ATTACHMENT_ACCEPT} disabled={uploading || (value.source_files?.length ?? 0) >= 20} onChange={event => { const files = Array.from(event.target.files ?? []); event.currentTarget.value = ''; if (files.length) void uploadFiles(files) }}/></label>
+    <label>{t('Исходный документ')}<span className="practice-file-picker">
+      <Input className="practice-file-input" aria-label={t('Исходный документ')} type="file" multiple accept={ATTACHMENT_ACCEPT} disabled={uploading || (value.source_files?.length ?? 0) >= 20} onChange={event => { const files = Array.from(event.target.files ?? []); event.currentTarget.value = ''; if (files.length) void uploadFiles(files) }}/>
+      <span className="button secondary" aria-hidden="true">{t('Выбрать файлы')}</span>
+      <span className="practice-file-status" aria-live="polite">{uploading ? t('Загрузка файлов…') : value.source_files?.length ? `${t('Файлов загружено:')} ${value.source_files.length}` : t('Файлы не выбраны')}</span>
+    </span></label>
     <small>{t(uploading ? 'Загрузка файлов…' : 'PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 10 МБ на файл.')}</small>
     {error && <p role="alert" className="notice error">{error}</p>}
     <LessonAttachments attachments={value.source_files ?? []} onRemove={disabled || uploading ? undefined : media => onChange({ ...value, source_files: value.source_files?.filter(file => file.media !== media) })}/>
