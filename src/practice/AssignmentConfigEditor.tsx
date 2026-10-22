@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { TableKit } from '@tiptap/extension-table'
@@ -12,10 +12,35 @@ import { blocksToDocument, documentToBlocks } from '../lecture/document'
 import { TableCellBackground } from '../lecture/table'
 import type { ConfigEditorProps } from './types'
 import type { AssignmentConfig } from './GuidedAssignment'
+import { api, type LessonAttachment } from '../api'
+import { LessonAttachments } from '../components/LessonAttachments'
+import { ATTACHMENT_ACCEPT, validateUploadSize } from '../utils/upload'
 
-export function AssignmentConfigEditor({ config, disabled, onChange }: ConfigEditorProps) {
+export function AssignmentConfigEditor({ config, disabled, onChange, onUploadingChange }: ConfigEditorProps) {
   const { t } = useI18n()
   const value = config as AssignmentConfig
+  const latest = useRef({ value, onChange })
+  latest.current = { value, onChange }
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+  async function uploadFiles(files: File[]) {
+    setError('')
+    setUploading(true)
+    onUploadingChange?.(true)
+    try {
+      if ((latest.current.value.source_files?.length ?? 0) + files.length > 20) throw new Error(t('Можно добавить не более 20 файлов.'))
+      files.forEach(validateUploadSize)
+      for (const file of files) {
+        const form = new FormData(); form.append('file', file)
+        const uploaded = await api<LessonAttachment>('media/files/', 'POST', form)
+        const current = latest.current.value
+        const next = { ...current, source_url: '', source_files: [...(current.source_files ?? []), uploaded] }
+        latest.current.value = next
+        latest.current.onChange(next)
+      }
+    } catch (cause) { setError((cause as Error).message) }
+    finally { setUploading(false); onUploadingChange?.(false) }
+  }
   const editor = useEditor({
     extensions: [StarterKit, TableKit, TableCellBackground, TextStyle, Color, Highlight.configure({ multicolor: true }), TextAlign.configure({ types: ['paragraph', 'heading'] })],
     content: blocksToDocument(value.instructions.map((content, position) => ({ type: 'TEXT', position, content, media: null, config: {} }))),
@@ -36,7 +61,10 @@ export function AssignmentConfigEditor({ config, disabled, onChange }: ConfigEdi
   ]
   return <fieldset disabled={disabled} className="practice-config"><legend>{t('Инструкция к заданию')}</legend>
     <div className="assignment-editor"><div className="assignment-editor-toolbar">{toolbar.map(({ Icon, label, action }) => <button type="button" key={label} title={t(label)} aria-label={t(label)} onClick={action}><Icon size={17}/></button>)}</div><EditorContent editor={editor}/></div>
-    <label>{t('Исходный документ')}<Input type="url" value={value.source_url ?? ''} onChange={event => onChange({ ...value, source_url: event.target.value })}/></label>
+    <label>{t('Исходный документ')}<Input type="file" multiple accept={ATTACHMENT_ACCEPT} disabled={uploading || (value.source_files?.length ?? 0) >= 20} onChange={event => { const files = Array.from(event.target.files ?? []); event.currentTarget.value = ''; if (files.length) void uploadFiles(files) }}/></label>
+    <small>{t(uploading ? 'Загрузка файлов…' : 'PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 10 МБ на файл.')}</small>
+    {error && <p role="alert" className="notice error">{error}</p>}
+    <LessonAttachments attachments={value.source_files ?? []} onRemove={disabled || uploading ? undefined : media => onChange({ ...value, source_files: value.source_files?.filter(file => file.media !== media) })}/>
     <h3>{t('Критерии самопроверки')}</h3>
     {value.criteria.map((criterion, index) => <div className="practice-criterion-editor" key={index}>
       <label>{t('Критерий')} {index + 1}<Input value={criterion.title} maxLength={300} onChange={event => onChange({ ...value, criteria: value.criteria.map((row, i) => i === index ? { ...row, title: event.target.value } : row) })}/></label>

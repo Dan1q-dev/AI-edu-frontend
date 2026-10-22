@@ -98,7 +98,7 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
     try {
       for (const file of Array.from(files)) {
         if ((draftRef.current?.attachments.length ?? 0) >= 20) throw new Error(t('К лекции можно прикрепить не более 20 файлов.'))
-        if (file.size > 20 * 1024 * 1024) throw new Error(t('Максимальный размер файла — 20 МБ.'))
+        if (file.size > 10 * 1024 * 1024) throw new Error(t('Максимальный размер файла — 10 МБ.'))
         const form = new FormData(); form.append('file', file)
         const uploaded = await api<LessonAttachment>('media/files/', 'POST', form)
         if (mounted.current) update({ attachments: [...(draftRef.current?.attachments ?? []), uploaded] })
@@ -126,7 +126,7 @@ function LessonEditor({ id, backLabel }: { id: string; backLabel?: string }) {
         <section className="lesson-document" aria-label={t('Содержание лекции')}>
           <LectureDocumentEditor lessonId={id} toolbarTarget={toolbarTarget} blocks={draft.blocks} disabled={busy || preview} onChange={blocks => update({ blocks })} onUpload={delta => { if (mounted.current) setUploads(count => count + delta) }} onError={error}/>
         </section>
-        <details className="lesson-document lesson-editor-attachments lecture-resources"><summary><Paperclip size={17}/>{t('Материалы для скачивания')}<span>{draft.attachments.length || ''}</span></summary><div><LessonAttachments attachments={draft.attachments} onRemove={busy ? undefined : media => update({ attachments: draftRef.current!.attachments.filter(file => file.media !== media) })}/><label className="lesson-attachment-upload"><Paperclip size={18}/><span>{t(uploads ? 'Загрузка файлов…' : 'Добавить файлы')}</span><input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip" disabled={busy || uploads > 0 || draft.attachments.length >= 20} onChange={event => { if (event.target.files?.length) void uploadAttachments(event.target.files); event.currentTarget.value = '' }}/></label><p>{t('PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 20 МБ на файл. Ученики увидят файлы после публикации.')}</p></div></details>
+        <details className="lesson-document lesson-editor-attachments lecture-resources"><summary><Paperclip size={17}/>{t('Материалы для скачивания')}<span>{draft.attachments.length || ''}</span></summary><div><LessonAttachments attachments={draft.attachments} onRemove={busy ? undefined : media => update({ attachments: draftRef.current!.attachments.filter(file => file.media !== media) })}/><label className="lesson-attachment-upload"><Paperclip size={18}/><span>{t(uploads ? 'Загрузка файлов…' : 'Добавить файлы')}</span><input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.zip" disabled={busy || uploads > 0 || draft.attachments.length >= 20} onChange={event => { if (event.target.files?.length) void uploadAttachments(event.target.files); event.currentTarget.value = '' }}/></label><p>{t('PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 10 МБ на файл. Ученики увидят файлы после публикации.')}</p></div></details>
         </div>
       </div>
     </div>

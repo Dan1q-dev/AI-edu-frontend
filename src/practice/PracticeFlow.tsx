@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Download, ExternalLink, Sparkles } from 'lucide-react'
 import { RichLessonContent } from '../components/RichLessonContent'
+import { LessonAttachments } from '../components/LessonAttachments'
 import { Button, Notice } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { LearningItem } from '../api'
@@ -128,6 +129,7 @@ export function PracticeFlow({ state, plugin, item, ownerId, busy, start, submit
           : <p>{t('Выполните задание в выбранном инструменте, затем вернитесь к самопроверке.')}</p>}
       </article></section>
       {config.source_url && safeResultLink(config.source_url) && <a className="practice-source-link" href={config.source_url} target="_blank" rel="noreferrer"><ExternalLink size={15}/>{t('Исходный документ')}</a>}
+      <LessonAttachments attachments={config.source_files ?? []}/>
       <section className="practice-task-criteria"><h2>{t('Критерии самопроверки')}</h2>
         {criteria.length ? <ol>{criteria.map((criterion, index) => <li key={index}><strong>{criterion.title}</strong>{criterion.description && <p>{criterion.description}</p>}{criterion.is_required && <small>{t('Обязательный критерий')}</small>}</li>)}</ol>
           : <p className="muted">{t('Критерии пока не заданы преподавателем. Перед завершением проверьте результат по инструкции.')}</p>}

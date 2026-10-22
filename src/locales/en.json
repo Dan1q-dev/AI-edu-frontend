@@ -842,5 +842,11 @@
   "Не удалось загрузить результат. Откройте инструмент и повторите самопроверку.": "Could not load the result. Open the tool and return to self-check.",
   "Подготовьте результат по инструкции задания. Затем перейдите к самопроверке.": "Prepare your result following the assignment instructions, then go to self-check.",
   "Открыть результат": "Open result",
-  "Название, инструкция и критерии сохранятся при смене инструмента.": "The title, instructions and criteria are preserved when switching tools."
+  "Название, инструкция и критерии сохранятся при смене инструмента.": "The title, instructions and criteria are preserved when switching tools.",
+  "до 10 МБ": "up to 10 MB",
+  "Исходный документ": "Source document",
+  "Можно добавить не более 20 файлов.": "You can add up to 20 files.",
+  "PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 10 МБ на файл.": "PDF, Word, PowerPoint, Excel, TXT, CSV or ZIP · up to 10 MB per file.",
+  "Максимальный размер файла — 10 МБ.": "Maximum file size is 10 MB.",
+  "PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 10 МБ на файл. Ученики увидят файлы после публикации.": "PDF, Word, PowerPoint, Excel, TXT, CSV or ZIP · up to 10 MB per file. Students will see files after publication."
 }

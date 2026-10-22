@@ -35,7 +35,9 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const [published, setPublished] = useState(initial.published)
   const [hasDraft, setHasDraft] = useState(Boolean(initial.draft))
   const [dirty, setDirty] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [saving, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const busy = saving || uploading
   const [message, setMessage] = useState('')
   const [failed, setFailed] = useState(false)
   const plugin = selected ? getPracticePlugin(selected.type, selected.version) : undefined
@@ -63,7 +65,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
     if (busy || !entry.available || !implementation) return
     const next = implementation.initialConfig()
     if (selected && hasCommonTask(selected.type) && hasCommonTask(entry.type)) {
-      for (const field of ['instructions', 'criteria', 'source_url']) if (field in config) next[field] = config[field]
+      for (const field of ['instructions', 'criteria', 'source_url', 'source_files']) if (field in config) next[field] = config[field]
     }
     setSelected({ type: entry.type, version: entry.version }); setConfig(next)
     setDirty(true); setCatalogOpen(false); setMessage(''); setFailed(false)
@@ -94,7 +96,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       </section>}
       {selected && !plugin && <Notice text={t('Этот тип практики пока недоступен')} kind="error"/>}
       <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => { setTitle(event.target.value); setDirty(true) }}/></label>
-      {ConfigEditor && <ConfigEditor key={selected?.type} config={config} disabled={busy} onChange={value => { setConfig(value); setDirty(true) }}/>}
+      {ConfigEditor && <ConfigEditor key={selected?.type} config={config} disabled={busy} onUploadingChange={setUploading} onChange={value => { setConfig(value); setDirty(true) }}/>}
       <div className="row"><Button variant="secondary" disabled={busy || !dirty || !title.trim() || !plugin} onClick={() => void save(false)}>{t('Сохранить')}</Button>
         <Button disabled={busy || !title.trim() || !plugin || (!dirty && !hasDraft)} onClick={() => void save(true)}>{t(published ? 'Обновить публикацию' : 'Опубликовать')}</Button></div>
     </div>

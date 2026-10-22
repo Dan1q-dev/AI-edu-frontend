@@ -60,7 +60,7 @@ export function LectureImportDialog({ lessonId, onClose, onApply }: { lessonId: 
   }, [])
   const start = async () => {
     if (!file || active || uploading) return
-    if (file.size > 30 * 1024 * 1024) { setError(t('Максимальный размер файла — 30 МБ.')); return }
+    if (file.size > 10 * 1024 * 1024) { setError(t('Максимальный размер файла — 10 МБ.')); return }
     setUploading(true); setError('')
     try {
       const form = new FormData(); form.append('file', file)
@@ -78,7 +78,7 @@ export function LectureImportDialog({ lessonId, onClose, onApply }: { lessonId: 
     <header><div><h2 id="lecture-import-title">{t('Импорт лекции из файла')}</h2><p>{t('Загрузите материал, проверьте результат и перенесите его в редактор.')}</p></div><button type="button" aria-label={t('Закрыть')} onClick={onClose}><X size={21}/></button></header>
     <div className="lecture-import-body">
       <div className="lecture-import-upload">
-        <label className="lecture-import-file"><FileUp size={24}/><span><strong>{file?.name ?? t('Выбрать файл')}</strong><small>PDF, DOCX, PPTX · {t('до 30 МБ')}</small></span><input type="file" aria-label={t('Файл лекции')} accept=".pdf,.docx,.pptx" disabled={uploading || active} onChange={event => { setFile(event.target.files?.[0] ?? null); setMode(null); setError('') }}/></label>
+        <label className="lecture-import-file"><FileUp size={24}/><span><strong>{file?.name ?? t('Выбрать файл')}</strong><small>PDF, DOCX, PPTX · {t('до 10 МБ')}</small></span><input type="file" aria-label={t('Файл лекции')} accept=".pdf,.docx,.pptx" disabled={uploading || active} onChange={event => { setFile(event.target.files?.[0] ?? null); setMode(null); setError('') }}/></label>
         <button type="button" disabled={!file || uploading || active} onClick={() => void start()}>{t(uploading ? 'Загрузка…' : 'Распознать файл')}</button>
       </div>
       {history.data && history.data.jobs.length > 0 && <label className="lecture-import-history">{t('Последние импорты')}<select aria-label={t('Последние импорты')} value={jobId ?? ''} disabled={uploading} onChange={event => { setSelected(event.target.value); setFile(null); setMode(null); setError('') }}>{history.data.jobs.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}

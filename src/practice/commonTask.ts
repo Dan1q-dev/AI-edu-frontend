@@ -1,6 +1,7 @@
 import type { Criterion, PracticeConfig } from './types'
+import type { LessonAttachment } from '../api'
 
-export type TaskConfig = { instructions: string[]; criteria: Criterion[]; source_url?: string }
+export type TaskConfig = { instructions: string[]; criteria: Criterion[]; source_url?: string; source_files?: LessonAttachment[] }
 export const hasCommonTask = (type: string) => ['lecture_workshop', 'checklist_practice', 'guided_assignment'].includes(type)
 export function defaultTaskConfig(): TaskConfig {
   return {

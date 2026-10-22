@@ -51,6 +51,7 @@ async function ensureCsrfToken(force = false) {
 }
 
 export async function api<T>(path: string, method = 'GET', data?: unknown): Promise<T> {
+  if (data instanceof FormData) for (const value of data.values()) if (value instanceof Blob) validateUploadSize(value)
   const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())
   if (unsafe) await ensureCsrfToken()
   const body = data instanceof FormData ? data : data === undefined ? undefined : JSON.stringify(data)
@@ -82,3 +83,4 @@ export async function apiAll<T>(path: string): Promise<T[]> {
   return results
 }
 import { translateCurrentLocale } from './i18n'
+import { validateUploadSize } from './utils/upload'
