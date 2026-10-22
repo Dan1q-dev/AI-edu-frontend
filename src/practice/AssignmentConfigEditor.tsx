@@ -65,12 +65,14 @@ export function AssignmentConfigEditor({ config, disabled, onChange, onUploading
     <small>{t(uploading ? 'Загрузка файлов…' : 'PDF, Word, PowerPoint, Excel, TXT, CSV или ZIP · до 10 МБ на файл.')}</small>
     {error && <p role="alert" className="notice error">{error}</p>}
     <LessonAttachments attachments={value.source_files ?? []} onRemove={disabled || uploading ? undefined : media => onChange({ ...value, source_files: value.source_files?.filter(file => file.media !== media) })}/>
-    <h3>{t('Критерии самопроверки')}</h3>
+    <div className="practice-criteria-heading"><h3>{t('Критерии самопроверки')}</h3><p>{t('Что студент должен проверить перед отправкой? Один пункт — одно понятное действие.')}</p></div>
     {value.criteria.map((criterion, index) => <div className="practice-criterion-editor" key={index}>
-      <label>{t('Критерий')} {index + 1}<Input value={criterion.title} maxLength={300} onChange={event => onChange({ ...value, criteria: value.criteria.map((row, i) => i === index ? { ...row, title: event.target.value } : row) })}/></label>
-      <label>{t('Описание критерия')}<Textarea value={criterion.description} maxLength={2000} onChange={event => onChange({ ...value, criteria: value.criteria.map((row, i) => i === index ? { ...row, description: event.target.value } : row) })}/></label>
+      <div className="practice-criterion-main"><label>{t('Критерий')} {index + 1}<Input value={criterion.title} placeholder={t('Например: в работе есть примеры по теме')} maxLength={300} onChange={event => onChange({ ...value, criteria: value.criteria.map((row, i) => i === index ? { ...row, title: event.target.value } : row) })}/></label>
+      <button type="button" className="button secondary" title={t('Удалить критерий')} aria-label={`${t('Удалить критерий')} ${index + 1}`} disabled={value.criteria.length <= 1} onClick={() => onChange({ ...value, criteria: value.criteria.filter((_, i) => i !== index) })}><Trash2 size={17}/></button></div>
+      <details className="practice-criterion-details"><summary>{t('Пояснение и обязательность')}<small>{t(criterion.is_required ? 'Обязательный критерий' : 'Необязательный критерий')}</small></summary>
+      <label>{t('Описание критерия')}<Textarea value={criterion.description} maxLength={2000} rows={2} onChange={event => onChange({ ...value, criteria: value.criteria.map((row, i) => i === index ? { ...row, description: event.target.value } : row) })}/></label>
       <label><input type="checkbox" checked={criterion.is_required} onChange={event => onChange({ ...value, criteria: value.criteria.map((row, i) => i === index ? { ...row, is_required: event.target.checked } : row) })}/>{t('Обязательный критерий')}</label>
-      <button type="button" className="button secondary" title={t('Удалить критерий')} disabled={value.criteria.length <= 1} onClick={() => onChange({ ...value, criteria: value.criteria.filter((_, i) => i !== index) })}><Trash2 size={17}/>{t('Удалить')}</button>
+      </details>
     </div>)}
     <button type="button" className="button secondary" disabled={value.criteria.length >= 30} onClick={() => onChange({ ...value, criteria: [...value.criteria, { title: '', description: '', is_required: true }] })}><Plus size={17}/>{t('Добавить критерий')}</button>
   </fieldset>

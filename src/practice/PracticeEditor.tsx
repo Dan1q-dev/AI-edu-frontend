@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ListChecks, Puzzle, Sparkles } from 'lucide-react'
 import { api, type LearningItem } from '../api'
@@ -9,6 +9,7 @@ import { useLeaveWarning } from '../useLeaveWarning'
 import { getPracticePlugin } from './registry'
 import { hasCommonTask, normalizeTaskConfig } from './commonTask'
 import type { PracticeManifest, PracticeVersion } from './types'
+import { UnsavedPracticeDialog } from './UnsavedPracticeDialog'
 import './practice.css'
 
 type DraftState = { draft: PracticeVersion | null; published: PracticeVersion | null; versions: PracticeVersion[] }
@@ -24,6 +25,8 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const { t } = useI18n()
   const [params] = useSearchParams()
   const qc = useQueryClient()
+  const navigate = useNavigate()
+  const [leaveTo, setLeaveTo] = useState<string | null>(null)
   const seed = initial.draft ?? initial.published
   const [selected, setSelected] = useState(seed ? { type: seed.practice_type, version: seed.plugin_version } : null)
   const [config, setConfig] = useState(seed && hasCommonTask(seed.practice_type) ? normalizeTaskConfig(seed.config) : seed?.config ?? {})
@@ -43,11 +46,11 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const plugin = selected ? getPracticePlugin(selected.type, selected.version) : undefined
   const manifest = catalog.data?.find(entry => entry.type === selected?.type && entry.version === selected.version)
   const ConfigEditor = plugin?.ConfigEditor
-  useLeaveWarning(dirty)
+  useLeaveWarning(dirty, setLeaveTo)
   const save = async (publish: boolean) => {
-    if (busy || !title.trim() || !selected || !plugin) return
+    if (busy || !title.trim() || !selected || !plugin) return false
     const validation = plugin.validateConfig(config)
-    if (validation) { setFailed(true); setMessage(t(validation)); return }
+    if (validation) { setFailed(true); setMessage(t(validation)); return false }
     setBusy(true); setMessage('')
     try {
       const path = `items/${item.short_id}/practice/draft/`
@@ -57,6 +60,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       setDirty(false); setFailed(false)
       setMessage(t(publish ? 'Практика опубликована' : 'Черновик сохранён'))
       await Promise.all([qc.invalidateQueries({ queryKey: ['admin', 'items'] }), qc.invalidateQueries({ queryKey: ['admin-item', item.short_id] }), qc.invalidateQueries({ queryKey: ['practice-draft', item.short_id] })])
+      return true
     } catch (error) { setFailed(true); setMessage(error instanceof Error ? error.message : t('Не удалось сохранить')) }
     finally { setBusy(false) }
   }
@@ -76,7 +80,15 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const alternatives = catalog.data?.filter(entry => entry.available && getPracticePlugin(entry.type, entry.version)
     && (entry.type !== selected?.type || entry.version !== selected.version)) ?? []
   return <div className="practice-editor-page">
-    <Link className="back" to={`/admin/curriculum${track ? `?track=${encodeURIComponent(track)}` : ''}`}><ArrowLeft size={16}/>{moduleTitle || t('Структура курса')}</Link>
+    <header className="practice-editor-toolbar">
+      <Link className="back" to={`/admin/curriculum${track ? `?track=${encodeURIComponent(track)}` : ''}`} title={moduleTitle || t('Структура курса')}><ArrowLeft size={16}/><span>{moduleTitle || t('Структура курса')}</span></Link>
+      <div className="practice-editor-actions">
+        <span className="practice-save-status" role="status">{t(busy ? 'Сохранение…' : dirty ? 'Есть несохранённые изменения' : 'Все изменения сохранены')}</span>
+        <Button variant="secondary" disabled={busy || !dirty || !title.trim() || !plugin} onClick={() => void save(false)}>{t('Сохранить')}</Button>
+        <Button disabled={busy || !title.trim() || !plugin || (!dirty && !hasDraft)} onClick={() => void save(true)}>{t(published ? 'Обновить публикацию' : 'Опубликовать')}</Button>
+      </div>
+    </header>
+    <div className="practice-editor-content">
     <span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{title || t('Новая практика')}</h1>
     {published && <p className="practice-version-note">{t('Изменения сохраняются в новой версии. Начатые попытки сохраняют прежние условия.')}</p>}
     <div className="card form-card">
@@ -97,9 +109,11 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       {selected && !plugin && <Notice text={t('Этот тип практики пока недоступен')} kind="error"/>}
       <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => { setTitle(event.target.value); setDirty(true) }}/></label>
       {ConfigEditor && <ConfigEditor key={selected?.type} config={config} disabled={busy} onUploadingChange={setUploading} onChange={value => { setConfig(value); setDirty(true) }}/>}
-      <div className="row"><Button variant="secondary" disabled={busy || !dirty || !title.trim() || !plugin} onClick={() => void save(false)}>{t('Сохранить')}</Button>
-        <Button disabled={busy || !title.trim() || !plugin || (!dirty && !hasDraft)} onClick={() => void save(true)}>{t(published ? 'Обновить публикацию' : 'Опубликовать')}</Button></div>
     </div>
     <Notice text={message} kind={failed ? 'error' : 'success'}/>
+    </div>
+    {leaveTo && <UnsavedPracticeDialog busy={busy} canSave={Boolean(title.trim() && plugin)} error={failed ? message : ''}
+      onCancel={() => setLeaveTo(null)} onDiscard={() => navigate(leaveTo)}
+      onSave={() => { void save(false).then(saved => { if (saved) navigate(leaveTo) }) }}/>}
   </div>
 }

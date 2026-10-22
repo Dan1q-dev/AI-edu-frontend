@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { api, type LearningItem } from '../api'
 import { PracticeRunner } from './PracticeRunner'
 import { PracticeEditorPage } from './PracticeEditor'
@@ -96,6 +96,38 @@ describe('Practice Engine completion', () => {
 })
 
 describe('changing the assigned practice', () => {
+  function mountLeaveFlow() {
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: function (this: HTMLDialogElement) { this.open = true } })
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value: function (this: HTMLDialogElement) { this.open = false } })
+    mockEditor()
+    mount(<Routes><Route path="/" element={<PracticeEditorPage item={item} moduleTitle="Модуль"/>}/><Route path="/admin/curriculum" element={<p>Содержание модуля</p>}/></Routes>)
+  }
+  it('keeps edits when leaving is cancelled and discards only after confirmation', async () => {
+    mountLeaveFlow()
+    const confirm = vi.spyOn(window, 'confirm')
+    fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Unsaved' } })
+    fireEvent.click(screen.getByRole('link', { name: 'Модуль' }))
+    const dialog = screen.getByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Остаться' }))
+    expect((screen.getByLabelText('Название') as HTMLInputElement).value).toBe('Unsaved')
+    fireEvent.click(screen.getByRole('link', { name: 'Модуль' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Выйти без сохранения' }))
+    await screen.findByText('Содержание модуля')
+    expect(confirm).not.toHaveBeenCalled()
+    expect(mockedApi.mock.calls.some(([, method]) => method === 'PUT')).toBe(false)
+  })
+  it('stays in the dialog after a failed save and leaves after a successful retry', async () => {
+    mountLeaveFlow()
+    fireEvent.change(await screen.findByLabelText('Название'), { target: { value: 'Saved before leaving' } })
+    fireEvent.click(screen.getByRole('link', { name: 'Модуль' }))
+    mockedApi.mockRejectedValueOnce(new Error('Offline'))
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить и выйти' }))
+    await within(screen.getByRole('dialog')).findByText('Offline')
+    expect(screen.queryByText('Содержание модуля')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Сохранить и выйти' }))
+    await screen.findByText('Содержание модуля')
+    expect(mockedApi).toHaveBeenCalledWith('items/p1/practice/draft/', 'PUT', expect.objectContaining({ title: 'Saved before leaving' }))
+  })
   it('replaces the selected practice on the same item and retains title and keeps the legacy description hidden', async () => {
     mockEditor()
     mount(<PracticeEditorPage item={item}/>)

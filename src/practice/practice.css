@@ -13,8 +13,41 @@
 .practice-checks small { font-weight: 400; color: var(--color-muted, #67738a); }
 .practice-checks p { font-size: .85rem; margin: 6px 0 0; white-space: pre-wrap; }
 .practice-version-note { padding: 16px; border-radius: 10px; background: #f0f6fd; }
-.practice-editor-page > .back { display: flex; align-items: center; gap: 8px; width: fit-content; margin-bottom: 18px; }
-.practice-editor-page > .eyebrow { display: block; }
+.admin-content:has(.practice-editor-page) { background-image: none; }
+.practice-editor-page { min-width: 0; padding-bottom: 48px; }
+.practice-editor-toolbar { position: sticky; top: var(--admin-header-height, 0px); z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 32px; background: var(--color-surface, white); border-bottom: 1px solid var(--color-border); }
+.practice-editor-toolbar .back { display: flex; align-items: center; gap: 8px; min-width: 0; margin: 0; }
+.practice-editor-toolbar .back svg { flex-shrink: 0; }
+.practice-editor-toolbar .back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.practice-editor-actions { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; gap: 12px; }
+.practice-save-status { color: var(--color-muted); font-size: .75rem; }
+.practice-editor-content { width: min(100% - 64px, 1200px); margin: 32px auto 0; }
+.practice-editor-content > .eyebrow { display: block; }
+.practice-editor-content h1 { overflow-wrap: anywhere; }
+.practice-editor-content > .form-card { width: 100%; max-width: none; }
+.practice-criteria-heading h3 { margin-bottom: 8px; }
+.practice-criteria-heading p { margin: 0; font-size: .85rem; }
+.practice-criterion-main { display: flex; align-items: flex-end; gap: 12px; }
+.practice-criterion-main > label { flex: 1; min-width: 0; }
+.practice-criterion-main > button { flex-shrink: 0; }
+.practice-criterion-details summary { cursor: pointer; color: var(--color-muted); font-size: .8rem; }
+.practice-criterion-details summary small { margin-left: 12px; }
+.practice-criterion-details > label { margin-top: 14px; }
+.practice-criterion-details > label:has(input[type=checkbox]) { display: flex; align-items: center; gap: 8px; }
+.practice-criterion-details input[type=checkbox] { width: 16px; height: 16px; }
+.practice-leave-dialog { width: min(560px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 28px; color: var(--color-text); background: var(--color-surface, white); border: 1px solid var(--color-border); border-radius: 16px; box-shadow: 0 25px 70px #0a1d3640; }
+.practice-leave-dialog::backdrop { background: #12233d8a; }
+.practice-leave-dialog h2 { font-size: 1.25rem; }
+.practice-leave-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+@media (max-width: 1000px) { .practice-save-status { display: none; } }
+@media (max-width: 760px) {
+  .practice-editor-toolbar { flex-wrap: wrap; gap: 14px; padding: 14px 16px; }
+  .practice-editor-toolbar .back { max-width: 100%; }
+  .practice-editor-actions { flex: 1 1 100%; }
+  .practice-editor-actions > .button { flex: 1; justify-content: center; padding-inline: 10px; }
+  .practice-editor-content { width: calc(100% - 32px); margin-top: 24px; }
+  .practice-leave-actions { display: grid; }
+}
 .practice-selection-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
 .practice-selection-heading h2 { flex: 1 1 240px; margin: 0; overflow-wrap: anywhere; }
 .practice-selection-heading .button { flex-shrink: 0; }
