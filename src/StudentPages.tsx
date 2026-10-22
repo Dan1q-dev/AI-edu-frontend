@@ -14,6 +14,7 @@ import { TutorPanel } from './tutor/TutorPanel'
 import { TestRunner } from './TestRunner'
 import { CourseProgressIndicator, LearningStatus } from './components/LearningStatus'
 import { LearningItemLink, PracticeRunner } from './AdaptiveLearning'
+import { ProgramJourney } from './ProgramJourney'
 
 function isTiptapContent(value: string) { try { return JSON.parse(value)?.type === 'doc' } catch { return false } }
 
@@ -33,6 +34,7 @@ export function CoursePage() {
   if (course.isLoading || modules.isLoading || items.isLoading || progress.isLoading) return <Loading/>
   if (course.error || modules.error || items.error || progress.error) return <ErrorState error={course.error || modules.error || items.error || progress.error}/>
   const state = progress.data
+  if (course.data?.certificate_enabled) return <><Link className="back" to="/"><ArrowLeft size={16}/>{t('Моё обучение')}</Link><ProgramJourney courseId={course.data.short_id}/></>
   return <>
     <Link className="back" to="/catalog"><ArrowLeft size={16}/>{t('Все курсы')}</Link>
     {course.data?.cover && <div className="course-banner"><img src={`/api/v1/media/${course.data.cover}/`} alt=""/></div>}
@@ -101,7 +103,7 @@ export function LearningItemPage({ user }: { user?: User } = {}) {
   const index = entries.findIndex(entry => entry.short_id === id)
   const kind = item.data?.type === 'TEST' ? t('ТЕСТ') : item.data?.type === 'PRACTICE' ? t('ПРАКТИКА') : t('ЛЕКЦИЯ')
   const assessment = item.data?.type === 'TEST' && ['assessment', 'results'].includes(search.get('view') ?? '')
-  return <LearningLayout tutor={item.data?.type === 'LECTURE' ? <TutorPanel key={`item-${id}`} contextType="item" contextId={id} lessonTitle={item.data.title}/> : undefined} workspace={workspace} assessment={assessment} hideNext={item.data?.type === 'TEST'} user={user} courseSlug={item.data?.course_short_id} courseTitle={item.data?.course_title} moduleTitle={item.data?.module_title} sections={sections} lessonId={id} lessonTitle={item.data?.title || t('Материал')} totalLessons={entries.length || undefined} next={index >= 0 ? entries[index + 1] : undefined} courseProgress={progress.data?.percent} itemProgress={progress.data?.items}>
+  return <LearningLayout tutor={item.data && item.data.type !== 'TEST' ? <TutorPanel key={`item-${id}`} contextType="item" contextId={id} lessonTitle={item.data.title} materialType={item.data.type === 'PRACTICE' ? 'practice' : 'lecture'}/> : undefined} workspace={workspace} assessment={assessment} hideNext={item.data?.type === 'TEST'} user={user} courseSlug={item.data?.course_short_id} courseTitle={item.data?.course_title} moduleTitle={item.data?.module_title} sections={sections} lessonId={id} lessonTitle={item.data?.title || t('Материал')} totalLessons={entries.length || undefined} next={index >= 0 ? entries[index + 1] : undefined} courseProgress={progress.data?.percent} itemProgress={progress.data?.items}>
     {item.data?.type === 'LECTURE' && <div className="lesson-heading"><span className="eyebrow">{kind}</span><h1>{item.data?.title}</h1><p>{item.data?.description}</p></div>}
     {item.data?.type === 'LECTURE' && <LectureProgress key={id} itemId={id} courseId={item.data.course_short_id ?? ''} savedPercent={progress.data?.items[id]?.progress_percent ?? 0}><article className="article lesson-article">{blocks.data?.map(block => block.type === 'TEXT' ? <div key={block.id} className="markdown" style={{ textAlign: block.config?.align === 'center' || block.config?.align === 'right' ? block.config.align : 'left' }}>{isTiptapContent(block.content) ? <RichLessonContent value={block.content}/> : <ReactMarkdown skipHtml>{block.content}</ReactMarkdown>}</div> : <figure key={block.id}><img className={block.config?.width === 'reading' ? 'lesson-image-reading' : ''} src={block.media_url || ''} alt={String(block.config?.alt || block.content || 'Изображение лекции')}/>{block.content && <figcaption>{block.content}</figcaption>}</figure>)}<LessonAttachments attachments={attachments.data ?? []}/></article></LectureProgress>}
     {item.data?.type === 'TEST' && <TestRunner key={id} itemId={id} ownerId={user?.id} next={index >= 0 ? entries[index + 1] : undefined} courseSlug={item.data.course_short_id}/>}

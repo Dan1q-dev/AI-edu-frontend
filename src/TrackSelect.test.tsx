@@ -83,7 +83,7 @@ describe('Registration flow with TrackSelect', () => {
   })
   afterEach(cleanup)
 
-  it('successfully selects a trajectory and submits registration', async () => {
+  it('registers the account before the separate trajectory selection step', async () => {
     mockedApiAll.mockResolvedValue(mockTracks as never)
     mockedApi.mockResolvedValue({
       id: 10,
@@ -103,11 +103,7 @@ describe('Registration flow with TrackSelect', () => {
       </QueryClientProvider>
     )
 
-    // Wait for tracks to load
-    const studentBtn = await screen.findByRole('radio', { name: /обучающийся/i })
-
-    // Select the first track
-    fireEvent.click(studentBtn)
+    expect(screen.queryByRole('radio')).toBeNull()
 
     // Fill registration form inputs
     fireEvent.change(screen.getByPlaceholderText('Имя'), { target: { value: 'Анна' } })
@@ -125,8 +121,7 @@ describe('Registration flow with TrackSelect', () => {
         expect.objectContaining({
           email: 'student@example.test',
           first_name: 'Анна',
-          last_name: 'Смирнова',
-          learning_track: 1
+          last_name: 'Смирнова'
         })
       )
     })

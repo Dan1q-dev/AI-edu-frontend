@@ -21,3 +21,33 @@
 .practice-catalog-card.is-selected { opacity: 1; border-color: #267fca; background: #edf6ff; cursor: default; }
 .practice-catalog-card span, .practice-catalog-card strong { overflow-wrap: anywhere; }
 .practice-catalog-card:focus-visible { outline: 2px solid #267fca; outline-offset: 3px; }
+
+.guided-assignment { min-width: 0; width: 100%; }
+.guided-assignment h1 { font-size: 24px; line-height: 1.35; overflow-wrap: anywhere; }
+.assignment-tabs { display: flex; gap: 4px; border-bottom: 1px solid #dbe3ec; margin: 24px 0; }
+.assignment-tabs button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #536375; font: inherit; }
+.assignment-tabs button[aria-selected="true"] { border-bottom-color: #267fca; color: #1464a8; font-weight: 600; }
+.assignment-instructions { overflow-wrap: anywhere; }
+.assignment-instructions table { display: block; max-width: 100%; overflow-x: auto; }
+.assignment-actions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.assignment-report { display: grid; gap: 24px; max-width: 820px; }
+.assignment-report > label { display: grid; gap: 8px; }
+.assignment-report small { color: #657187; font-size: 13px; }
+.assignment-report fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.assignment-report legend { font-weight: 600; margin-bottom: 12px; }
+.assignment-check { display: flex; align-items: flex-start; gap: 12px; padding: 16px 0; border-bottom: 1px solid #e6eaf0; }
+.assignment-check input { width: 18px; height: 18px; margin-top: 3px; flex-shrink: 0; }
+.assignment-check span { display: grid; gap: 6px; overflow-wrap: anywhere; }
+.assignment-report > .button { justify-self: start; }
+.assignment-submitted { border-top: 1px solid #dbe3ec; padding-top: 16px; }
+.assignment-submitted > p:first-child { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #167450; }
+.assignment-editor { border: 1px solid #dbe3ec; border-radius: 8px; overflow: hidden; }
+.assignment-editor-toolbar { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid #dbe3ec; }
+.assignment-editor-toolbar button { display: grid; place-items: center; width: 36px; height: 36px; background: white; border: 1px solid #dbe3ec; border-radius: 4px; }
+.assignment-editor .tiptap { min-height: 240px; padding: 20px; overflow-x: auto; }
+.assignment-editor table { border-collapse: collapse; }
+.assignment-editor td, .assignment-editor th { border: 1px solid #ccd5e0; padding: 8px; }
+@media (max-width: 600px) {
+  .guided-assignment h1 { font-size: 21px; }
+  .assignment-tabs button { flex: 1; padding: 10px 8px; font-size: 14px; }
+}

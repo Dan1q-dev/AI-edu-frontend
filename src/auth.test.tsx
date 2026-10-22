@@ -10,7 +10,7 @@ vi.mock('./api', async importOriginal => ({
 }))
 vi.mock('./AdminCurriculum', () => ({ AdminCurriculum: () => <p>Curriculum workspace</p> }))
 
-const student: User = { id: 1, email: 'student@example.test', first_name: 'Ada', last_name: '', role: 'STUDENT', learning_track: null }
+const student: User = { id: 1, email: 'student@example.test', first_name: 'Ada', last_name: '', role: 'STUDENT', learning_track: { id: 1, short_id: 'it', title: 'IT' } }
 const admin: User = { ...student, id: 2, email: 'admin@example.test', role: 'ADMIN' }
 const anonymous = () => new ApiError('Authentication credentials were not provided.', 403, 'not_authenticated')
 const clients: QueryClient[] = []
@@ -209,7 +209,6 @@ describe('authentication with mounted application', () => {
     await screen.findByRole('heading', { name: 'Новый участник' })
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: student.email } })
     fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: 'StrongPass321!' } })
-    fireEvent.click(await screen.findByRole('radio', { name: 'IT' }))
     fireEvent.click(screen.getByRole('button', { name: 'Зарегистрироваться' }))
     expect(await screen.findByLabelText('Меню пользователя')).toBeTruthy()
     expect(screen.getByTestId('location').textContent).toBe('/')
