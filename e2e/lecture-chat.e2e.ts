@@ -9,7 +9,7 @@ for (const width of [1440, 390]) {
       course_short_id: 'course', course_title: 'AI в образовании', title: 'Создайте учебную лекцию',
       type: 'PRACTICE', status: 'PUBLISHED', position: 0 }
     const next = { ...item, id: 2, short_id: 'next', type: 'TEST', title: 'Проверка знаний', position: 1 }
-    let started = false, done = false, generated = 0
+    let started = false, done = false, generated = 0, turns = 0
     let lastPrompt = ''
     const messages: Record<string, unknown>[] = []
     const sectionIds = ['goal', 'learning_outcomes', 'outline', 'introduction', 'main_material', 'examples', 'key_concepts', 'conclusions', 'control_questions', 'self_study']
@@ -39,11 +39,31 @@ for (const width of [1440, 390]) {
         return json({ id: 44, submission: 99, document_type: 'lecture', schema_version: 1, revision: generated + 1, parameters: {}, content: generated ? lecture() : {} })
       }
       if (path === 'workspace/documents/44/messages/') return json({ count: messages.length, results: messages, next: null, previous: null })
+      if (path === 'workspace/artifacts/1/download/') return route.fulfill({
+        body: 'DOCX download fixture', contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        headers: { 'content-disposition': 'attachment; filename="lecture.docx"' },
+      })
       if (path === 'workspace/documents/44/operations/') {
-        const data = request.postDataJSON(); lastPrompt = data.prompt; generated++
-        messages.push({ id: generated * 2 - 1, operation: generated, role: 'user', text: lastPrompt },
-          { id: generated * 2, operation: generated, role: 'assistant', text: 'Лекция создана', content: lecture() })
-        return json({ id: generated, document: 44, ...data, status: 'SUCCEEDED', result: { content: lecture(), revision: generated + 1 } }, 202)
+        const data = request.postDataJSON(); lastPrompt = data.prompt; turns++
+        expect(data.kind).toBe('chat')
+        messages.push({ id: turns * 2 - 1, operation: turns, role: 'user', text: lastPrompt })
+        let result: Record<string, unknown>
+        if (turns <= 2) {
+          const text = turns === 1 ? 'Для кого подготовить лекцию и на сколько минут?' : 'На каком языке подготовить лекцию?'
+          const choices = turns === 1 ? ['Студенты · 45 минут', 'Преподаватели · 60 минут'] : ['Русский', 'Қазақша', 'English']
+          result = { action: 'clarify', choices }
+          messages.push({ id: turns * 2, operation: turns, role: 'assistant', text, choices })
+        } else if (lastPrompt === 'Подготовить Word-файл') {
+          const artifact = { id: 1, name: 'Лекция.docx', size: 40000, revision: turns + 1, url: '/api/v1/workspace/artifacts/1/download/' }
+          result = { action: 'export', artifact }
+          messages.push({ id: turns * 2, operation: turns, role: 'assistant', text: 'Файл Word готов.', artifact })
+        } else {
+          generated++
+          const choices = ['Изменить раздел', 'Добавить примеры', 'Добавить вопросы', 'Сократить лекцию', 'Подготовить Word-файл']
+          result = { action: generated === 1 ? 'generate' : 'edit', content: lecture(), choices }
+          messages.push({ id: turns * 2, operation: turns, role: 'assistant', text: 'Лекция создана', content: lecture(), choices })
+        }
+        return json({ id: turns, document: 44, ...data, status: 'SUCCEEDED', result: { ...result, revision: turns + 1 } }, 202)
       }
       if (/^workspace\/operations\/\d+\/$/.test(path)) return json({ id: Number(path.split('/')[2]), document: 44, kind: 'generate', status: 'SUCCEEDED', result: { content: lecture(), revision: generated + 1 } })
       throw new Error(`Unexpected API ${request.method()} ${path}`)
@@ -56,6 +76,8 @@ for (const width of [1440, 390]) {
     await page.screenshot({ path: `test-results/lecture-chat-empty-${width}.png`, fullPage: true })
     await prompt.fill('Подготовь лекцию о применении AI в образовании')
     await prompt.press('Enter')
+    await page.getByRole('button', { name: 'Студенты · 45 минут', exact: true }).click()
+    await page.getByRole('button', { name: 'Русский', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Как применять AI в образовании' })).toBeVisible()
     await page.reload()
     await expect(page.getByRole('heading', { name: 'Как применять AI в образовании' })).toBeVisible()
@@ -80,8 +102,21 @@ for (const width of [1440, 390]) {
     const inputBox = await prompt.boundingBox()
     expect(inputBox!.y).toBeGreaterThanOrEqual(0)
     expect(inputBox!.y + inputBox!.height).toBeLessThanOrEqual(900)
+    const heading = await page.locator('.lecture-chat-heading').boundingBox()
+    const navigation = await page.locator('.learning-header').boundingBox()
+    expect(heading!.height).toBeLessThanOrEqual(70)
+    expect(heading!.y).toBeGreaterThanOrEqual(navigation!.y + navigation!.height)
     await scroll.evaluate(element => { element.scrollTop = element.scrollHeight })
     await page.screenshot({ path: `test-results/lecture-chat-answer-${width}.png`, fullPage: true })
+    await page.getByRole('button', { name: 'Подготовить Word-файл', exact: true }).click()
+    const attachment = page.getByRole('link', { name: /Лекция.docx/ })
+    await expect(attachment).toBeVisible()
+    const downloadPromise = page.waitForEvent('download')
+    await attachment.click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toMatch(/\.docx$/)
+    expect(generated).toBe(2)
+    await page.screenshot({ path: `test-results/lecture-chat-docx-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: 'Сделано', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Выполнено', exact: true })).toBeDisabled()
     await expect(prompt).toHaveCount(0)

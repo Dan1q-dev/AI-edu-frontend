@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Loader2, RefreshCw, Send, Sparkles } from 'lucide-react'
+import { Check, Download, FileText, Loader2, RefreshCw, Send, Sparkles } from 'lucide-react'
 import { ApiError } from '../api'
 import { Button, ErrorState, Loading, Notice, Textarea } from '../components/ui'
 import { RichLessonContent } from '../components/RichLessonContent'
@@ -8,13 +8,15 @@ import { useI18n } from '../i18n'
 import { useLeaveWarning } from '../useLeaveWarning'
 import type { RuntimeProps } from '../practice/types'
 import { workspaceApi, readReference, referenceKey, writeReference } from './api'
-import { isLecture, type Lecture, type OperationInput, type WorkspaceDocument } from './types'
+import { isLecture, type Lecture, type OperationInput, type WorkspaceDocument, type WorkspaceArtifact } from './types'
 import './workspace.css'
 
 const failureLabels: Record<string, string> = {
   ai_not_configured: 'AI API не настроен. Обратитесь к администратору.',
   ai_timeout: 'AI не успел ответить. Попробуйте ещё раз.',
   ai_rate_limited: 'Лимит AI-запросов достигнут. Попробуйте позже.',
+  workspace_limit: 'Достигнут часовой лимит: 5 генераций, 10 редактирований или 10 файлов Word. Попробуйте позже.',
+  ai_invalid_content: 'Не удалось подготовить лекцию в допустимом формате до 3000 слов. Попробуйте уточнить запрос.',
   revision_conflict: 'Лекция изменилась. Обновите чат и повторите запрос.',
   access_revoked: 'Доступ к работе закрыт.', submission_closed: 'Практическая работа завершена',
 }
@@ -23,6 +25,7 @@ function requestError(error: unknown) {
     if (error.status === 409) return 'Лекция изменилась или уже выполняется AI-запрос. Обновите чат.'
     if (error.status === 403 || error.status === 404) return 'Доступ к работе закрыт.'
     if (error.status === 503) return 'AI API не настроен. Обратитесь к администратору.'
+    if (error.status === 429) return error.message
   }
   return 'Не удалось выполнить запрос. Проверьте соединение и повторите.'
 }
@@ -30,6 +33,17 @@ function requestError(error: unknown) {
 function LectureAnswer({ lecture }: { lecture: Lecture }) {
   return <article className="workspace-lecture-answer"><h2>{lecture.title}</h2>{lecture.sections.map(section =>
     <section key={section.id}><h3>{section.title}</h3><RichLessonContent value={JSON.stringify(section.content)}/></section>)}</article>
+}
+
+function LectureAttachment({ artifact }: { artifact: WorkspaceArtifact }) {
+  const { t } = useI18n()
+  // Attachments are private, authenticated downloads from our own API only.
+  if (!/^\/api\/v1\/workspace\/artifacts\/\d+\/download\/$/.test(artifact.url)) return null
+  return <a className="lecture-chat-attachment" href={artifact.url} download={artifact.name}>
+    <span className="lecture-chat-file-icon"><FileText size={23}/></span>
+    <span><strong>{artifact.name}</strong><small>DOCX · {Math.max(1, Math.ceil(artifact.size / 1024))} {t('КБ')}</small></span>
+    <Download size={18} aria-label={t('Скачать файл')}/>
+  </a>
 }
 
 export function LectureWorkshop(props: RuntimeProps) {
@@ -118,7 +132,7 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
         writeReference(referenceKey(ownerId, document.submission), document.id)
         await qc.invalidateQueries({ queryKey: ['practice', item.short_id] })
       }
-      request ??= { document: document!.id, input: { request_id: crypto.randomUUID(), revision: document!.revision, kind: 'generate', prompt: text.trim() } }
+      request ??= { document: document!.id, input: { request_id: crypto.randomUUID(), revision: document!.revision, kind: 'chat', prompt: text.trim() } }
       const next = await workspaceApi.start(request.document, request.input)
       setOperationId(next.id); setRetryRequest(null); setPrompt('')
       writeReference(referenceKey(ownerId, document?.submission ?? state.submission?.id), request.document, next.id)
@@ -141,20 +155,27 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
   const lastUserMessage = messages.data?.filter(message => message.role === 'user').at(-1)
   const fallback = loaded.data?.content
   const hasAnswers = messages.data?.some(message => message.content)
+  const latestAssistant = messages.data?.filter(message => message.role === 'assistant').at(-1)
   return <div className="lecture-workshop lecture-chat">
-    <header className="lecture-chat-heading"><div><span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{state.version!.title}</h1><p>{t('Виртуальная мастерская генерации лекции')}</p></div>
+    <header className="lecture-chat-heading"><span className="lecture-chat-heading-icon" aria-hidden="true"><Sparkles size={19}/></span><div><span className="eyebrow">{t('Мастерская лекций')}</span><h1 title={state.version!.title}>{state.version!.title}</h1></div>
       <Button disabled={disabled || !!retryRequest || state.is_completed} onClick={() => void onSubmit({ completed: true })}><Check size={18}/>{t(state.is_completed ? 'Выполнено' : 'Сделано')}</Button></header>
     <div className="lecture-chat-body" ref={bodyRef}>
       <div className="lecture-chat-scroll" ref={scrollRef}>
         {state.version!.description && <p className="lecture-chat-instructions">{state.version!.description}</p>}
         {!active && !state.is_completed && <Button disabled={busy} onClick={() => void onStart()}>{t('Продолжить практику')}</Button>}
         <div className="lecture-chat-messages" role="log" aria-label={t('История сообщений')} aria-live="polite">
-          {!messages.data?.length && !fallback?.title && <div className="lecture-chat-welcome"><span className="lecture-chat-avatar"><Sparkles size={22}/></span><h2>{t('Какую лекцию подготовим?')}</h2><p>{t('Напишите тему и пожелания в сообщении. AI сгенерирует текст лекции, а вы сможете уточнить запрос в этом же чате.')}</p></div>}
+          {!messages.data?.length && !fallback?.title && <div className="lecture-chat-welcome"><span className="lecture-chat-avatar"><Sparkles size={22}/></span><h2>{t('Какую лекцию подготовим?')}</h2><p>{t('Напишите тему. Помощник уточнит аудиторию, длительность и язык, подготовит полную лекцию и поможет оформить её в Word.')}</p><small className="lecture-chat-scope">{t('Полные лекции · Редактирование · Word (.docx)')}</small></div>}
           {documentId && (loaded.isPending || messages.isPending) && <Loading variant="inline"/>}
           {messages.data?.map(message => <div key={message.id} className={`lecture-chat-message ${message.role}`}><span className="lecture-chat-message-author">{t(message.role === 'user' ? 'Вы' : 'AI Assistant')}</span>
-            {message.content ? <LectureAnswer lecture={message.content}/> : <p>{message.text}</p>}</div>)}
+            {message.content ? <LectureAnswer lecture={message.content}/> : <p>{message.text}</p>}
+            {message.content && (message.artifact || !!message.choices?.length) && <p>{message.text}</p>}
+            {message.artifact && <LectureAttachment artifact={message.artifact}/>}
+            {active && message.id === latestAssistant?.id && !!message.choices?.length && <div className="lecture-chat-choices" role="group" aria-label={t('Варианты ответа')}>
+              {message.choices.map(choice => <button key={choice} type="button" disabled={disabled || !!retryRequest || !!prompt.trim()} onClick={() => void send(choice)}>{choice}</button>)}
+            </div>}
+          </div>)}
           {!hasAnswers && fallback && isLecture(fallback) && <div className="lecture-chat-message assistant"><LectureAnswer lecture={fallback}/></div>}
-          {(sending || pending) && <div className="lecture-chat-pending" role="status"><Loader2 size={18} className="workspace-spinner"/>{t(sending ? 'Отправляем запрос…' : operation.data?.status === 'PENDING' ? 'Запрос в очереди. Ожидаем начала генерации…' : 'Генерируем лекцию…')}</div>}
+          {(sending || pending) && <div className="lecture-chat-pending" role="status"><Loader2 size={18} className="workspace-spinner"/>{t(sending ? 'Отправляем запрос…' : operation.data?.status === 'PENDING' ? 'Запрос в очереди. Ожидаем начала генерации…' : 'Помощник готовит ответ…')}</div>}
         </div>
         <Notice text={error || failure} kind="error"/>
         {active && failure && lastUserMessage && <Button variant="secondary" disabled={disabled || !!retryRequest} onClick={() => void send(lastUserMessage.text)}><RefreshCw size={16}/>{t('Повторить отправку')}</Button>}
@@ -163,7 +184,7 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
       </div>
       <div className="lecture-chat-footer" ref={footerRef}>
         {active ? <form className="lecture-chat-composer" onSubmit={event => { event.preventDefault(); void send() }}>
-          <Textarea aria-label={t('Ваш запрос')} placeholder={t('Напишите запрос для генерации лекции…')} rows={3} maxLength={8000} value={prompt} disabled={disabled || !!retryRequest}
+          <Textarea aria-label={t('Ваш запрос')} placeholder={t('Напишите тему, уточнение или попросите Word-файл…')} rows={3} maxLength={8000} value={prompt} disabled={disabled || !!retryRequest}
             onChange={event => setPrompt(event.target.value)} onKeyDown={event => {
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() }
             }}/>

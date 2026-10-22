@@ -1,14 +1,17 @@
 .is-document-workspace .learning-workspace { max-width: 1920px; }
-.is-document-workspace .learning-main { width: 100%; max-width: none; padding: 24px; }
+.is-document-workspace .learning-main { width: 100%; max-width: none; padding: 16px; }
 .is-document-workspace .learning-center .lesson-navigation { width: calc(100% - 48px); max-width: none; }
 .is-document-workspace .outline-button { display: inline-flex; }
 .lecture-workshop { color: var(--color-ink); }
-.lecture-chat { display: flex; flex-direction: column; height: max(360px, calc(100dvh - 190px)); border: 1px solid var(--color-border); border-radius: 18px; background: #fff; overflow: hidden; }
-.lecture-chat-heading { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 28px; border-bottom: 1px solid var(--color-border); }
-.lecture-chat-heading h1 { margin: 5px 0 6px; font-size: clamp(1.15rem, 2vw, 1.5rem); line-height: 1.35; }
+.lecture-chat { --chat-header-height: 64px; position: relative; display: flex; flex-direction: column; height: max(360px, calc(100dvh - 174px)); border: 1px solid var(--color-border); border-radius: 16px; background: #fff; overflow: hidden; }
+.lecture-chat-heading { position: absolute; z-index: 2; top: 0; left: 0; right: 0; height: var(--chat-header-height); display: flex; align-items: center; gap: 12px; padding: 10px 22px; border-bottom: 1px solid var(--color-border); background: #fff; }
+.lecture-chat-heading > div { flex: 1; min-width: 0; }
+.lecture-chat-heading .eyebrow { font-size: .58rem; letter-spacing: .09em; }
+.lecture-chat-heading-icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; color: var(--color-primary); background: #eef2fc; border-radius: 10px; }
+.lecture-chat-heading h1 { margin: 3px 0 0; font-size: 1rem; line-height: 1.3; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .lecture-chat-heading p { margin: 0; color: var(--color-muted); font-size: .85rem; }
-.lecture-chat-heading > .button { flex-shrink: 0; }
-.lecture-chat-body { position: relative; flex: 1; width: min(100%, 860px); min-height: 0; margin: 0 auto; }
+.lecture-chat-heading > .button { flex-shrink: 0; min-height: 34px; padding: 7px 12px; gap: 6px; font-size: .76rem; box-shadow: none; }
+.lecture-chat-body { position: relative; flex: 1; width: min(100%, 860px); min-height: 0; margin: var(--chat-header-height) auto 0; }
 .lecture-chat-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; padding: 32px 28px calc(var(--chat-footer-height, 220px) + 20px); display: flex; flex-direction: column; gap: 20px; }
 .lecture-chat-footer { position: absolute; z-index: 1; bottom: 0; left: 0; right: 0; display: grid; gap: 12px; padding: 14px 28px calc(18px + env(safe-area-inset-bottom, 0px)); background: #fff; border-top: 1px solid var(--color-border); }
 .lecture-chat-instructions { margin: 0; white-space: pre-wrap; line-height: 1.75; }
@@ -21,6 +24,18 @@
 .lecture-chat-message-author { font-size: .75rem; font-weight: 650; color: var(--color-muted); }
 .lecture-chat-message > p { white-space: pre-wrap; line-height: 1.8; margin: 10px 0 0; }
 .lecture-chat-message.user { align-self: flex-end; max-width: 88%; border-radius: 16px 16px 4px 16px; background: #f1f5fb; padding: 16px 20px; }
+.lecture-chat-scope { display: block; margin-top: 18px; color: var(--color-muted); font-size: .74rem; line-height: 1.7; }
+.lecture-chat-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.lecture-chat-choices button { border: 1px solid #d8e0f0; border-radius: 18px; padding: 8px 13px; background: #fff; color: var(--color-primary); font: inherit; font-size: .8rem; cursor: pointer; text-align: left; }
+.lecture-chat-choices button:hover:not(:disabled), .lecture-chat-choices button:focus-visible { background: #eef2fc; border-color: var(--color-primary); }
+.lecture-chat-choices button:disabled { opacity: .5; cursor: default; }
+.lecture-chat-attachment { display: flex; align-items: center; gap: 12px; width: min(100%, 420px); padding: 14px; margin-top: 16px; color: var(--color-ink); text-decoration: none; border: 1px solid #d8e0f0; border-radius: 12px; background: #fafbff; }
+.lecture-chat-attachment:hover { border-color: var(--color-primary); background: #f1f4fc; }
+.lecture-chat-file-icon { display: grid; place-items: center; width: 40px; height: 44px; border-radius: 8px; background: #e8eefb; color: var(--color-primary); flex: none; }
+.lecture-chat-attachment > span:nth-child(2) { flex: 1; min-width: 0; }
+.lecture-chat-attachment strong { display: block; font-size: .85rem; overflow-wrap: anywhere; }
+.lecture-chat-attachment small { display: block; font-size: .7rem; color: var(--color-muted); margin-top: 5px; }
+.lecture-chat-attachment > svg { flex: none; color: var(--color-primary); }
 .workspace-lecture-answer { line-height: 1.8; }
 .workspace-lecture-answer h2 { font-size: 1.35rem; margin: 12px 0 20px; }
 .workspace-lecture-answer h3 { font-size: 1.08rem; margin: 24px 0 10px; }
@@ -34,9 +49,13 @@
 .lecture-chat-composer-actions > span { font-size: .7rem; color: var(--color-muted); }
 .lecture-chat-disclaimer { color: var(--color-muted); font-size: .73rem; text-align: center; margin: 0; }
 @media (max-width: 640px) {
-  .lecture-chat-heading { padding: 18px 16px; align-items: flex-start; gap: 12px; }
-  .lecture-chat-heading .eyebrow { font-size: .6rem; }
-  .lecture-chat-heading > .button { padding: 9px 12px; font-size: .8rem; }
+  .is-document-workspace .learning-main { padding: 12px; }
+  .lecture-chat { --chat-header-height: 60px; height: max(360px, calc(100dvh - 158px)); }
+  .lecture-chat-heading { padding: 8px 12px; gap: 8px; }
+  .lecture-chat-heading-icon { width: 28px; height: 30px; border-radius: 8px; }
+  .lecture-chat-heading h1 { font-size: .86rem; }
+  .lecture-chat-heading .eyebrow { font-size: .5rem; letter-spacing: .04em; }
+  .lecture-chat-heading > .button { padding: 7px 9px; font-size: .7rem; }
   .lecture-chat-scroll { padding: 22px 16px calc(var(--chat-footer-height, 220px) + 16px); }
   .lecture-chat-footer { padding: 12px 16px calc(16px + env(safe-area-inset-bottom, 0px)); }
   .lecture-chat-welcome { padding: 22px 0 30px; }

@@ -11,11 +11,12 @@ export type WorkspaceDocument = {
   id: number; submission: number; document_type: string; schema_version: number
   parameters: LectureParameters; content: Lecture | Record<string, never>; revision: number; created_at: string; updated_at: string
 }
-export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; content?: Lecture | null; created_at: string }
-export type OperationInput = { request_id: string; revision: number; kind: 'generate' | 'improve_prompt'; prompt: string }
+export type WorkspaceArtifact = { id: number; name: string; size: number; url: string; revision: number }
+export type WorkspaceMessage = { id: number; operation: number; role: 'user' | 'assistant'; text: string; content?: Lecture | null; choices?: string[]; artifact?: WorkspaceArtifact | null; created_at: string }
+export type OperationInput = { request_id: string; revision: number; kind: 'generate' | 'improve_prompt' | 'chat'; prompt: string }
 export type WorkspaceOperation = {
   id: number; document: number; request_id: string; kind: OperationInput['kind']; status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
-  base_revision: number; result: { content?: Lecture; revision?: number; improved_prompt?: string }; error_code: string
+  base_revision: number; result: { content?: Lecture; revision?: number; improved_prompt?: string; action?: string; choices?: string[]; artifact?: WorkspaceArtifact }; error_code: string
   model: string; duration_ms: number | null; input_tokens: number | null; output_tokens: number | null; total_tokens: number | null
   cost: string | null; cost_currency: string; attempts: number; created_at: string; started_at: string | null; finished_at: string | null
 }

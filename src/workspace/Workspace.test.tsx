@@ -59,7 +59,7 @@ describe('lecture chat', () => {
     mount({ submission: null })
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Лекция о педагогике для начинающих' } })
     fireEvent.click(screen.getByRole('button', { name: 'Отправить запрос' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST', expect.objectContaining({ prompt: 'Лекция о педагогике для начинающих', kind: 'generate', revision: 1 })))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST', expect.objectContaining({ prompt: 'Лекция о педагогике для начинающих', kind: 'chat', revision: 1 })))
     expect(mockedApi).toHaveBeenCalledWith('items/workshop-1/practice/workspace/', 'POST', { language: 'ru' })
     await waitFor(() => expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(''))
   })
@@ -78,7 +78,7 @@ describe('lecture chat', () => {
     expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(true)
     operation = { ...operation, status: 'RUNNING' }
     await act(() => client.invalidateQueries({ queryKey: ['workspace-operation'] }))
-    await screen.findByText('Генерируем лекцию…')
+    await screen.findByText('Помощник готовит ответ…')
     expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(true)
     operation = { ...operation, status: 'SUCCEEDED', result: { content: lecture, revision: 2 } }
     await act(() => client.invalidateQueries({ queryKey: ['workspace-operation'] }))
@@ -115,7 +115,7 @@ describe('lecture chat', () => {
     operation = { ...operation, status: 'FAILED', request_id: 'old-request', error_code: 'ai_timeout' }
     mount(); await ready()
     fireEvent.click(await screen.findByRole('button', { name: 'Повторить отправку' }))
-    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST', expect.objectContaining({ prompt: 'Создай лекцию', kind: 'generate' })))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST', expect.objectContaining({ prompt: 'Создай лекцию', kind: 'chat' })))
     const payload = mockedApi.mock.calls.find(([path]) => path.endsWith('/operations/'))![2] as { request_id: string }
     expect(payload.request_id).not.toBe('old-request')
   })
@@ -124,6 +124,39 @@ describe('lecture chat', () => {
     mount(); await screen.findByRole('alert')
     expect(screen.queryByText(lecture.title)).toBeNull()
     expect(screen.queryByRole('textbox')).toBeNull()
+  })
+  it('sends an inline answer choice through the same chat endpoint', async () => {
+    operation.status = 'SUCCEEDED'
+    messages = [{ id: 1, operation: 71, role: 'assistant', text: 'Для какой аудитории?',
+      choices: ['Студенты · 45 минут', 'Преподаватели · 60 минут'], created_at: '' }]
+    mount(); await ready()
+    expect(screen.getByRole('group', { name: 'Варианты ответа' })).toBeTruthy()
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/operations/71/'))
+    await waitFor(() => expect((screen.getByRole('button', { name: 'Студенты · 45 минут' }) as HTMLButtonElement).disabled).toBe(false))
+    fireEvent.click(screen.getByRole('button', { name: 'Студенты · 45 минут' }))
+    await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST',
+      expect.objectContaining({ kind: 'chat', prompt: 'Студенты · 45 минут' })))
+  })
+  it('shows private Word attachments in assistant messages without a permanent export button', async () => {
+    operation.status = 'SUCCEEDED'
+    messages = [{ id: 1, operation: 71, role: 'assistant', text: 'Файл готов', artifact: {
+      id: 3, name: 'Лекция.docx', size: 40000, url: '/api/v1/workspace/artifacts/3/download/', revision: 2 }, created_at: '' }]
+    mount(); await ready()
+    const link = screen.getByRole('link', { name: /Лекция.docx/ })
+    expect(link.getAttribute('href')).toBe('/api/v1/workspace/artifacts/3/download/')
+    expect(link.getAttribute('download')).toBe('Лекция.docx')
+    expect(screen.queryByRole('button', { name: /Word|DOCX/ })).toBeNull()
+  })
+  it('does not render historical choices or untrusted attachment URLs', async () => {
+    operation.status = 'SUCCEEDED'
+    messages = [
+      { id: 1, operation: 70, role: 'assistant', text: 'Старый вопрос', choices: ['Старый вариант'], created_at: '' },
+      { id: 2, operation: 71, role: 'assistant', text: 'Файл готов', artifact: {
+        id: 3, name: 'Bad.docx', size: 1, url: 'https://untrusted.test/file.docx', revision: 2 }, created_at: '' },
+    ]
+    mount(); await ready()
+    expect(screen.queryByRole('button', { name: 'Старый вариант' })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Bad.docx/ })).toBeNull()
   })
   it.each([['en', 'Done', 'en'], ['kz', 'Дайын', 'kk']])('uses %s labels and the corresponding generation language', async (locale, done, language) => {
     localStorage.setItem('ai-edu-locale', locale!)
