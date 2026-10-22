@@ -74,6 +74,10 @@ describe('lecture chat', () => {
     const { client } = mount(); await ready()
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Добавь примеры' } })
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter', shiftKey: false })
+    await screen.findByText('Запрос в очереди. Ожидаем начала генерации…')
+    expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(true)
+    operation = { ...operation, status: 'RUNNING' }
+    await act(() => client.invalidateQueries({ queryKey: ['workspace-operation'] }))
     await screen.findByText('Генерируем лекцию…')
     expect((screen.getByRole('button', { name: 'Сделано' }) as HTMLButtonElement).disabled).toBe(true)
     operation = { ...operation, status: 'SUCCEEDED', result: { content: lecture, revision: 2 } }

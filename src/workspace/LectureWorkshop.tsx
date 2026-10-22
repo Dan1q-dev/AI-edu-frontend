@@ -138,7 +138,7 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
         {messages.data?.map(message => <div key={message.id} className={`lecture-chat-message ${message.role}`}><span className="lecture-chat-message-author">{t(message.role === 'user' ? 'Вы' : 'AI Assistant')}</span>
           {message.content ? <LectureAnswer lecture={message.content}/> : <p>{message.text}</p>}</div>)}
         {!hasAnswers && fallback && isLecture(fallback) && <div className="lecture-chat-message assistant"><LectureAnswer lecture={fallback}/></div>}
-        {(sending || pending) && <div className="lecture-chat-pending" role="status"><Loader2 size={18} className="workspace-spinner"/>{t('Генерируем лекцию…')}</div>}
+        {(sending || pending) && <div className="lecture-chat-pending" role="status"><Loader2 size={18} className="workspace-spinner"/>{t(sending ? 'Отправляем запрос…' : operation.data?.status === 'PENDING' ? 'Запрос в очереди. Ожидаем начала генерации…' : 'Генерируем лекцию…')}</div>}
         <div ref={endRef}/>
       </div>
       <Notice text={error || failure} kind="error"/>

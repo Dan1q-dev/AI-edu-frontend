@@ -797,6 +797,8 @@
   "Напишите тему и пожелания в сообщении. AI сгенерирует текст лекции, а вы сможете уточнить запрос в этом же чате.": "Describe the topic and your requirements. AI will generate a lecture, and you can refine it in this chat.",
   "Напишите запрос для генерации лекции…": "Enter a prompt to generate a lecture…",
   "Генерируем лекцию…": "Generating your lecture…",
+  "Отправляем запрос…": "Sending your request…",
+  "Запрос в очереди. Ожидаем начала генерации…": "Your request is queued. Waiting for generation to start…",
   "Отправить запрос": "Send prompt",
   "Отправить": "Send",
   "Повторить отправку": "Retry sending",
