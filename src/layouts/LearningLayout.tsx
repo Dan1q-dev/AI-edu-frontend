@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { ArrowLeft, BookOpen, ChevronDown, ChevronRight, CircleCheck, Code2, PanelLeftOpen, Sparkles, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { LearningItem, Lesson, Module, User } from '../api'
@@ -6,6 +6,7 @@ import { LanguageSelect, useI18n } from '../i18n'
 import { LearningStatus } from '../components/LearningStatus'
 import { AccountMenu } from './AccountMenu'
 import { NextItemAction } from './NextItemAction'
+import { PanelResizeHandle } from './PanelResizeHandle'
 import './learning-navigation.css'
 
 export type ContentEntry = Lesson | LearningItem
@@ -28,6 +29,17 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
   const [compact, setCompact] = useState(() => window.innerWidth <= 900)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [tutorOpen, setTutorOpen] = useState(false)
+  const [tutorWidth, setTutorWidth] = useState(() => {
+    try {
+      const value = Number(localStorage.getItem('learning-tutor-width'))
+      return value >= 260 && value <= 560 ? value : 300
+    } catch { return 300 }
+  })
+  const tutorPanelRef = useRef<HTMLElement>(null)
+  const resizeTutor = (width: number) => {
+    setTutorWidth(width)
+    try { localStorage.setItem('learning-tutor-width', String(width)) } catch { /* Optional preference. */ }
+  }
   const [expanded, setExpanded] = useState<Record<number, boolean>>({})
   const activeModule = sections?.find(section => section.lessons.some(item => item.short_id === lessonId))?.module.id
   const drawerRef = useRef<HTMLElement>(null), tutorRef = useRef<HTMLDivElement>(null)
@@ -95,7 +107,7 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
   const showOutline = !assessment && !compact && desktopOpen
   const showRail = !assessment && !showOutline
   const percent = Math.min(100, Math.max(0, courseProgress ?? 0))
-  return <div className={`learning-layout ${workspace ? 'is-document-workspace' : ''} ${assessment ? 'is-assessment' : ''} ${showOutline ? 'has-course-outline' : showRail ? 'has-course-rail' : ''} ${tutor && !assessment ? 'has-lecture-tutor' : ''}`}>
+  return <div style={workspace ? { '--learning-tutor-width': `${tutorWidth}px` } as CSSProperties : undefined} className={`learning-layout ${workspace ? 'is-document-workspace' : ''} ${assessment ? 'is-assessment' : ''} ${showOutline ? 'has-course-outline' : showRail ? 'has-course-rail' : ''} ${tutor && !assessment ? 'has-lecture-tutor' : ''}`}>
     {!assessment && <header className="learning-header" inert={drawerOpen || tutorOpen}>
       <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'} className="learning-back" aria-label={t(courseSlug ? 'Вернуться к курсу' : 'Вернуться в каталог')}><ArrowLeft size={17}/><span>{t(courseSlug ? 'К курсу' : 'Каталог')}</span></Link>
       <nav className="learning-header-title learning-breadcrumbs" aria-label={t('Путь обучения')}>{courseTitle && <Link to={courseSlug ? `/courses/${courseSlug}` : '/catalog'}>{courseTitle}</Link>}<span>{moduleTitle && <>{moduleTitle} <span aria-hidden="true">›</span> </>}<strong aria-current="page">{lessonTitle}</strong></span></nav>
@@ -108,7 +120,9 @@ export function LearningLayout({ children, tutor, workspace = false, assessment 
         {courseProgress !== undefined && <div className="outline-rail-progress" role="progressbar" aria-label={t('Прогресс курса')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} title={`${t('Ваш прогресс')}: ${percent}%`}><strong>{percent}%</strong><span className="outline-rail-progress-track" aria-hidden="true"><span style={{ width: `${percent}%` }}/></span></div>}
       </div></aside>}
       <div className="learning-center"><main className="learning-main">{children}</main>{!hideNext && <div className="learning-next-bar"><NextItemAction next={next} courseSlug={courseSlug}/></div>}</div>
-      {tutor && !assessment && !tutorOpen && <aside className="learning-tutor" aria-label={t('AI Tutor')}>{tutor}</aside>}
+      {tutor && !assessment && !tutorOpen && <aside ref={tutorPanelRef} id="learning-tutor-panel" className="learning-tutor" aria-label={t('AI Tutor')}>
+        {workspace && <PanelResizeHandle panel={tutorPanelRef} width={tutorWidth} onResize={resizeTutor}/>}{tutor}
+      </aside>}
     </div>
     {drawerOpen && compact && <div className="outline-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setDrawerOpen(false) }}><aside ref={drawerRef} role="dialog" aria-modal="true" id="course-outline" className="course-outline mobile-outline" aria-label={t('Содержание курса')}>{outline}</aside></div>}
     {tutorOpen && <div ref={tutorRef} className="tutor-overlay" role="dialog" aria-modal="true" aria-label={t('ИИ-тьютор')} onMouseDown={event => { if (event.target === event.currentTarget) setTutorOpen(false) }}><aside className="learning-tutor"><div className="tutor-mobile-close"><button className="icon-button" title={t('Закрыть тьютора')} aria-label={t('Закрыть тьютора')} onClick={() => setTutorOpen(false)}><X size={19}/></button></div>{tutor}</aside></div>}

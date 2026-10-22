@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Download, FileText, Loader2, RefreshCw, Send, Sparkles } from 'lucide-react'
 import { ApiError } from '../api'
-import { Button, ErrorState, Loading, Notice, Textarea } from '../components/ui'
+import { Button, ErrorState, Loading, Notice } from '../components/ui'
 import { RichLessonContent } from '../components/RichLessonContent'
 import { useI18n } from '../i18n'
 import { useLeaveWarning } from '../useLeaveWarning'
@@ -46,6 +46,15 @@ function LectureAttachment({ artifact }: { artifact: WorkspaceArtifact }) {
   </a>
 }
 
+function fitPrompt(input: HTMLTextAreaElement | null) {
+  if (!input) return
+  const maximum = Number.parseFloat(getComputedStyle(input).maxHeight) || 160
+  input.style.height = '0px'
+  const contentHeight = input.value ? input.scrollHeight : 32
+  input.style.height = `${Math.min(maximum, Math.max(32, contentHeight))}px`
+  input.style.overflowY = contentHeight > maximum ? 'auto' : 'hidden'
+}
+
 export function LectureWorkshop(props: RuntimeProps) {
   return <LectureChat key={props.state.submission?.status === 'SUBMITTED' ? props.state.submission.id : 'active'} {...props}/>
 }
@@ -63,9 +72,8 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
   const [retryRequest, setRetryRequest] = useState<{ document: number; input: OperationInput } | null>(null)
   const sendingRef = useRef(false)
   const handledOperation = useRef<number | null>(null)
-  const bodyRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const footerRef = useRef<HTMLDivElement>(null)
+  const promptRef = useRef<HTMLTextAreaElement>(null)
   const active = !state.submission || state.submission.status === 'IN_PROGRESS'
   useLeaveWarning(active && Boolean(prompt.trim()))
 
@@ -104,15 +112,20 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
     void loaded.refetch()
     void messages.refetch()
   }, [operation.data, pending, retryRequest])
-  useLayoutEffect(() => {
-    const body = bodyRef.current, footer = footerRef.current
-    if (!body || !footer) return
-    const reserveFooter = () => body.style.setProperty('--chat-footer-height', `${footer.offsetHeight}px`)
-    reserveFooter()
-    if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(reserveFooter)
-    observer.observe(footer)
-    return () => observer.disconnect()
+  useLayoutEffect(() => fitPrompt(promptRef.current), [prompt, active])
+  useEffect(() => {
+    const input = promptRef.current
+    if (!input || typeof ResizeObserver === 'undefined') return
+    let previousWidth = input.clientWidth
+    const observer = new ResizeObserver(() => {
+      if (input.clientWidth === previousWidth) return
+      previousWidth = input.clientWidth
+      fitPrompt(input)
+    })
+    observer.observe(input)
+    const resize = () => fitPrompt(input)
+    window.addEventListener('resize', resize)
+    return () => { observer.disconnect(); window.removeEventListener('resize', resize) }
   }, [active])
   useEffect(() => {
     const scroll = scrollRef.current
@@ -159,7 +172,7 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
   return <div className="lecture-workshop lecture-chat">
     <header className="lecture-chat-heading"><span className="lecture-chat-heading-icon" aria-hidden="true"><Sparkles size={19}/></span><div><span className="eyebrow">{t('Мастерская лекций')}</span><h1 title={state.version!.title}>{state.version!.title}</h1></div>
       <Button disabled={disabled || !!retryRequest || state.is_completed} onClick={() => void onSubmit({ completed: true })}><Check size={18}/>{t(state.is_completed ? 'Выполнено' : 'Сделано')}</Button></header>
-    <div className="lecture-chat-body" ref={bodyRef}>
+    <div className="lecture-chat-body">
       <div className="lecture-chat-scroll" ref={scrollRef}>
         {state.version!.description && <p className="lecture-chat-instructions">{state.version!.description}</p>}
         {!active && !state.is_completed && <Button disabled={busy} onClick={() => void onStart()}>{t('Продолжить практику')}</Button>}
@@ -182,13 +195,13 @@ function LectureChat({ state, item, ownerId, busy, onSubmit, onStart }: RuntimeP
         {(loaded.error || messages.error || operation.error) && <Notice text={t('Не удалось обновить чат. Проверьте соединение и повторите.')} kind="error"/>}
         {(error || loaded.error || messages.error || operation.error) && documentId && <Button variant="secondary" disabled={sending} onClick={() => void refresh()}><RefreshCw size={16}/>{t('Обновить чат')}</Button>}
       </div>
-      <div className="lecture-chat-footer" ref={footerRef}>
+      <div className="lecture-chat-footer">
         {active ? <form className="lecture-chat-composer" onSubmit={event => { event.preventDefault(); void send() }}>
-          <Textarea aria-label={t('Ваш запрос')} placeholder={t('Напишите тему, уточнение или попросите Word-файл…')} rows={3} maxLength={8000} value={prompt} disabled={disabled || !!retryRequest}
+          <textarea ref={promptRef} className="input" aria-label={t('Ваш запрос')} placeholder={t('Напишите сообщение…')} rows={1} maxLength={8000} value={prompt} disabled={disabled || !!retryRequest}
             onChange={event => setPrompt(event.target.value)} onKeyDown={event => {
               if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send() }
             }}/>
-          <div className="lecture-chat-composer-actions"><span>{t('Enter — отправить, Shift + Enter — новая строка')}</span><Button type="submit" disabled={disabled || !retryRequest && !prompt.trim()} aria-label={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')}><Send size={18}/>{t(retryRequest ? 'Повторить отправку' : 'Отправить')}</Button></div>
+          <Button type="submit" className="lecture-chat-send" disabled={disabled || !retryRequest && !prompt.trim()} title={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')} aria-label={t(retryRequest ? 'Повторить отправку' : 'Отправить запрос')}><Send size={16}/></Button>
         </form> : <p className="lecture-chat-completed"><Check size={18}/>{t('Практическая работа завершена')}</p>}
         <p className="lecture-chat-disclaimer">{t('AI может ошибаться. Проверяйте сгенерированный материал.')}</p>
       </div>
