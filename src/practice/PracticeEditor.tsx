@@ -10,6 +10,7 @@ import { getPracticePlugin } from './registry'
 import { hasCommonTask, normalizeTaskConfig } from './commonTask'
 import type { PracticeManifest, PracticeVersion } from './types'
 import { UnsavedPracticeDialog } from './UnsavedPracticeDialog'
+import { workshopFor } from '../workspace/workshops'
 import './practice.css'
 
 type DraftState = { draft: PracticeVersion | null; published: PracticeVersion | null; versions: PracticeVersion[] }
@@ -105,7 +106,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
     catalogTrigger.current?.focus()
   }
   const track = params.get('track')
-  const selectedName = manifest?.name ?? (selected?.type === 'lecture_workshop' ? 'Виртуальная мастерская генерации лекции' : 'Выбранная практика')
+  const selectedName = manifest?.name ?? workshopFor(selected?.type ?? '')?.title ?? 'Выбранная практика'
   const SelectedIcon = manifest?.icon === 'sparkles' ? Sparkles : manifest?.icon === 'list-checks' ? ListChecks : Puzzle
   const alternatives = catalog.data?.filter(entry => entry.available && getPracticePlugin(entry.type, entry.version)
     && (entry.type !== selected?.type || entry.version !== selected.version)) ?? []

@@ -44,6 +44,20 @@ beforeEach(() => { mockedApi.mockReset(); localStorage.clear(); sessionStorage.c
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients = []; vi.restoreAllMocks() })
 
 describe('Practice Engine completion', () => {
+  it.each([
+    ...Object.entries(workshops).map(([type, definition]) => [type, definition.title]),
+    ['checklist_practice', workshops.lecture_workshop!.title],
+    ['guided_assignment', 'Практическое задание'],
+  ])('shows the assigned tool name for %s on the student task page', async (type, title) => {
+    // The learner must see the tool from their assigned version, even if a newer version exists.
+    mockedApi.mockResolvedValue({ ...state, current_version_id: 99, version: { ...version, practice_type: type } } as never)
+    mount(<PracticeRunner item={item}/>)
+    const label = await screen.findByText('Инструмент выполнения')
+    expect(within(label.parentElement!).getByText(title, { exact: true })).toBeTruthy()
+    if (type !== 'lecture_workshop' && type !== 'checklist_practice') {
+      expect(screen.queryByText('Мастерская лекций', { exact: true })).toBeNull()
+    }
+  })
   it.each(['practical_workshop', 'pedagogical_workshop', 'syllabus_workshop'])('publishes %s from the catalog and preserves shared instructions', async type => {
     const definition = workshops[type]!
     const entry = { ...workshop, type, name: definition.title, frontend_editor: type, student_runtime: type }

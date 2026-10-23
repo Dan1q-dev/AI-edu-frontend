@@ -63,6 +63,7 @@ for (const width of [1440, 390]) {
           throw new Error(`Unexpected API ${request.method()} ${path}`)
         })
         await page.goto('/#/items/constructor')
+        await expect(page.locator('.practice-tool-card strong')).toHaveText(definition.title)
         await page.getByRole('button', { name: 'Начать выполнение', exact: true }).click()
         await expect(page.getByRole('heading', { name: definition.welcome })).toBeVisible()
         await expect(page.getByRole('combobox', { name: 'Созданная лекция' })).toHaveCount(0)
