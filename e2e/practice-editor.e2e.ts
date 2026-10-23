@@ -32,6 +32,9 @@ test('practice editor keeps actions visible and protects unsaved edits on deskto
   const catalog = page.getByRole('region', { name: 'Выберите тип практической работы' })
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
+    const trigger = page.getByRole('button', { name: 'Изменить практику' })
+    const selectorWidth = await page.locator('.practice-selector').evaluate(element => element.getBoundingClientRect().width)
+    expect((await trigger.boundingBox())!.width).toBeCloseTo(selectorWidth, 0)
     const before = await title.evaluate(element => element.getBoundingClientRect().top + window.scrollY)
     await page.getByRole('button', { name: 'Изменить практику' }).click()
     await expect(catalog).toBeVisible()
@@ -43,7 +46,15 @@ test('practice editor keeps actions visible and protects unsaved edits on deskto
     await expect(catalog).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Изменить практику' })).toBeFocused()
     await page.getByRole('button', { name: 'Изменить практику' }).click()
+    await page.getByRole('heading', { level: 1 }).evaluate(element => {
+      // Outside controls may stop bubbling; dismissal must still work.
+      element.addEventListener('pointerdown', event => event.stopPropagation(), { once: true })
+      element.addEventListener('click', event => event.stopPropagation(), { once: true })
+    })
     await page.getByRole('heading', { level: 1 }).click()
+    await expect(catalog).toHaveCount(0)
+    await trigger.click()
+    await page.getByRole('heading', { level: 1 }).dispatchEvent('click')
     await expect(catalog).toHaveCount(0)
   }
   await page.setViewportSize({ width: 1440, height: 900 })

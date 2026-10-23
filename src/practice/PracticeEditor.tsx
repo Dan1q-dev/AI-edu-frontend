@@ -35,8 +35,8 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const catalogContainer = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!catalogOpen) return
-    const dismiss = (event: PointerEvent) => {
-      if (!catalogContainer.current?.contains(event.target as Node)) setCatalogOpen(false)
+    const dismiss = (event: Event) => {
+      if (catalogContainer.current && !event.composedPath().includes(catalogContainer.current)) setCatalogOpen(false)
     }
     const escape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
@@ -44,10 +44,12 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
       setCatalogOpen(false)
       catalogTrigger.current?.focus()
     }
-    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('pointerdown', dismiss, true)
+    document.addEventListener('click', dismiss, true)
     document.addEventListener('keydown', escape)
     return () => {
-      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('pointerdown', dismiss, true)
+      document.removeEventListener('click', dismiss, true)
       document.removeEventListener('keydown', escape)
     }
   }, [catalogOpen])
