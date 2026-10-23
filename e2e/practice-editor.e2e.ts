@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { workshops } from '../src/workspace/workshops'
 
 test('practice editor keeps actions visible and protects unsaved edits on desktop and mobile', async ({ page }) => {
   const errors: string[] = []
@@ -13,7 +14,7 @@ test('practice editor keeps actions visible and protects unsaved edits on deskto
     if (path === 'auth/me/') return json({ id: 1, email: 'admin@example.test', first_name: 'Автор', last_name: '', role: 'ADMIN', learning_track: null })
     if (path === 'items/practice-1/') return json(item)
     if (path === 'modules/') return json({ results: [{ id: 1, short_id: 'module-1', title: 'Основы работы с ИИ', course: 1 }], next: null })
-    if (path === 'practice-types/') return json([{ type: 'lecture_workshop', version: '1.0.0', name: 'Виртуальная мастерская генерации лекции', description: 'Подготовка лекции с помощью ИИ', icon: 'sparkles', available: true }])
+    if (path === 'practice-types/') return json(Object.entries(workshops).map(([type, definition]) => ({ type, version: '1.0.0', name: definition.title, description: definition.description, icon: 'sparkles', available: true })))
     if (path === 'items/practice-1/practice/draft/') {
       if (route.request().method() === 'PUT') {
         version = { ...version, ...route.request().postDataJSON() }; saved.push(version.title)
@@ -28,6 +29,33 @@ test('practice editor keeps actions visible and protects unsaved edits on deskto
   await expect(title).toBeVisible()
   await expect(page.getByText('Все изменения сохранены', { exact: true })).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Сохранить', exact: true })).toBeDisabled()
+  const catalog = page.getByRole('region', { name: 'Выберите тип практической работы' })
+  for (const width of [1440, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    const before = await title.evaluate(element => element.getBoundingClientRect().top + window.scrollY)
+    await page.getByRole('button', { name: 'Изменить практику' }).click()
+    await expect(catalog).toBeVisible()
+    await expect(catalog.getByRole('button', { name: /Конструктор практического занятия/ })).toBeVisible()
+    expect(await title.evaluate(element => element.getBoundingClientRect().top + window.scrollY)).toBe(before)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `test-results/practice-selector-${width}.png` })
+    await page.keyboard.press('Escape')
+    await expect(catalog).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Изменить практику' })).toBeFocused()
+    await page.getByRole('button', { name: 'Изменить практику' }).click()
+    await page.getByRole('heading', { level: 1 }).click()
+    await expect(catalog).toHaveCount(0)
+  }
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.getByRole('button', { name: 'Изменить практику' }).click()
+  await page.keyboard.press('Tab')
+  await expect(catalog.getByRole('button', { name: /Конструктор практического занятия/ })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(catalog).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: workshops.practical_workshop!.title, exact: true })).toBeVisible()
+  await expect(title).toHaveValue(item.title)
+  await page.getByRole('button', { name: 'Изменить практику' }).click()
+  await catalog.getByRole('button', { name: /Мастерская лекций/ }).click()
   await expect(page.getByLabel('Описание критерия', { exact: true }).first()).toBeHidden()
   await page.locator('.practice-criterion-details summary').first().click()
   await expect(page.getByRole('textbox', { name: 'Описание критерия', exact: true }).first()).toBeVisible()

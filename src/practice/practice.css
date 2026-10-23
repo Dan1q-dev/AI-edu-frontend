@@ -1,9 +1,19 @@
-.practice-catalog { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; margin: 24px 0; }
-.practice-catalog-card { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; text-align: left; color: var(--color-text, #17223b); background: white; border: 1px solid #dbe3ec; border-radius: 14px; padding: 24px; }
+.practice-catalog { display: grid; gap: 6px; margin: 0; }
+.practice-catalog-card { display: flex; align-items: flex-start; gap: 12px; width: 100%; text-align: left; font: inherit; color: var(--color-text, #17223b); background: var(--color-surface, white); border: 1px solid transparent; border-radius: 10px; padding: 12px; cursor: pointer; transition: background .15s, border-color .15s; }
 .practice-catalog-card:hover:enabled { border-color: #267fca; background: #f5faff; }
 .practice-catalog-card:disabled { opacity: .6; cursor: not-allowed; }
-.practice-catalog-card strong { font-size: 1.05rem; }
+.practice-catalog-card strong { font-size: .9rem; font-weight: 600; line-height: 1.4; }
 .practice-catalog-card svg { color: #267fca; }
+.practice-catalog-icon, .practice-selection-icon { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 10px; background: #edf6ff; color: #267fca; }
+.practice-catalog-copy { display: grid; gap: 4px; min-width: 0; }
+.practice-catalog-copy > span { color: var(--color-muted, #67738a); font-size: .8rem; line-height: 1.5; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.practice-catalog-copy small { font-size: .72rem; color: #267fca; }
+.practice-catalog-check { flex-shrink: 0; margin: 8px 0 0 auto; }
+.practice-selector { position: relative; min-width: 0; margin-bottom: 20px; }
+#practice-type-catalog { position: absolute; top: calc(100% + 8px); left: 0; z-index: 35; width: min(100%, 600px); max-height: min(480px, 60dvh); overflow-y: auto; overscroll-behavior: contain; padding: 10px; border: 1px solid var(--color-border, #dbe3ec); border-radius: 14px; background: var(--color-surface, white); box-shadow: 0 12px 40px #17223b24; }
+#practice-type-catalog > p { margin: 8px 10px 12px; font-size: .78rem; line-height: 1.5; color: var(--color-muted, #67738a); }
+.practice-selection-heading .button svg { transition: transform .15s; }
+.practice-selection-heading .button svg.is-open { transform: rotate(180deg); }
 .practice-config { border: 0; padding: 0; min-width: 0; display: grid; gap: 16px; }
 .practice-config legend { font-weight: 700; margin-bottom: 12px; }
 .practice-instruction-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
@@ -60,12 +70,18 @@
   .practice-editor-content { width: calc(100% - 32px); margin-top: 24px; }
   .practice-leave-actions { display: grid; }
 }
-.practice-selection-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
-.practice-selection-heading h2 { flex: 1 1 240px; margin: 0; overflow-wrap: anywhere; }
+.practice-selection-heading { display: flex; align-items: center; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--color-border, #dbe3ec); }
+.practice-selection-heading h2 { flex: 1; min-width: 0; margin: 0; font-size: 1rem; line-height: 1.45; overflow-wrap: anywhere; }
 .practice-selection-heading .button { flex-shrink: 0; }
 .practice-catalog-card.is-selected { opacity: 1; border-color: #267fca; background: #edf6ff; cursor: default; }
 .practice-catalog-card span, .practice-catalog-card strong { overflow-wrap: anywhere; }
 .practice-catalog-card:focus-visible { outline: 2px solid #267fca; outline-offset: 3px; }
+@media (max-width: 600px) {
+  .practice-selection-heading { flex-wrap: wrap; gap: 10px; }
+  .practice-selection-heading h2 { flex-basis: calc(100% - 50px); }
+  .practice-selection-heading .button { width: 100%; justify-content: space-between; }
+  #practice-type-catalog { max-height: min(400px, 55dvh); }
+}
 
 .guided-assignment { min-width: 0; width: 100%; }
 .guided-assignment h1 { font-size: 24px; line-height: 1.35; overflow-wrap: anywhere; }

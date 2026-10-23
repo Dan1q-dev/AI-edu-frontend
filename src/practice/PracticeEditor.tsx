@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ListChecks, Puzzle, Sparkles } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ListChecks, Puzzle, Sparkles } from 'lucide-react'
 import { api, type LearningItem } from '../api'
 import { Button, ErrorState, Input, Loading, Notice } from '../components/ui'
 import { useI18n } from '../i18n'
@@ -32,7 +32,31 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   const [config, setConfig] = useState(seed && hasCommonTask(seed.practice_type) ? normalizeTaskConfig(seed.config) : seed?.config ?? {})
   const [catalogOpen, setCatalogOpen] = useState(!seed)
   const catalogTrigger = useRef<HTMLButtonElement>(null)
+  const catalogContainer = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!catalogOpen) return
+    const dismiss = (event: PointerEvent) => {
+      if (!catalogContainer.current?.contains(event.target as Node)) setCatalogOpen(false)
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setCatalogOpen(false)
+      catalogTrigger.current?.focus()
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [catalogOpen])
   const catalog = useQuery({ queryKey: ['practice-types'], queryFn: () => api<PracticeManifest[]>('practice-types/') })
+  useLayoutEffect(() => {
+    if (catalogOpen && window.innerWidth <= 600) {
+      catalogContainer.current?.querySelector('#practice-type-catalog')?.scrollIntoView?.({ block: 'nearest' })
+    }
+  }, [catalogOpen, catalog.data])
   const [title, setTitle] = useState(seed?.title ?? item.title)
   const description = seed?.description ?? item.description
   const [published, setPublished] = useState(initial.published)
@@ -80,6 +104,7 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
   }
   const track = params.get('track')
   const selectedName = manifest?.name ?? (selected?.type === 'lecture_workshop' ? 'Виртуальная мастерская генерации лекции' : 'Выбранная практика')
+  const SelectedIcon = manifest?.icon === 'sparkles' ? Sparkles : manifest?.icon === 'list-checks' ? ListChecks : Puzzle
   const alternatives = catalog.data?.filter(entry => entry.available && getPracticePlugin(entry.type, entry.version)
     && (entry.type !== selected?.type || entry.version !== selected.version)) ?? []
   return <div className="practice-editor-page">
@@ -95,20 +120,23 @@ function PracticeForm({ item, moduleTitle, initial }: { item: LearningItem; modu
     <span className="eyebrow">{t('ПРАКТИЧЕСКАЯ РАБОТА')}</span><h1>{title || t('Новая практика')}</h1>
     {published && <p className="practice-version-note">{t('Изменения сохраняются в новой версии. Начатые попытки сохраняют прежние условия.')}</p>}
     <div className="card form-card">
-      <div className="practice-selection-heading"><h2>{t(selected ? selectedName : 'Выберите тип практической работы')}</h2><button ref={catalogTrigger} type="button" className="button secondary" disabled={busy} aria-expanded={catalogOpen} aria-controls="practice-type-catalog" onClick={() => setCatalogOpen(open => !open)}>{t(catalogOpen ? 'Закрыть выбор' : selected ? 'Изменить практику' : 'Выбрать практику')}</button></div>
-      {manifest && <p>{t(manifest.description)}</p>}
+      <div className="practice-selector" ref={catalogContainer} onBlur={event => {
+        if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) setCatalogOpen(false)
+      }}>
+      <div className="practice-selection-heading"><span className="practice-selection-icon"><SelectedIcon size={20} aria-hidden="true"/></span><h2>{t(selected ? selectedName : 'Выберите тип практической работы')}</h2><button ref={catalogTrigger} type="button" className="button secondary" disabled={busy} aria-expanded={catalogOpen} aria-controls="practice-type-catalog" onClick={() => setCatalogOpen(open => !open)}>{t(catalogOpen ? 'Закрыть выбор' : selected ? 'Изменить практику' : 'Выбрать практику')}<ChevronDown size={16} aria-hidden="true" className={catalogOpen ? 'is-open' : ''}/></button></div>
       {catalogOpen && <section id="practice-type-catalog" aria-label={t('Выберите тип практической работы')}>
-        <p>{t('Название, инструкция и критерии сохранятся при смене инструмента.')}</p>
+        <p className="practice-catalog-hint">{t('Название, инструкция и критерии сохранятся при смене инструмента.')}</p>
         {catalog.isLoading ? <Loading variant="inline"/> : catalog.error ? <><ErrorState error={catalog.error}/><Button variant="secondary" onClick={() => void catalog.refetch()} disabled={catalog.isFetching}>{t('Повторить')}</Button></> : <>
           <div className="practice-catalog">{catalog.data?.map(entry => {
             const active = entry.type === selected?.type && entry.version === selected.version
             const enabled = entry.available && Boolean(getPracticePlugin(entry.type, entry.version))
             const Icon = entry.icon === 'sparkles' ? Sparkles : entry.icon === 'list-checks' ? ListChecks : Puzzle
-            return <button type="button" className={`practice-catalog-card${active ? ' is-selected' : ''}`} key={`${entry.type}@${entry.version}`} aria-pressed={active} disabled={busy || !enabled || active} onClick={() => choose(entry)}><Icon size={24} aria-hidden="true"/><strong>{t(entry.name)}</strong><span>{t(entry.description)}</span>{active && <small>{t('Текущая практика')}</small>}{!enabled && <small>{t('Скоро / недоступно')}</small>}</button>
+            return <button type="button" className={`practice-catalog-card${active ? ' is-selected' : ''}`} key={`${entry.type}@${entry.version}`} aria-pressed={active} disabled={busy || !enabled || active} onClick={() => choose(entry)}><span className="practice-catalog-icon"><Icon size={20} aria-hidden="true"/></span><span className="practice-catalog-copy"><strong>{t(entry.name)}</strong><span>{t(entry.description)}</span>{active && <small>{t('Текущая практика')}</small>}{!enabled && <small>{t('Скоро / недоступно')}</small>}</span>{active && <Check size={18} className="practice-catalog-check" aria-hidden="true"/>}</button>
           })}</div>
           {!alternatives.length && <p>{t('Других доступных практик пока нет.')}</p>}
         </>}
       </section>}
+      </div>
       {selected && !plugin && <Notice text={t('Этот тип практики пока недоступен')} kind="error"/>}
       <label>{t('Название')}<Input value={title} maxLength={200} disabled={busy} onChange={event => setTitle(event.target.value)}/></label>
       {ConfigEditor && <ConfigEditor key={selected?.type} itemId={item.short_id} config={config} disabled={busy} onUploadingChange={setUploading} onChange={setConfig}/>}
