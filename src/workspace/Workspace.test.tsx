@@ -237,9 +237,4 @@ describe('shared teaching constructors', () => {
       expect.objectContaining({ prompt: 'Формат занятия: Деловая игра.\nУправление конфликтами' })))
   })
 
-  it('explains the required syllabus inputs without creating a document on mount', () => {
-    mount({ version: { ...state.version!, practice_type: 'syllabus_workshop' }, submission: null })
-    expect(screen.getByText(workshops.syllabus_workshop!.description)).toBeTruthy()
-    expect(mockedApi.mock.calls.some(([, method]) => method === 'POST')).toBe(false)
-  })
 })

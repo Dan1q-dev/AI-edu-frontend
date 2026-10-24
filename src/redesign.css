@@ -636,6 +636,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .language-select.compact > .system-select { min-width: 120px; }
 .language-select .system-select-trigger { min-height: 38px; font-size: .83rem; }
 .auth-language { position: fixed; top: 20px; right: 22px; z-index: 20; }
+.auth-reset-link { display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 0; border: 0; background: transparent; color: var(--color-primary); font: inherit; font-size: 13px; cursor: pointer; }
+.auth-reset-link:hover { color: var(--color-primary-dark); text-decoration: underline; }
+.auth-recovery-form { gap: 18px; }
+.auth-recovery-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--color-primary-soft); color: var(--color-primary); }
+.auth-recovery-result { display: grid; gap: 18px; }
+.auth-recovery-result small { color: var(--color-muted); line-height: 1.6; }
+.auth-recovery-error { display: grid; gap: 10px; padding: 12px 14px; border: 1px solid #f0d0d4; border-radius: 8px; background: #fff3f4; color: #a63d4a; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.auth-recovery-error a { color: var(--color-primary); text-decoration: underline; }
 .main-header-inner > .language-select { margin-left: auto; }
 .main-header-inner > .user-menu { margin-left: 14px; }
 .learning-workspace { display: grid; grid-template-columns: 264px minmax(0, 1fr) 300px; min-height: calc(100vh - 62px); max-width: 1920px; margin: auto; }

@@ -45,7 +45,8 @@ beforeEach(() => {
   vi.mocked(api).mockImplementation(async path => {
     if (path === 'auth/me/') throw anonymous()
     if (path === 'me/learning/') return { resume_course: null, active_courses: [], completed_courses: [], available_courses: [] } as never
-    if (path === 'auth/login/' || path === 'auth/register/') return student as never
+    if (path === 'auth/login/') return student as never
+    if (path === 'auth/register/') return { ...student, verification_required: true } as never
     return undefined as never
   })
 })
@@ -201,16 +202,19 @@ describe('authentication with mounted application', () => {
     expect((screen.getByLabelText('Пароль') as HTMLInputElement).value).toBe('')
   })
 
-  it('updates the mounted application after registration', async () => {
+  it('waits for email verification after registration without creating a session', async () => {
     vi.mocked(apiAll).mockImplementation(async path => path === 'tracks/'
       ? [{ id: 1, title: 'IT', short_id: 'it', description: '', cover: null, is_published: true, is_active: true, is_system: false }] as never
       : [] as never)
-    mount('/register')
+    const client = mount('/register')
     await screen.findByRole('heading', { name: 'Новый участник' })
     fireEvent.change(screen.getByLabelText('Email'), { target: { value: student.email } })
     fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: 'StrongPass321!' } })
     fireEvent.click(screen.getByRole('button', { name: 'Зарегистрироваться' }))
-    expect(await screen.findByLabelText('Меню пользователя')).toBeTruthy()
-    expect(screen.getByTestId('location').textContent).toBe('/')
+    expect(await screen.findByRole('heading', { name: 'Подтвердите email' })).toBeTruthy()
+    expect(screen.queryByLabelText('Меню пользователя')).toBeNull()
+    expect(client.getQueryData(['me'])).toBeNull()
+    expect(screen.getByTestId('location').textContent).toBe('/register')
+    expect(screen.getByRole('link', { name: 'Отправить письмо ещё раз' }).getAttribute('href')).toContain('/resend-verification?email=')
   })
 })

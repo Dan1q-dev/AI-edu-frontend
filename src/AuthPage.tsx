@@ -4,11 +4,12 @@ import { useQueryClient } from '@tanstack/react-query'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogIn, UserPlus } from 'lucide-react'
-import { api, type User } from './api'
+import { LogIn, Mail, UserPlus } from 'lucide-react'
+import { api, ApiError, type User } from './api'
 import { updateSession } from './session'
 import { Button, Input, Notice } from './components/ui'
-import { LanguageTabs, useI18n } from './i18n'
+import { useI18n } from './i18n'
+import { AuthLayout } from './components/AuthLayout'
 
 const makeSchema = (t: (key: string) => string, mode: 'login' | 'register') => z.object({
   email: z.string().trim().pipe(z.email(t('Введите корректный email'))),
@@ -32,43 +33,44 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   })
 
   const [error, setError] = useState('')
+  const [verificationEmail, setVerificationEmail] = useState('')
+  const [unverified, setUnverified] = useState(false)
   const qc = useQueryClient()
   const navigate = useNavigate()
 
   const submit = async (values: Form) => {
     setError('')
+    setUnverified(false)
     try {
-      const user = await api<User>(
+      const user = await api<User & { verification_required?: boolean }>(
         `auth/${mode}/`,
         'POST',
         mode === 'register'
           ? values
           : { email: values.email, password: values.password }
       )
+      if (mode === 'register') {
+        setVerificationEmail(user.email)
+        return
+      }
       await updateSession(qc, user)
       navigate(user.role === 'ADMIN' ? '/admin/curriculum' : '/', { replace: true })
     } catch (e) {
-      setError((e as Error).message)
+      setUnverified(e instanceof ApiError && e.code === 'email_not_verified')
+      setError(t((e as Error).message))
     }
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-language"><LanguageTabs/></div>
-      <div className="auth-side">
-        <Link to="/" className="auth-brand" aria-label="AI Edu">
-          <span className="atlas-brand-mark" aria-hidden="true">AI</span>
-          <span>{t('Исследовательский прототип')}</span>
-        </Link>
-        <div className="auth-product-copy">
-          <p className="eyebrow">{t('Персонализированное обучение преподавателей')}</p>
-          <h1>AI Edu<span aria-hidden="true"> /</span></h1>
-          <p>{t('Учебная траектория меняется после каждого модуля на основе теста, практики, ошибок и освоенных компетенций.')}</p>
-        </div>
-        <small>© AI Edu · {t('Образовательная платформа')}</small>
-      </div>
-
-      <div className="auth-form-wrap">
+    <AuthLayout>
+      {verificationEmail ? <div className="auth-form card auth-recovery-result" role="status">
+        <span className="auth-recovery-icon"><Mail size={26} aria-hidden="true"/></span>
+        <h2>{t('Подтвердите email')}</h2>
+        <p>{t('Мы отправили письмо с подтверждением на')} <strong>{verificationEmail}</strong>. {t('Перейдите по ссылке из письма, чтобы войти в аккаунт.')}</p>
+        <small>{t('Если письма нет, проверьте папку «Спам».')}</small>
+        <Link className="button primary wide" to="/login">{t('Вернуться ко входу')}</Link>
+        <Link className="auth-reset-link" to={`/resend-verification?email=${encodeURIComponent(verificationEmail)}`}>{t('Отправить письмо ещё раз')}</Link>
+      </div> :
         <form
           className={`auth-form card ${mode === 'register' ? 'auth-form-register' : ''}`}
           onSubmit={handleSubmit(submit)}
@@ -119,6 +121,9 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             <small className="field-error">{errors.password?.message}</small>
           </label>
 
+          {mode === 'login' && <Link className="auth-reset-link" to="/forgot-password">{t('Забыли пароль?')}</Link>}
+          {unverified && <Link className="auth-reset-link" to="/resend-verification">{t('Отправить письмо подтверждения')}</Link>}
+
           <Notice text={error} onDismiss={() => setError('')} kind="error" />
 
           <Button
@@ -145,8 +150,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
               </>
             )}
           </div>
-        </form>
-      </div>
-    </div>
+        </form>}
+    </AuthLayout>
   )
 }

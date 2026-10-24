@@ -13,6 +13,8 @@ const UserDetailPage = lazy(() => import('./admin/UserDetailPage').then(module =
 const AdminProfilePage = lazy(() => import('./admin/AdminProfilePage').then(module => ({ default: module.AdminProfilePage })))
 
 const AuthPage = lazy(() => import('./AuthPage').then(module => ({ default: module.AuthPage })))
+const PasswordResetPage = lazy(() => import('./PasswordResetPage').then(module => ({ default: module.PasswordResetPage })))
+const EmailVerificationPage = lazy(() => import('./EmailVerificationPage').then(module => ({ default: module.EmailVerificationPage })))
 const CatalogPage = lazy(() => import('./StudentPages').then(module => ({ default: module.CatalogPage })))
 const CoursePage = lazy(() => import('./StudentPages').then(module => ({ default: module.CoursePage })))
 const LessonPage = lazy(() => import('./StudentPages').then(module => ({ default: module.LessonPage })))
@@ -42,6 +44,10 @@ export default function App() {
     <Route path="/certificates/:token" element={<CertificatePage/>}/>
     <Route path="/login" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage key="login" mode="login"/>}/>
     <Route path="/register" element={user ? <Navigate to={user.role === 'ADMIN' ? '/admin/curriculum' : '/'} replace/> : <AuthPage key="register" mode="register"/>}/>
+    <Route path="/forgot-password" element={<PasswordResetPage key="request" mode="request"/>}/>
+    <Route path="/reset-password/:uid/:token" element={<PasswordResetPage key="confirm" mode="confirm"/>}/>
+    <Route path="/verify-email/:token" element={<EmailVerificationPage key="verify" mode="verify"/>}/>
+    <Route path="/resend-verification" element={<EmailVerificationPage key="resend" mode="resend"/>}/>
     <Route path="/" element={<ProtectedPage user={user}>{user?.role === 'ADMIN' ? <Navigate to="/admin/curriculum" replace/> : <MyLearningPage user={user!}/>}</ProtectedPage>}/>
     <Route path="/catalog" element={<ProtectedPage user={user}><CatalogPage/></ProtectedPage>}/>
     <Route path="/courses/:slug" element={<ProtectedPage user={user}><CoursePage/></ProtectedPage>}/>

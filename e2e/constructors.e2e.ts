@@ -70,9 +70,9 @@ for (const width of [1440, 390]) {
         if (definition.sessionTypes) await page.getByRole('button', { name: 'Деловая игра', exact: true }).click()
         await page.screenshot({ path: `test-results/${type}-${sourceMode}-empty-${width}.png`, fullPage: true })
         const prompt = page.getByRole('textbox', { name: 'Ваш запрос' })
-        await prompt.fill(type === 'syllabus_workshop'
-          ? 'Педагогика, специальность Учитель, 5 кредитов, 15 недель, результат: проектировать занятия.'
-          : sourceMode === 'inline' ? 'Подготовь практику по лекции: Формирующее оценивание выявляет пробелы. Обратная связь направляет обучение.' : 'Педагогика для будущих преподавателей')
+        await prompt.fill(sourceMode === 'inline'
+          ? 'Подготовь практику по лекции: Формирующее оценивание выявляет пробелы. Обратная связь направляет обучение.'
+          : 'Педагогика для будущих преподавателей')
         await page.getByRole('button', { name: 'Отправить запрос', exact: true }).click()
         if (sourceMode === 'saved') {
           await page.getByRole('combobox', { name: 'Созданная лекция' }).click()

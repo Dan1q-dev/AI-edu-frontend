@@ -9,14 +9,12 @@ export type LectureParameters = {
 export type Lecture = { title: string; sections: { id: SectionId; title: string; content: JSONContent }[] }
 export type WorkspaceParameters = LectureParameters & {
   session_type?: 'seminar' | 'round_table' | 'discussion' | 'business_game' | 'case_study' | 'research' | 'project' | 'group'
-  specialty?: string; credits?: number; duration_weeks?: number
 }
 export type WorkspaceContent = { title: string; sections: { id: string; title: string; content: JSONContent }[] }
 export const workspaceSections: Record<string, readonly string[]> = {
   lecture: sectionIds,
   practical_session: ['goal', 'objectives', 'learning_outcomes', 'basic_tasks', 'intermediate_tasks', 'advanced_tasks', 'cases', 'problem_questions', 'execution_stages', 'assessment_criteria'],
   pedagogical_scenario: ['goal', 'learning_outcomes', 'format', 'preparation', 'roles', 'scenario', 'tasks', 'discussion_questions', 'assessment_criteria', 'reflection'],
-  syllabus: ['course_information', 'goals', 'learning_outcomes', 'thematic_plan', 'lectures', 'practical_sessions', 'independent_assignments', 'teaching_methods', 'assessment', 'literature'],
 }
 export type WorkspaceDocument = {
   id: number; submission: number; document_type: string; schema_version: number

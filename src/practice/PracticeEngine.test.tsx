@@ -58,7 +58,7 @@ describe('Practice Engine completion', () => {
       expect(screen.queryByText('Мастерская лекций', { exact: true })).toBeNull()
     }
   })
-  it.each(['practical_workshop', 'pedagogical_workshop', 'syllabus_workshop'])('publishes %s from the catalog and preserves shared instructions', async type => {
+  it.each(['practical_workshop', 'pedagogical_workshop'])('publishes %s from the catalog and preserves shared instructions', async type => {
     const definition = workshops[type]!
     const entry = { ...workshop, type, name: definition.title, frontend_editor: type, student_runtime: type }
     const config = normalizeTaskConfig({ criteria: [{ title: 'Критерий преподавателя', description: '', is_required: true }] })
