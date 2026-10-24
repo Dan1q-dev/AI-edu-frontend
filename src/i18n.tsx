@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Check, ChevronDown, Languages } from 'lucide-react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Languages } from 'lucide-react'
+import { Select } from './components/Select'
 import ruMessages from './locales/ru.json'
 import kzMessages from './locales/kz.json'
 import enMessages from './locales/en.json'
@@ -61,72 +62,11 @@ export function LanguageTabs() {
 
 export function LanguageSelect({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale, t } = useI18n()
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    document.addEventListener('touchstart', handleClickOutside)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-      document.removeEventListener('touchstart', handleClickOutside)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [open])
-
-  const current = languages.find(item => item.code === locale) ?? languages[0]
-
-  return (
-    <div className={`language-select ${compact ? 'compact' : ''}`} ref={containerRef}>
-      {!compact && <span className="language-select-label">{t('Язык интерфейса')}</span>}
-      <button
-        type="button"
-        className="language-select-trigger"
-        aria-label={t('Язык интерфейса')}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen(value => !value)}
-      >
-        <Languages className="language-select-icon" size={15} aria-hidden="true" />
-        <span className="language-select-text">{current.label}</span>
-        <ChevronDown size={14} className={`language-select-chevron ${open ? 'open' : ''}`} aria-hidden="true" />
-      </button>
-
-      {open && (
-        <div className="language-select-menu" role="listbox" aria-label={t('Язык интерфейса')}>
-          {languages.map(item => {
-            const isSelected = item.code === locale
-            return (
-              <button
-                key={item.code}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                className={`language-select-option ${isSelected ? 'active' : ''}`}
-                onClick={() => {
-                  setLocale(item.code)
-                  setOpen(false)
-                }}
-              >
-                <span>{item.label}</span>
-                {isSelected && <Check size={14} className="language-select-check" aria-hidden="true" />}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
+  return <div className={`language-select ${compact ? 'compact' : ''}`}>
+    {!compact && <span className="language-select-label">{t('Язык интерфейса')}</span>}
+    <Select compact className="language-select-trigger" aria-label={t('Язык интерфейса')}
+      leadingIcon={<Languages size={15}/>} value={locale} onChange={event => setLocale(event.target.value as Locale)}>
+      {languages.map(language => <option key={language.code} value={language.code}>{language.label}</option>)}
+    </Select>
+  </div>
 }

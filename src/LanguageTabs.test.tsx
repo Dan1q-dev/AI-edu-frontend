@@ -1,8 +1,20 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, test } from 'vitest'
-import { I18nProvider, LanguageTabs, useI18n } from './i18n'
+import { I18nProvider, LanguageSelect, LanguageTabs, useI18n } from './i18n'
 
 afterEach(() => { cleanup(); localStorage.clear() })
+
+test('the shared language dropdown changes locale with the keyboard', () => {
+  render(<I18nProvider><LanguageSelect compact/></I18nProvider>)
+  const trigger = screen.getByRole('combobox', { name: 'Язык интерфейса' })
+  fireEvent.keyDown(trigger, { key: 'Enter' })
+  fireEvent.keyDown(trigger, { key: 'End' })
+  fireEvent.keyDown(trigger, { key: 'Enter' })
+  expect(localStorage.getItem('ai-edu-locale')).toBe('en')
+  expect(document.documentElement.lang).toBe('en')
+  expect(trigger.textContent).toBe('English')
+  expect(screen.queryByRole('listbox')).toBeNull()
+})
 
 test('reference language tabs keep the existing locale state and translations', () => {
   function Copy() {

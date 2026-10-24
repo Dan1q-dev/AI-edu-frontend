@@ -1,3 +1,4 @@
+import { Select } from '../components/Select'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -55,9 +56,9 @@ function DocumentImportDialog({ root, practice = false, onClose, onApply }: Impo
     const overflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     const keyboard = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeRef.current() }
+      if (event.key === 'Escape' && !panel.current?.querySelector('[role="combobox"][aria-expanded="true"]')) { event.preventDefault(); event.stopPropagation(); closeRef.current() }
       if (event.key !== 'Tab') return
-      const items = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],[tabindex="0"]')
+      const items = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled):not([hidden]),a[href],[tabindex="0"]')
       if (!items?.length) return
       const first = items[0]!, last = items[items.length - 1]!
       if (!panel.current?.contains(document.activeElement)) { event.preventDefault(); first.focus() }
@@ -90,7 +91,7 @@ function DocumentImportDialog({ root, practice = false, onClose, onApply }: Impo
         <label className="lecture-import-file"><FileUp size={24}/><span><strong>{file?.name ?? t('Выбрать файл')}</strong><small>PDF, DOCX, PPTX · {t('до 10 МБ')}</small></span><input type="file" aria-label={t(practice ? 'Файл инструкции' : 'Файл лекции')} accept=".pdf,.docx,.pptx" disabled={uploading || active} onChange={event => { setFile(event.target.files?.[0] ?? null); setMode(null); setError('') }}/></label>
         <button type="button" disabled={!file || uploading || active} onClick={() => void start()}>{t(uploading ? 'Загрузка…' : 'Распознать файл')}</button>
       </div>
-      {history.data && history.data.jobs.length > 0 && <label className="lecture-import-history">{t('Последние импорты')}<select aria-label={t('Последние импорты')} value={jobId ?? ''} disabled={uploading} onChange={event => { setSelected(event.target.value); setFile(null); setMode(null); setError('') }}>{history.data.jobs.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
+      {history.data && history.data.jobs.length > 0 && <label className="lecture-import-history">{t('Последние импорты')}<Select compact aria-label={t('Последние импорты')} value={jobId ?? ''} disabled={uploading} onChange={event => { setSelected(event.target.value); setFile(null); setMode(null); setError('') }}>{history.data.jobs.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</Select></label>}
       {(error || history.error || query.error || (!file && job?.error)) && <p className="lecture-import-error" role="alert">{error || (history.error || query.error)?.message || job?.error}</p>}
       {(uploading || active) && <div className="lecture-import-progress" role="status"><LoaderCircle size={23} className="lecture-import-spinner"/><div><strong>{t(uploading ? 'Загрузка файла' : job?.stage === 'ocr' ? 'Распознаём текст на изображениях' : job?.stage === 'structuring' ? 'Восстанавливаем структуру' : job?.stage === 'validating' ? 'Проверяем результат' : job?.status === 'PENDING' ? 'Файл в очереди' : 'Извлекаем текст и изображения')}</strong><p>{t('Можно закрыть окно. Результат останется в последних импортах.')}</p></div></div>}
       {result && <>

@@ -199,8 +199,10 @@ describe('shared teaching constructors', () => {
     messages = [{ id: 1, operation: 71, role: 'assistant', text: 'Можно выбрать готовую лекцию или продолжить по теме.', offer_source_lecture: true, created_at: '' }]
     operation.status = 'SUCCEEDED'
     mount({ version: { ...state.version!, practice_type: 'practical_workshop' } })
-    await screen.findByRole('option', { name: 'Сохранённая лекция' })
-    fireEvent.change(screen.getByRole('combobox', { name: 'Созданная лекция' }), { target: { value: '8' } })
+    const sourceSelect = await screen.findByRole('combobox', { name: 'Созданная лекция' })
+    await waitFor(() => expect((sourceSelect as HTMLButtonElement).disabled).toBe(false))
+    fireEvent.click(sourceSelect)
+    fireEvent.click(await screen.findByRole('option', { name: 'Сохранённая лекция' }))
     fireEvent.click(screen.getByRole('button', { name: 'Отправить запрос' }))
     await waitFor(() => expect(mockedApi).toHaveBeenCalledWith('workspace/documents/44/operations/', 'POST',
       expect.objectContaining({ source_lecture_id: 8, kind: 'chat', prompt: 'Подготовь практическое занятие по выбранной лекции.' })))

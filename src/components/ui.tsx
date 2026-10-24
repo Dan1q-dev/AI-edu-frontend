@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import './notifications.css'
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
 import { BookOpen, CircleCheck, CircleAlert, Loader2 } from 'lucide-react'
 import { useI18n } from '../i18n'
 
@@ -19,15 +19,7 @@ export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea {...props} className={`input ${props.className || ''}`} />
 }
 
-export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {}
-
-export function Select({ className = '', children, ...props }: SelectProps) {
-  return (
-    <select {...props} className={`input select ${className}`.trim()}>
-      {children}
-    </select>
-  )
-}
+export { Select, type SelectProps } from './Select'
 
 export interface LoadingProps {
   label?: string

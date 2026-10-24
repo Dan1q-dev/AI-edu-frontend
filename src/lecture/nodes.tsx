@@ -1,3 +1,4 @@
+import { Select } from '../components/Select'
 import { Node, mergeAttributes } from '@tiptap/core'
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { Plugin } from '@tiptap/pm/state'
@@ -19,7 +20,7 @@ function ImageView({ node, selected, updateAttributes, extension, getPos, editor
       <label className="lecture-image-replace">{t('Заменить изображение')}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={Boolean(node.attrs.uploadId)} onChange={event => { const file = event.target.files?.[0], pos = getPos(); if (file && pos !== undefined) (extension.storage as ImageStorage).replace?.(pos, file); event.currentTarget.value = '' }}/></label>
       <label>{t('Подпись')}<input value={node.attrs.caption} onChange={event => { if (editor.isEditable) updateAttributes({ caption: event.target.value }) }}/></label>
       <label>{t('Альтернативный текст')}<input value={node.attrs.alt} onChange={event => { if (editor.isEditable) updateAttributes({ alt: event.target.value }) }}/></label>
-      <label>{t('Ширина изображения')}<select value={node.attrs.width} onChange={event => { if (editor.isEditable) updateAttributes({ width: event.target.value }) }}><option value="wide">{t('Широкая')}</option><option value="reading">{t('По ширине текста')}</option></select></label>
+      <label>{t('Ширина изображения')}<Select compact value={node.attrs.width} onChange={event => { if (editor.isEditable) updateAttributes({ width: event.target.value }) }}><option value="wide">{t('Широкая')}</option><option value="reading">{t('По ширине текста')}</option></Select></label>
     </div>}
   </NodeViewWrapper>
 }

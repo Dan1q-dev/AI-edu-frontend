@@ -75,11 +75,13 @@ for (const width of [1440, 390]) {
           : sourceMode === 'inline' ? 'Подготовь практику по лекции: Формирующее оценивание выявляет пробелы. Обратная связь направляет обучение.' : 'Педагогика для будущих преподавателей')
         await page.getByRole('button', { name: 'Отправить запрос', exact: true }).click()
         if (sourceMode === 'saved') {
-          await page.getByRole('combobox', { name: 'Созданная лекция' }).selectOption('8')
+          await page.getByRole('combobox', { name: 'Созданная лекция' }).click()
+          await page.getByRole('option', { name: 'Лекция о педагогике', exact: true }).click()
           // The optional offer must survive reloading the conversation.
           await page.reload()
           await page.getByRole('button', { name: 'Продолжить выполнение', exact: true }).click()
-          await page.getByRole('combobox', { name: 'Созданная лекция' }).selectOption('8')
+          await page.getByRole('combobox', { name: 'Созданная лекция' }).click()
+          await page.getByRole('option', { name: 'Лекция о педагогике', exact: true }).click()
           await page.getByRole('button', { name: 'Отправить запрос', exact: true }).click()
         }
         await expect(page.getByRole('heading', { name: content.title })).toBeVisible()

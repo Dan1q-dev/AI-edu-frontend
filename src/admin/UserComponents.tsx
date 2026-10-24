@@ -61,7 +61,7 @@ export function UserCreateDialog({ onClose, onCreated }: { onClose: () => void; 
   const keyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape' && !busy) onClose()
     if (event.key !== 'Tab') return
-    const focusable = [...(ref.current?.querySelectorAll<HTMLElement>('input:not(:disabled),select:not(:disabled),button:not(:disabled),a[href]') ?? [])]
+    const focusable = [...(ref.current?.querySelectorAll<HTMLElement>('input:not(:disabled),select:not(:disabled):not([hidden]),button:not(:disabled),a[href]') ?? [])]
     const first = focusable[0], last = focusable.at(-1)
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }

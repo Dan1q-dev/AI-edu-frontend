@@ -1,3 +1,4 @@
+import { Select } from '../components/Select'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, useEditorState, type Editor } from '@tiptap/react'
@@ -261,7 +262,7 @@ export function LectureDocumentEditor({ blocks, disabled, onChange, onUpload, on
       <button type="button" onClick={() => editor.chain().focus().deleteColumn().run()}>{t('Удалить столбец')}</button>
       <button type="button" onClick={() => editor.chain().focus().deleteTable().run()}>{t('Удалить таблицу')}</button>
     </div>}
-    {state?.callout && !disabled && <div className="lecture-table-tools"><select aria-label={t('Тип врезки')} value={editor.getAttributes('callout').tone} onChange={event => editor.chain().focus().updateAttributes('callout', { tone: event.target.value }).run()}><option value="important">{t('Важно')}</option><option value="note">{t('Примечание')}</option><option value="tip">{t('Совет')}</option></select><button type="button" onClick={() => editor.chain().focus().lift('callout').run()}>{t('Убрать врезку')}</button></div>}
+    {state?.callout && !disabled && <div className="lecture-table-tools"><Select compact aria-label={t('Тип врезки')} value={editor.getAttributes('callout').tone} onChange={event => editor.chain().focus().updateAttributes('callout', { tone: event.target.value }).run()}><option value="important">{t('Важно')}</option><option value="note">{t('Примечание')}</option><option value="tip">{t('Совет')}</option></Select><button type="button" onClick={() => editor.chain().focus().lift('callout').run()}>{t('Убрать врезку')}</button></div>}
     <EditorContent editor={editor} className="lecture-document-content"/>
     <div className="lecture-word-count">{t('Слов')}: {state?.words ?? 0}</div>
     {menu && !disabled && <div className="lecture-insert-menu" role="menu" aria-label={t('Добавить содержимое')} style={{ top: Math.min(menu.top, Math.max(8, window.innerHeight - 355)), left: menu.left }}>

@@ -1,3 +1,4 @@
+import { Select } from '../components/Select'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useEditorState, type Editor } from '@tiptap/react'
 import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, GripVertical, ImagePlus, Italic, Link2, List, ListOrdered, Minus, MoreHorizontal, PanelLeft, Redo2, Sigma, StickyNote, Table2, Underline, Undo2, Video } from 'lucide-react'
@@ -55,14 +56,14 @@ export function LectureRibbon({ editor, disabled, outlineOpen, reorder, onOutlin
     <div id="lecture-ribbon-panel" className="ribbon-panel" role="tabpanel" aria-labelledby={`lecture-tab-${tab}`}>
       {tab === 'home' ? <div className="ribbon-home" role="toolbar" aria-label={t('Форматирование текста')}>
         <div className="ribbon-group">{button('Отменить', <Undo2 size={17}/>, () => editor.chain().focus().undo().run(), undefined, !state.undo)}{button('Повторить', <Redo2 size={17}/>, () => editor.chain().focus().redo().run(), undefined, !state.redo)}</div>
-        <div className="ribbon-group"><select aria-label={t('Стиль текста')} disabled={disabled} value={state.style} onChange={event => {
+        <div className="ribbon-group"><Select compact aria-label={t('Стиль текста')} disabled={disabled} value={state.style} onChange={event => {
           const value = event.target.value, chain = editor.chain().focus()
           if (editor.isActive('blockquote')) chain.lift('blockquote')
           if (value === 'h2' || value === 'h3') chain.setHeading({ level: value === 'h2' ? 2 : 3 }).run()
           else if (value === 'quote') chain.setParagraph().wrapIn('blockquote').run()
           else if (value === 'code') chain.setCodeBlock().run()
           else chain.setParagraph().run()
-        }}><option value="paragraph">{t('Обычный текст')}</option><option value="h2">{t('Заголовок раздела')}</option><option value="h3">{t('Подзаголовок')}</option><option value="quote">{t('Цитата')}</option><option value="code">{t('Блок кода')}</option></select></div>
+        }}><option value="paragraph">{t('Обычный текст')}</option><option value="h2">{t('Заголовок раздела')}</option><option value="h3">{t('Подзаголовок')}</option><option value="quote">{t('Цитата')}</option><option value="code">{t('Блок кода')}</option></Select></div>
         <div className="ribbon-group">{button('Жирный', <Bold size={17}/>, () => editor.chain().focus().toggleBold().run(), state.bold)}{button('Курсив', <Italic size={17}/>, () => editor.chain().focus().toggleItalic().run(), state.italic)}{button('Подчёркнутый', <Underline size={17}/>, () => editor.chain().focus().toggleUnderline().run(), state.underline)}{button('Ссылка', <Link2 size={17}/>, onLink)}</div>
         <div className="ribbon-group"><LectureColorPicker editor={editor} disabled={disabled} value={state.color}/><LectureColorPicker editor={editor} disabled={disabled} highlight value={state.highlight}/></div>
         <div className="ribbon-group">{button('Маркированный список', <List size={18}/>, () => editor.chain().focus().toggleBulletList().run(), state.bullet)}{button('Нумерованный список', <ListOrdered size={18}/>, () => editor.chain().focus().toggleOrderedList().run(), state.ordered)}</div>

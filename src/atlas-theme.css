@@ -61,8 +61,8 @@ h1, h2, h3 { color: var(--color-ink); letter-spacing: 0; }
 .main-header .main-nav-link.active { background: #fffefa; color: #293a78; box-shadow: inset 0 -3px var(--atlas-gold); }
 .main-header .user-menu > summary, .main-header .user-menu-name { color: #edf1ff; }
 .main-header .language-select-trigger { border-color: rgb(255 255 255 / 25%); background: rgb(255 255 255 / 8%); color: #edf1ff; }
-.main-header .language-select-icon, .main-header .language-select-chevron { color: #d6def8; }
-.user-menu-panel, .language-select-menu { background: var(--color-surface); }
+.main-header .language-select .system-select-icon, .main-header .language-select .system-select-chevron { color: #d6def8; }
+.user-menu-panel { background: var(--color-surface); }
 .main-content, .admin-content { background-image: linear-gradient(rgb(218 226 240 / 25%) 1px, transparent 1px); background-size: 100% 42px; }
 .resume-course { background: #eaf0fb; border-color: #d5ddef; }
 .resume-course-art { color: #4058af; }
@@ -110,7 +110,7 @@ h1, h2, h3 { color: var(--color-ink); letter-spacing: 0; }
 .admin-shell .curriculum-course-icon { background: var(--color-primary-soft); color: var(--color-primary); }
 .admin-shell .curriculum-add-inline { color: var(--color-primary); }
 .admin-shell .curriculum-add-inline:hover { background: var(--color-primary-soft); border-color: #cbd5e7; }
-.admin-shell .curriculum-track-selector select { border-color: var(--color-border); color: var(--color-ink); }
+.admin-shell .curriculum-track-selector .system-select-trigger { border-color: var(--color-border); color: var(--color-ink); }
 
 /* Login follows the reference, without the research formula or demo credentials. */
 .auth-page { position: relative; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); min-height: 100dvh; background: #f8f9fc; }
