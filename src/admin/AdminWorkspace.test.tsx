@@ -46,10 +46,11 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 describe('admin workspace', () => {
-  it('shows only builder and users navigation and a separate profile link', () => {
+  it('shows builder, users, analytics navigation and a separate profile link', () => {
     mount(<AdminLayout user={actor}><p>Workspace</p></AdminLayout>)
     expect(screen.getByRole('link', { name: 'Конструктор' }).getAttribute('href')).toBe('/admin/curriculum')
     expect(screen.getByRole('link', { name: 'Пользователи' }).getAttribute('href')).toBe('/admin/users')
+    expect(screen.getByRole('link', { name: 'Аналитика' }).getAttribute('href')).toBe('/admin/analytics')
     expect(screen.queryByText('Моё обучение')).toBeNull()
     expect(screen.queryByText('Каталог')).toBeNull()
     expect(screen.queryByText('Панель администратора')).toBeNull()
