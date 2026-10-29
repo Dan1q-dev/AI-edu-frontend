@@ -9,6 +9,7 @@ import './tutor.css'
 import { useTutorVoice } from './useTutorVoice'
 import { useKevinAvatar, localAvatarEnabled, type AvatarPacket } from './KevinAvatar'
 import { useVoiceConversation } from './useVoiceConversation'
+import { useTeacherAvatar } from './avatar/useTeacherAvatar'
 
 type Message = TutorMessage & { id: string; sources?: TutorSource[]; interrupted?: boolean }
 type Conversation = { sessionId: string; messages: Message[] }
@@ -46,7 +47,11 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [autoSpeak, setAutoSpeak] = useState(localAvatarEnabled)
   const [avatarMessageId, setAvatarMessageId] = useState<string | null>(null)
-  const avatar = useKevinAvatar(setError, () => abortRef.current?.abort())
+  const localAvatar = useKevinAvatar(setError, () => abortRef.current?.abort())
+  const teacherAvatar = useTeacherAvatar(!!storageKey, setError, () => abortRef.current?.abort())
+  const avatarEnabled = localAvatarEnabled || teacherAvatar.available
+  const avatar = teacherAvatar.available ? teacherAvatar : localAvatar
+  useEffect(() => { if (teacherAvatar.available) setAutoSpeak(true) }, [teacherAvatar.available])
   const voice = useTutorVoice(contextType, contextId, locale, text => { setDraft(prev => prev ? `${prev} ${text}` : text); inputRef.current?.focus() }, setError)
   const interrupt = () => {
     abortRef.current?.abort()
@@ -56,6 +61,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
   }
   const live = useVoiceConversation({ contextType, contextId, onInterrupt: interrupt,
     onQuestion: text => { void submit(text, true) }, onError: setError })
+  useEffect(() => { if (!avatarEnabled) live.stop() }, [avatarEnabled])
   useEffect(() => {
     avatar.behavior(avatar.active ? 'idle' : busy || live.transcribing ? 'thinking' : live.enabled ? 'listening' : 'idle')
   }, [busy, live.transcribing, live.enabled, avatar.active])
@@ -75,10 +81,10 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
   const submit = async (text: string, fromVoice = false) => {
     text = text.trim()
     if (!text || busyRef.current || (!fromVoice && (live.enabled || live.starting)) || voice.recording || voice.transcribing || voice.requestingMic) return
-    if (localAvatarEnabled && autoSpeak && !avatar.ready) { setError('Дождитесь загрузки Кевина.'); return }
+    if (avatarEnabled && autoSpeak && !avatar.ready) { setError('Дождитесь загрузки преподавателя.'); return }
     avatar.stop()
     avatar.prepareResponse(text)
-    const streamingAvatar = localAvatarEnabled && autoSpeak && locale === 'ru'
+    const streamingAvatar = avatarEnabled && autoSpeak && locale === 'ru'
     if (streamingAvatar) { voice.stopSpeech(); voice.unlockAudio(); avatar.unlock() }
     const controller = new AbortController()
     abortRef.current = controller
@@ -131,10 +137,10 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
   }
   const speakMessage = async (message: Message) => {
     if (live.enabled || live.starting) return
-    if (!localAvatarEnabled) { void voice.speak(message.id, message.content); return }
+    if (!avatarEnabled) { void voice.speak(message.id, message.content); return }
     if (avatar.active && avatarMessageId === message.id) { abortRef.current?.abort(); avatar.stop(); return }
     if (busy) return
-    if (!avatar.ready) { setError('Дождитесь загрузки Кевина.'); return }
+    if (!avatar.ready) { setError('Дождитесь загрузки преподавателя.'); return }
     const controller = new AbortController()
     abortRef.current = controller
     voice.stopSpeech(); avatar.stop(); avatar.unlock(); voice.unlockAudio()
@@ -162,7 +168,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
   return <section className="tutor-panel" aria-label={`${t('Диалог с тьютором')}: ${lessonTitle}`}>
     <header className="tutor-panel-header"><div className="tutor-heading"><Sparkles size={18}/><h2>{t('ИИ-тьютор')}</h2></div>
       <div className="tutor-header-actions">
-      {localAvatarEnabled && <button type="button" className={`icon-button tutor-call ${live.enabled ? 'connected' : ''}`} title={live.enabled || live.starting ? 'Завершить разговор' : 'Начать разговор'} aria-label={live.enabled || live.starting ? 'Завершить разговор' : 'Начать разговор'} aria-pressed={live.enabled} disabled={locale !== 'ru' || !avatar.ready} onClick={() => {
+      {avatarEnabled && <button type="button" className={`icon-button tutor-call ${live.enabled ? 'connected' : ''}`} title={live.enabled || live.starting ? 'Завершить разговор' : 'Начать разговор'} aria-label={live.enabled || live.starting ? 'Завершить разговор' : 'Начать разговор'} aria-pressed={live.enabled} disabled={locale !== 'ru' || !avatar.ready} onClick={() => {
         if (live.enabled || live.starting) { live.stop(); interrupt() }
         else { interrupt(); voice.cancel(); setAutoSpeak(true); setError(''); avatar.unlock(); voice.unlockAudio(); void live.start() }
       }}>{live.starting ? <LoaderCircle className="tutor-spinner" size={16}/> : live.enabled ? <PhoneOff size={16}/> : <Phone size={16}/>}</button>}
@@ -184,7 +190,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
         {message.interrupted && <small className="tutor-interrupted">{t('Ответ прерван')}</small>}
         {message.role === 'assistant' && <div className="tutor-message-tools">
           <button type="button" className="icon-button" title={t(copied === message.id ? 'Скопировано' : 'Копировать ответ')} aria-label={t('Копировать ответ')} onClick={() => void copy(message)}>{copied === message.id ? <Check size={14}/> : <Copy size={14}/>}</button>
-          {!message.interrupted && <button type="button" className="icon-button" disabled={locale !== 'ru' || (localAvatarEnabled && busy && avatarMessageId !== message.id)} title={t(locale !== 'ru' ? 'Озвучка доступна на русском' : voice.speakingId === message.id || (avatar.active && avatarMessageId === message.id) ? 'Остановить озвучку' : 'Озвучить ответ')} aria-label={t(voice.speakingId === message.id || voice.loadingSpeechId === message.id || (avatar.active && avatarMessageId === message.id) ? 'Остановить озвучку' : 'Озвучить ответ')} onClick={() => void speakMessage(message)}>{voice.loadingSpeechId === message.id ? <LoaderCircle className="tutor-spinner" size={14}/> : voice.speakingId === message.id || (avatar.active && avatarMessageId === message.id) ? <Square size={14}/> : <Volume2 size={14}/>}</button>}
+          {!message.interrupted && <button type="button" className="icon-button" disabled={locale !== 'ru' || (avatarEnabled && busy && avatarMessageId !== message.id)} title={t(locale !== 'ru' ? 'Озвучка доступна на русском' : voice.speakingId === message.id || (avatar.active && avatarMessageId === message.id) ? 'Остановить озвучку' : 'Озвучить ответ')} aria-label={t(voice.speakingId === message.id || voice.loadingSpeechId === message.id || (avatar.active && avatarMessageId === message.id) ? 'Остановить озвучку' : 'Озвучить ответ')} onClick={() => void speakMessage(message)}>{voice.loadingSpeechId === message.id ? <LoaderCircle className="tutor-spinner" size={14}/> : voice.speakingId === message.id || (avatar.active && avatarMessageId === message.id) ? <Square size={14}/> : <Volume2 size={14}/>}</button>}
           {!!message.sources?.length && <details className="tutor-sources"><summary>{t(materialType === 'practice' ? 'Материал практической работы' : 'Материал лекции')}</summary>{message.sources.map((source, index) => <div key={`${source.chunk_id}-${index}`}><strong>{source.label}</strong><p>{source.snippet ?? source.text ?? ''}</p></div>)}</details>}
         </div>}
       </div>)}
@@ -195,7 +201,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
       if (last) { setDraft(last.content); inputRef.current?.focus() }
     }}>{t('Повторить вопрос')}</button></div>}
     {(voice.recording || voice.transcribing || voice.requestingMic) && <div className="tutor-voice-status" role="status">{t(voice.recording ? 'Идёт запись...' : voice.transcribing ? 'Распознаю речь...' : 'Открываю микрофон...')}</div>}
-    {(live.enabled || live.starting) && <div className={`tutor-voice-status tutor-live-status ${live.hearing ? 'hearing' : ''}`} role="status"><span className="tutor-pulse"/>{live.starting ? 'Подключаю микрофон...' : live.hearing ? 'Слушаю вас...' : live.transcribing ? 'Распознаю вопрос...' : avatar.active ? 'Кевин отвечает' : busy ? 'Кевин думает...' : 'Слушаю'}</div>}
+    {(live.enabled || live.starting) && <div className={`tutor-voice-status tutor-live-status ${live.hearing ? 'hearing' : ''}`} role="status"><span className="tutor-pulse"/>{live.starting ? 'Подключаю микрофон...' : live.hearing ? 'Слушаю вас...' : live.transcribing ? 'Распознаю вопрос...' : avatar.active ? 'Тьютор отвечает' : busy ? 'Тьютор думает...' : 'Слушаю'}</div>}
     <form className="tutor-composer" onSubmit={onSubmit}>
       <textarea ref={inputRef} rows={2} maxLength={4000} value={draft} placeholder={t(materialType === 'practice' ? 'Спросите по заданию...' : 'Спросите по лекции...')} aria-label={t('Вопрос тьютору')} onChange={event => setDraft(event.target.value)} onKeyDown={event => {
         if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void submit(draft) }
