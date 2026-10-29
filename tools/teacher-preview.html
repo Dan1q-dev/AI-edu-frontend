@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Преподаватель - проверка модели</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:15px system-ui;color:#18263d;background:#f6f8fb}
+main{display:grid;grid-template-columns:minmax(0,1fr) 240px;min-height:100dvh}
+#viewport{height:100dvh;min-height:360px}aside{padding:20px;border-left:1px solid #d8dfe9;background:white}
+h1{font-size:20px;margin:0 0 20px}label{display:block;margin:24px 0 8px}input{width:100%;accent-color:#4058b6}
+#status{font-size:13px;color:#596b83;overflow-wrap:anywhere}
+button{margin-top:24px;min-height:38px;padding:8px 14px;border:0;border-radius:6px;color:white;background:#4058b6;cursor:pointer}button:disabled{opacity:.5}
+@media(max-width:600px){main{grid-template-columns:1fr}#viewport{height:65dvh}aside{border-left:0;border-top:1px solid #d8dfe9}label{margin-top:14px}}
+</style>
+<main><div id="viewport"></div><aside><h1>Преподаватель</h1><p id="status">Загрузка модели</p>
+<label for="jaw">Челюсть</label><input id="jaw" type="range" min="0" max="1" step="0.01" value="0">
+<label for="blink">Веки</label><input id="blink" type="range" min="0" max="1" step="0.01" value="0">
+<label for="pucker">Губы</label><input id="pucker" type="range" min="0" max="1" step="0.01" value="0">
+<label for="smile">Улыбка</label><input id="smile" type="range" min="0" max="1" step="0.01" value="0">
+<button id="play" type="button">Проверить голос Cedar</button>
+</aside></main>
+<script type="module">
+import { TeacherScene } from '/src/tutor/avatar/TeacherScene.ts'
+import { StreamPlayback } from '/src/tutor/avatar/stream-playback.mjs'
+const status = document.querySelector('#status')
+const teacher = new TeacherScene(document.querySelector('#viewport'), error => {status.textContent = error.message})
+window.teacherProbe = teacher
+try { await teacher.load('/__teacher.glb'); status.textContent = 'Модель загружена'; document.body.dataset.ready='true' }
+catch (error) {status.textContent=error.message; console.error(error)}
+let audio, playing=false, frame
+const player = new StreamPlayback(() => audio)
+document.querySelector('#play').addEventListener('click', async event => {
+  if (playing) {player.reset(); teacher.reset(); playing=false; cancelAnimationFrame(frame); event.target.textContent='Проверить голос Cedar'; return}
+  try {
+    audio ??= new AudioContext()
+    await audio.resume()
+    const faces = await fetch('/__faces.json').then(response => response.json())
+    const wav = await fetch('/__cedar.wav').then(response => response.arrayBuffer())
+    const decoded = await new OfflineAudioContext(1, 1, 24000).decodeAudioData(wav)
+    const samples = decoded.getChannelData(0)
+    player.accept({kind:'start', engine:faces.engine})
+    for (let offset=0; offset<samples.length; offset+=12000) {
+      const block = samples.subarray(offset, offset+12000)
+      const pcm = new Int16Array(block.length)
+      for (let i=0;i<block.length;i++) pcm[i] = Math.round(Math.max(-1,Math.min(1,block[i])) * 32767)
+      const bytes = new Uint8Array(pcm.buffer)
+      player.accept({kind:'segment', pcm:btoa(String.fromCharCode(...bytes)), offset:offset/24000, sampleRate:24000,
+        ...(offset===0 ? {names:faces.names,frames:faces.frames} : {})})
+    }
+    player.accept({kind:'end',duration:samples.length/24000})
+    playing=true; event.target.textContent='Остановить'
+    const tick = () => {
+      const state=player.tick(); teacher.setFace(state.weights)
+      document.body.dataset.speaking=String(state.active)
+      if (state.time>=samples.length/24000-.025 && !state.active) {playing=false;teacher.reset();event.target.textContent='Проверить голос Cedar';return}
+      frame=requestAnimationFrame(tick)
+    }
+    frame=requestAnimationFrame(tick)
+  } catch(error) {status.textContent=error.message;console.error(error)}
+})
+for (const input of document.querySelectorAll('input')) input.addEventListener('input', () => {
+  const value = id => Number(document.querySelector('#'+id).value)
+  teacher.setBlink(false)
+  teacher.setFace({ jawOpen:value('jaw'), eyeBlinkLeft:value('blink'), eyeBlinkRight:value('blink'), mouthPucker:value('pucker'), mouthSmileLeft:value('smile'), mouthSmileRight:value('smile') })
+})
+window.addEventListener('pagehide', () => {cancelAnimationFrame(frame);player.reset();audio?.close();teacher.dispose()}, {once:true})
+</script>
+</html>
