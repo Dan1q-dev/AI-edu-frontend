@@ -61,6 +61,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
   }
   const live = useVoiceConversation({ contextType, contextId, onInterrupt: interrupt,
     onQuestion: text => { void submit(text, true) }, onError: setError })
+  useEffect(() => { if (!avatarEnabled) live.stop() }, [avatarEnabled])
   useEffect(() => {
     avatar.behavior(avatar.active ? 'idle' : busy || live.transcribing ? 'thinking' : live.enabled ? 'listening' : 'idle')
   }, [busy, live.transcribing, live.enabled, avatar.active])
