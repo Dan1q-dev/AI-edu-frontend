@@ -8,6 +8,7 @@ type Options = {
   onInterrupt: () => void
   onQuestion: (text: string) => void
   onError: (message: string) => void
+  isAssistantSpeaking?: () => boolean
 }
 
 export function useVoiceConversation(options: Options) {
@@ -25,12 +26,14 @@ export function useVoiceConversation(options: Options) {
   const stream = useRef<MediaStream | null>(null)
   const request = useRef<AbortController | null>(null)
   const durationTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const suppressed = useRef(false)
 
   const release = () => {
     running.current = false
     epoch.current++
     utterance.current++
     request.current?.abort()
+    suppressed.current = false
     if (durationTimer.current) clearTimeout(durationTimer.current)
     durationTimer.current = null
     stream.current?.getTracks().forEach(track => track.stop())
@@ -68,13 +71,18 @@ export function useVoiceConversation(options: Options) {
         getStream: async () => mic,
         positiveSpeechThreshold: 0.7, negativeSpeechThreshold: 0.4,
         redemptionMs: 900, preSpeechPadMs: 400, minSpeechMs: 350,
-        onSpeechStart: () => { if (current()) setHearing(true) },
+        onSpeechStart: () => { if (current() && !callbacks.current.isAssistantSpeaking?.()) setHearing(true) },
         onSpeechRealStart: () => {
           if (!current()) return
+          // Do not feed the teacher's speaker output back as a new student turn.
+          // The explicit stop button remains available during playback.
+          suppressed.current = !!callbacks.current.isAssistantSpeaking?.()
+          if (suppressed.current) { setHearing(false); return }
           utterance.current++
           request.current?.abort()
           setTranscribing(false)
           callbacks.current.onInterrupt()
+          if (durationTimer.current) clearTimeout(durationTimer.current)
           durationTimer.current = setTimeout(() => {
             if (current()) { stop(); callbacks.current.onError('Фраза длиннее 30 секунд. Включите разговор и задайте более короткий вопрос.') }
           }, 30000)
@@ -85,6 +93,7 @@ export function useVoiceConversation(options: Options) {
           setHearing(false)
           if (durationTimer.current) clearTimeout(durationTimer.current)
           durationTimer.current = null
+          if (suppressed.current || callbacks.current.isAssistantSpeaking?.()) { suppressed.current = false; return }
           const turn = utterance.current
           const controller = new AbortController()
           request.current = controller

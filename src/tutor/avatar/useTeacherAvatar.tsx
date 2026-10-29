@@ -91,6 +91,7 @@ export function useTeacherAvatar(authorized: boolean, onError: (message: string)
   }
   return {
     available, ready, active,
+    isSpeaking: () => player.current?.isSpeaking() ?? false,
     unlock: () => {
       context.current ??= new AudioContext()
       void context.current.resume().catch(() => handlers.current.onError('Разрешите воспроизведение звука в браузере.'))
