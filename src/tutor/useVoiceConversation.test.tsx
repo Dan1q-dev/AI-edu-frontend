@@ -19,6 +19,24 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 const options = () => ({ contextType: 'item' as const, contextId: 'lesson-a', onInterrupt: vi.fn(), onQuestion: vi.fn(), onError: vi.fn() })
 
 describe('continuous voice conversation', () => {
+  it('does not interrupt or transcribe the teacher audio and resumes on the next student turn', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ text: 'Настоящий вопрос.' }))
+    vi.stubGlobal('fetch', fetchMock)
+    let speaking = true
+    const config = { ...options(), isAssistantSpeaking: () => speaking }
+    const view = renderHook(() => useVoiceConversation(config))
+    await act(() => view.result.current.start())
+    act(() => { callbacks.onSpeechStart?.(); callbacks.onSpeechRealStart?.() })
+    expect(view.result.current.hearing).toBe(false)
+    // An echo utterance remains suppressed even if playback ends before VAD does.
+    speaking = false
+    act(() => callbacks.onSpeechEnd?.(new Float32Array(16000)))
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(config.onInterrupt).not.toHaveBeenCalled()
+    act(() => { callbacks.onSpeechStart?.(); callbacks.onSpeechRealStart?.(); callbacks.onSpeechEnd?.(new Float32Array(16000)) })
+    await waitFor(() => expect(config.onQuestion).toHaveBeenCalledExactlyOnceWith('Настоящий вопрос.'))
+    expect(config.onInterrupt).toHaveBeenCalledOnce()
+  })
   it('automatically submits speech, stays listening and interrupts on real speech only', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json({ text: 'Объясните оценивание.' }))
     vi.stubGlobal('fetch', fetchMock)

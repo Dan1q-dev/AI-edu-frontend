@@ -8,6 +8,10 @@ export class StreamPlayback {
     this.sources = new Set(); this.segments = []; this.frames = []; this.names = [];
     this.ranges = []; this.duration = 0; this.ended = false; this.received = 0; this.played = 0; this.underruns = 0;
   }
+  isSpeaking() {
+    const last = this.ranges.at(-1), context = this.getContext();
+    return !!last && (!this.ended || this.segments.length > 0 || !!context && context.currentTime < last.end + .25);
+  }
   accept(data) {
     if (!['start', 'segment', 'end'].includes(data.kind)) throw new Error('Invalid avatar packet');
     if (data.kind === 'start') { this.reset(); return; }
@@ -44,11 +48,11 @@ export class StreamPlayback {
       const part = this.segments[0]; const length = part.samples.length / 24000;
       if (part.offset + length > safeEnd + .001) break;
       const last = this.ranges.at(-1);
-      const running = last && last.end > context.currentTime + .03;
+      const running = last && last.end >= context.currentTime + .015;
       // Rebuffer on a shared sound/animation clock, never animate missing audio.
-      if (!running && !this.ended && safeEnd - part.offset < 1) break;
+      if (!running && !this.ended && safeEnd - part.offset < (last ? .9 : .45)) break;
       if (!running && last) this.underruns++;
-      const start = running ? last.end : context.currentTime + .12;
+      const start = running ? last.end : context.currentTime + .045;
       const buffer = context.createBuffer(1, part.samples.length, 24000); buffer.copyToChannel(part.samples, 0);
       const source = context.createBufferSource(); source.buffer = buffer; source.connect(context.destination);
       this.sources.add(source); source.onended = () => { this.sources.delete(source); source.disconnect(); };
@@ -61,7 +65,8 @@ export class StreamPlayback {
     if (!range) {
       const last = this.ranges.at(-1);
       if (this.ended && !this.segments.length && last && now >= last.end) this.played = this.duration;
-      return { active: false, time: this.played, weights: {}, duration: this.duration || 90 };
+      // A packet boundary or brief rebuffer is not the end of the spoken turn.
+      return { active: this.isSpeaking(), time: this.played, weights: {}, duration: this.duration || 90 };
     }
     this.played = Math.max(this.played, range.offset + now - range.start);
     let index = this.frames.findIndex(f => f.t > this.played);

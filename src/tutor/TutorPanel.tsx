@@ -60,6 +60,7 @@ function TutorConversation({ storageKey, contextType, contextId, lessonTitle, ma
     setBusy(false)
   }
   const live = useVoiceConversation({ contextType, contextId, onInterrupt: interrupt,
+    isAssistantSpeaking: () => teacherAvatar.available ? teacherAvatar.isSpeaking() : localAvatar.active,
     onQuestion: text => { void submit(text, true) }, onError: setError })
   useEffect(() => { if (!avatarEnabled) live.stop() }, [avatarEnabled])
   useEffect(() => {
