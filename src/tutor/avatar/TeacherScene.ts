@@ -185,7 +185,7 @@ export class TeacherScene {
     const height = Math.max(this.host.clientHeight, 1)
     this.renderer.setSize(width, height, false)
     this.camera.aspect = width / height
-    const span = Math.max(0.55, 0.56 / this.camera.aspect)
+    const span = Math.max(0.40, 0.48 / this.camera.aspect)
     const distance = span / (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2)))
     this.camera.position.copy(this.lookAt).addScaledVector(this.front, distance)
     this.camera.position.y += 0.055
